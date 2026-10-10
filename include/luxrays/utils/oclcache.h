@@ -28,6 +28,7 @@
 #include <atomic>
 #include <oneapi/tbb.h>
 #include "luxrays/utils/ocl.h"
+#include "luxrays/utils/oclhash.h"
 
 namespace luxrays {
 
@@ -82,7 +83,9 @@ public:
 		return programs;
 	}
 
-	static std::string ToOptsString(const std::vector<std::string> &kernelsParameters);
+	static std::string ToOptsString(const std::vector<std::string> &kernelsParameters) {
+		return OCLKernelParamsToString(kernelsParameters);
+	}
 	static cl_program ForcedCompile(cl_context context, cl_device_id device,
 		const std::vector<std::string> &kernelsParameters, const std::string &kernelSource,
 		std::string *errorStr);
@@ -129,8 +132,12 @@ public:
 		std::vector<bool> *fromSPIRV = nullptr
 	);
 
-	static std::string HashString(const std::string &ss);
-	static u_int HashBin(const char *s, const size_t size);
+	static std::string HashString(const std::string &ss) {
+		return OCLKernelHashString(ss);
+	}
+	static u_int HashBin(const char *s, const size_t size) {
+		return OCLKernelHashBin(s, size);
+	}
 
 	static std::filesystem::path GetCacheDir(const std::string &applicationName);
 

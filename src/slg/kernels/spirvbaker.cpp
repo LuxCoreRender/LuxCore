@@ -34,7 +34,8 @@
 
 #include "luxrays/core/epsilon.h"
 #include "luxrays/kernels/kernels.h"
-#include "luxrays/utils/oclcache.h"
+// Note: oclhash.h (and not oclcache.h) so the tool is dependency-free
+#include "luxrays/utils/oclhash.h"
 
 #include "slg/kernels/kernels.h"
 #include "slg/kernels/kernelsources.h"
@@ -84,8 +85,12 @@ int main(int argc, char *argv[]) {
 	for (const string &renderEngineType : renderEngineTypes) {
 		for (const auto &platformDefine : platformDefines) {
 			vector<string> params;
+			// Note: the default epsilon values (and not MachineEpsilon::GetMin() /
+			// MachineEpsilon::GetMax(), which would link LuxCore) because the tool
+			// is dependency-free. At run time the values are the same as long as
+			// the scene.epsilon.min/max properties are left to their default.
 			GetKernelParamters(params, renderEngineType,
-				MachineEpsilon::GetMin(), MachineEpsilon::GetMax());
+				DEFAULT_EPSILON_MIN, DEFAULT_EPSILON_MAX);
 			params.push_back(platformDefine.first);
 			AddDeviceParameters(params);
 
@@ -97,8 +102,8 @@ int main(int argc, char *argv[]) {
 			const string baseName = outDir + "/" + stableName;
 
 			const string hash =
-				oclKernelPersistentCache::HashString(oclKernelPersistentCache::ToOptsString(params)) +
-				"-" + oclKernelPersistentCache::HashString(fullSource);
+				OCLKernelHashString(OCLKernelParamsToString(params)) +
+				"-" + OCLKernelHashString(fullSource);
 
 			// Write the OpenCL source
 			const string srcFileName = baseName + ".cl";

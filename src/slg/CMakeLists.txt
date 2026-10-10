@@ -99,129 +99,9 @@ endif(APPLE)
 #
 ###########################################################################
 
-set(SLG_KERNELS
-  ${PROJECT_SOURCE_DIR}/include/slg/cameras/camera_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/cameras/camera_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/engines/caches/photongi/pgic_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/engines/caches/photongi/pgic_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/engines/pathoclbase/kernels/pathoclbase_datatypes.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/engines/pathoclbase/kernels/pathoclbase_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/engines/pathoclbase/kernels/pathoclbase_kernels_micro.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/engines/pathtracer_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/film_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/film_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/film_mergesamplebuffer_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/denoiser/filmdenoiser_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/sampleresult_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_backgroundimg_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_bloom_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_cameraresponse_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_coloraberration_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_gammacorrection_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_gaussianblur3x3_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_objectidmask_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_optixdenoiser_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_premultiplyalpha_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_vignetting_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_whitebalance_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_reduce_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_autolinear_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_linear_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_luxlinear_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_reinhard02_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/sampleresult_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/filters/filter_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/film/filters/filter_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/imagemap/imagemap_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/imagemap/imagemap_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/lights/light_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/lights/light_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/lights/strategies/dlsc_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/lights/strategies/dlsc_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/lights/strategies/lightstrategy_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/lights/visibility/elvc_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/lights/visibility/elvc_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/samplers/sampler_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/samplers/sampler_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/samplers/sampler_random_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/samplers/sampler_sobol_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/samplers/sampler_metropolis_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/samplers/sampler_tilepath_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/bsdf/bsdf_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/bsdf/bsdf_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/bsdf/bsdfutils_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/bsdf/hitpoint_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/bsdf/hitpoint_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/material_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_generic.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_default.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_archglass.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_carpaint.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_clearvol.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_cloth.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_glass.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_glossy2.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_glossycoating.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_glossytranslucent.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_heterogeneousvol.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_homogeneousvol.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_matte.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_matte_translucent.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_metal2.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_mirror.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_mix.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_null.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_roughglass.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_roughmatte_translucent.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_thinfilmcoating.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_velvet.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_disney.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_twosided.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/material_funcs_evalops.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/materials/material_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/scene/scene_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/scene/scene_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/scene/sceneobject_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/hitpoint/texture_hitpoint_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/mapping/mapping_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/mapping/mapping_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/math/texture_abs_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/math/texture_clamp_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/math/texture_random_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/texture_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/texture_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/texture_funcs_evalops.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/texture_bilerp_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/texture_blackbody_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/texture_blender_noise_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/texture_blender_noise_funcs2.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/texture_blender_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/texture_bombing_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/texture_brick_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/texture_bump_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/texture_colordepth_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/texture_densitygrid_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/texture_distort_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/texture_hsv_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/texture_irregulardata_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/texture_noise_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/texture_imagemap_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/texture_others_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/texture_triplanar_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelcolor_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelconst_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/utils/evalstack_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/utils/mortoncurve_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/utils/pathdepthinfo_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/utils/pathdepthinfo_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/utils/pathvolumeinfo_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/utils/pathvolumeinfo_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/utils/pathinfo_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/utils/pathinfo_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/utils/varianceclamping_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/volumes/volume_types.cl
-  ${PROJECT_SOURCE_DIR}/include/slg/volumes/volume_funcs.cl
-)
+# The kernel source file list is shared with the SPIR-V bake project
+include("${PROJECT_SOURCE_DIR}/build-system/cmake/KernelFiles.cmake")
+list(TRANSFORM SLG_KERNELS PREPEND "${PROJECT_SOURCE_DIR}/")
 
 # Make sure some IDE won't try to compile CL by some built-in rule:
 SET_SOURCE_FILES_PROPERTIES(${SLG_KERNELS} PROPERTIES HEADER_FILE_ONLY TRUE)
@@ -536,130 +416,13 @@ file(MAKE_DIRECTORY ${generated_kernels_dir})
 
 PreprocessOCLKernels(${generated_kernels_dir} slg ${SLG_KERNELS})
 
-set(SLG_KERNEL_SRCS
-  ${generated_kernels_dir}/sampler_types_kernel.cpp
-  ${generated_kernels_dir}/sampler_funcs_kernel.cpp
-  ${generated_kernels_dir}/sampler_random_funcs_kernel.cpp
-  ${generated_kernels_dir}/sampler_sobol_funcs_kernel.cpp
-  ${generated_kernels_dir}/sampler_metropolis_funcs_kernel.cpp
-  ${generated_kernels_dir}/sampler_tilepath_funcs_kernel.cpp
-  ${generated_kernels_dir}/film_types_kernel.cpp
-  ${generated_kernels_dir}/film_funcs_kernel.cpp
-  ${generated_kernels_dir}/film_mergesamplebuffer_funcs_kernel.cpp
-  ${generated_kernels_dir}/filmdenoiser_funcs_kernel.cpp
-  ${generated_kernels_dir}/sampleresult_types_kernel.cpp
-  ${generated_kernels_dir}/plugin_backgroundimg_funcs_kernel.cpp
-  ${generated_kernels_dir}/plugin_bloom_funcs_kernel.cpp
-  ${generated_kernels_dir}/plugin_cameraresponse_funcs_kernel.cpp
-  ${generated_kernels_dir}/plugin_coloraberration_funcs_kernel.cpp
-  ${generated_kernels_dir}/plugin_gammacorrection_funcs_kernel.cpp
-  ${generated_kernels_dir}/plugin_gaussianblur3x3_funcs_kernel.cpp
-  ${generated_kernels_dir}/plugin_objectidmask_funcs_kernel.cpp
-  ${generated_kernels_dir}/plugin_optixdenoiser_funcs_kernel.cpp
-  ${generated_kernels_dir}/plugin_premultiplyalpha_funcs_kernel.cpp
-  ${generated_kernels_dir}/plugin_vignetting_funcs_kernel.cpp
-  ${generated_kernels_dir}/plugin_whitebalance_funcs_kernel.cpp
-  ${generated_kernels_dir}/tonemap_reduce_funcs_kernel.cpp
-  ${generated_kernels_dir}/tonemap_autolinear_funcs_kernel.cpp
-  ${generated_kernels_dir}/tonemap_linear_funcs_kernel.cpp
-  ${generated_kernels_dir}/tonemap_luxlinear_funcs_kernel.cpp
-  ${generated_kernels_dir}/tonemap_reinhard02_funcs_kernel.cpp
-  ${generated_kernels_dir}/sampleresult_funcs_kernel.cpp
-  ${generated_kernels_dir}/filter_types_kernel.cpp
-  ${generated_kernels_dir}/filter_funcs_kernel.cpp
-  ${generated_kernels_dir}/camera_types_kernel.cpp
-  ${generated_kernels_dir}/camera_funcs_kernel.cpp
-  ${generated_kernels_dir}/bsdf_types_kernel.cpp
-  ${generated_kernels_dir}/bsdf_funcs_kernel.cpp
-  ${generated_kernels_dir}/bsdfutils_funcs_kernel.cpp
-  ${generated_kernels_dir}/imagemap_types_kernel.cpp
-  ${generated_kernels_dir}/imagemap_funcs_kernel.cpp
-  ${generated_kernels_dir}/material_types_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_generic_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_default_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_archglass_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_carpaint_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_clearvol_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_cloth_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_disney_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_glass_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_glossy2_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_glossycoating_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_glossytranslucent_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_heterogeneousvol_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_homogeneousvol_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_matte_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_matte_translucent_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_metal2_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_mirror_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_mix_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_null_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_roughglass_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_roughmatte_translucent_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_thinfilmcoating_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_twosided_kernel.cpp
-  ${generated_kernels_dir}/materialdefs_funcs_velvet_kernel.cpp
-  ${generated_kernels_dir}/material_funcs_evalops_kernel.cpp
-  ${generated_kernels_dir}/material_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_types_kernel.cpp
-  ${generated_kernels_dir}/texture_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_funcs_evalops_kernel.cpp
-  ${generated_kernels_dir}/texture_blender_noise_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_blender_noise_funcs2_kernel.cpp
-  ${generated_kernels_dir}/texture_blender_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_bump_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_noise_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_abs_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_bilerp_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_blackbody_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_bombing_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_brick_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_clamp_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_colordepth_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_densitygrid_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_distort_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_fresnelcolor_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_fresnelconst_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_hitpoint_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_hsv_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_irregulardata_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_imagemap_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_others_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_random_funcs_kernel.cpp
-  ${generated_kernels_dir}/texture_triplanar_funcs_kernel.cpp
-  ${generated_kernels_dir}/evalstack_funcs_kernel.cpp
-  ${generated_kernels_dir}/mortoncurve_funcs_kernel.cpp
-  ${generated_kernels_dir}/pathdepthinfo_types_kernel.cpp
-  ${generated_kernels_dir}/pathdepthinfo_funcs_kernel.cpp
-  ${generated_kernels_dir}/pathvolumeinfo_types_kernel.cpp
-  ${generated_kernels_dir}/pathvolumeinfo_funcs_kernel.cpp
-  ${generated_kernels_dir}/pathinfo_types_kernel.cpp
-  ${generated_kernels_dir}/pathinfo_funcs_kernel.cpp
-  ${generated_kernels_dir}/varianceclamping_funcs_kernel.cpp
-  ${generated_kernels_dir}/volume_types_kernel.cpp
-  ${generated_kernels_dir}/volume_funcs_kernel.cpp
-  ${generated_kernels_dir}/light_types_kernel.cpp
-  ${generated_kernels_dir}/light_funcs_kernel.cpp
-  ${generated_kernels_dir}/dlsc_types_kernel.cpp
-  ${generated_kernels_dir}/dlsc_funcs_kernel.cpp
-  ${generated_kernels_dir}/elvc_types_kernel.cpp
-  ${generated_kernels_dir}/elvc_funcs_kernel.cpp
-  ${generated_kernels_dir}/lightstrategy_funcs_kernel.cpp
-  ${generated_kernels_dir}/scene_types_kernel.cpp
-  ${generated_kernels_dir}/scene_funcs_kernel.cpp
-  ${generated_kernels_dir}/sceneobject_types_kernel.cpp
-  ${generated_kernels_dir}/mapping_types_kernel.cpp
-  ${generated_kernels_dir}/mapping_funcs_kernel.cpp
-  ${generated_kernels_dir}/hitpoint_types_kernel.cpp
-  ${generated_kernels_dir}/hitpoint_funcs_kernel.cpp
-  ${generated_kernels_dir}/pgic_types_kernel.cpp
-  ${generated_kernels_dir}/pgic_funcs_kernel.cpp
-  ${generated_kernels_dir}/pathoclbase_datatypes_kernel.cpp
-  ${generated_kernels_dir}/pathoclbase_funcs_kernel.cpp
-  ${generated_kernels_dir}/pathoclbase_kernels_micro_kernel.cpp
-  ${generated_kernels_dir}/pathtracer_types_kernel.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/kernels/kernelsources.cpp
-)
+# The generated kernel sources are derived from the kernel source files list
+set(SLG_KERNEL_SRCS)
+foreach(slg_kernel ${SLG_KERNELS})
+  get_filename_component(slg_kernel_name ${slg_kernel} NAME_WE)
+  list(APPEND SLG_KERNEL_SRCS ${generated_kernels_dir}/${slg_kernel_name}_kernel.cpp)
+endforeach()
+list(APPEND SLG_KERNEL_SRCS ${PROJECT_SOURCE_DIR}/src/slg/kernels/kernelsources.cpp)
 
 SOURCE_GROUP("Source Files\\SLG Kernels\\Generated" FILES ${SLG_KERNEL_SRCS})
 
@@ -697,11 +460,7 @@ if(LUXRAYS_PRECOMPILE_SPIRV AND NOT LUXRAYS_DISABLE_OPENCL AND NOT CMAKE_CROSSCO
   set(spirv_dir "${GENERATED_DIR}/spirv")
   file(MAKE_DIRECTORY ${spirv_dir})
 
-  set(SPIRV_VARIANTS
-    pathocl_generic pathocl_amd pathocl_nvidia
-    tilepathocl_generic tilepathocl_amd tilepathocl_nvidia
-    rtpathocl_generic rtpathocl_amd rtpathocl_nvidia
-  )
+  # SPIRV_VARIANTS is defined in build-system/cmake/KernelFiles.cmake
 
   set(spirv_module_sources ${spirv_dir}/embeddedspirv.cpp)
   foreach(spirv_variant ${SPIRV_VARIANTS})

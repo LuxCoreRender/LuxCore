@@ -1,3 +1,4 @@
+set(KERNELPREPROCESS_LIST_DIR "${CMAKE_CURRENT_LIST_DIR}")
 ################################################################################
 # Copyright 1998-2020 by authors (see AUTHORS.txt)
 #
@@ -30,7 +31,7 @@ FUNCTION(PreprocessOCLKernel NAMESPACE KERNEL SRC DST)
 		COMMAND ${CMAKE_COMMAND}
 			-DDST=${DST} -DSRC=${SRC}
 			-DNAMESPACE=${NAMESPACE} -DKERNEL=${KERNEL}
-			-P "${PROJECT_SOURCE_DIR}/build-system/cmake/Scripts/PreprocessKernel.cmake"
+			-P "${KERNELPREPROCESS_LIST_DIR}/Scripts/PreprocessKernel.cmake"
 		MAIN_DEPENDENCY ${SRC}
 	)
 

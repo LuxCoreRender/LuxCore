@@ -1,0 +1,187 @@
+# SPDX-FileCopyrightText: 2026 Authors (see AUTHORS.txt)
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# The OpenCL kernel source files (relative to the project root). They are
+# used by the main build (see src/luxrays/CMakeLists.txt and
+# src/slg/CMakeLists.txt) and by the dependency-free SPIR-V bake project
+# (build-system/spirv).
+
+set(LUXRAYS_KERNELS
+    include/luxrays/luxrays_types.cl
+    include/luxrays/core/color/color_types.cl
+    include/luxrays/core/color/color_funcs.cl
+    include/luxrays/core/bvh/bvhbuild_types.cl
+    include/luxrays/accelerators/bvh.cl
+    include/luxrays/accelerators/mbvh.cl
+    include/luxrays/accelerators/optixaccel.cl
+    include/luxrays/accelerators/optixemptyaccel.cl
+    include/luxrays/core/exttrianglemesh_types.cl
+    include/luxrays/core/exttrianglemesh_funcs.cl
+    include/luxrays/core/randomgen_types.cl
+    include/luxrays/core/randomgen_funcs.cl
+    include/luxrays/core/trianglemesh_types.cl
+    include/luxrays/core/geometry/matrix4x4_types.cl
+    include/luxrays/core/geometry/matrix4x4_funcs.cl
+    include/luxrays/core/geometry/transform_types.cl
+    include/luxrays/core/geometry/transform_funcs.cl
+    include/luxrays/core/geometry/frame_types.cl
+    include/luxrays/core/geometry/frame_funcs.cl
+    include/luxrays/core/epsilon_types.cl
+    include/luxrays/core/epsilon_funcs.cl
+    include/luxrays/core/geometry/ray_types.cl
+    include/luxrays/core/geometry/ray_funcs.cl
+    include/luxrays/core/geometry/point_types.cl
+    include/luxrays/core/geometry/vector_types.cl
+    include/luxrays/core/geometry/vector_funcs.cl
+    include/luxrays/core/geometry/normal_types.cl
+    include/luxrays/core/geometry/quaternion_types.cl
+    include/luxrays/core/geometry/quaternion_funcs.cl
+    include/luxrays/core/geometry/bbox_types.cl
+    include/luxrays/core/geometry/bbox_funcs.cl
+    include/luxrays/core/geometry/motionsystem_types.cl
+    include/luxrays/core/geometry/motionsystem_funcs.cl
+    include/luxrays/core/geometry/triangle_types.cl
+    include/luxrays/core/geometry/triangle_funcs.cl
+    include/luxrays/core/geometry/uv_types.cl
+    include/luxrays/core/utils_funcs.cl
+    include/luxrays/devices/cudadevice_math.cl
+    include/luxrays/devices/cudadevice_oclemul_types.cl
+    include/luxrays/devices/cudadevice_oclemul_funcs.cl
+    include/luxrays/devices/ocldevice_funcs.cl
+    include/luxrays/utils/atomic_funcs.cl
+    include/luxrays/utils/mc_funcs.cl
+)
+
+set(SLG_KERNELS
+    include/slg/cameras/camera_types.cl
+    include/slg/cameras/camera_funcs.cl
+    include/slg/engines/caches/photongi/pgic_types.cl
+    include/slg/engines/caches/photongi/pgic_funcs.cl
+    include/slg/engines/pathoclbase/kernels/pathoclbase_datatypes.cl
+    include/slg/engines/pathoclbase/kernels/pathoclbase_funcs.cl
+    include/slg/engines/pathoclbase/kernels/pathoclbase_kernels_micro.cl
+    include/slg/engines/pathtracer_types.cl
+    include/slg/film/film_types.cl
+    include/slg/film/film_funcs.cl
+    include/slg/film/film_mergesamplebuffer_funcs.cl
+    include/slg/film/denoiser/filmdenoiser_funcs.cl
+    include/slg/film/sampleresult_types.cl
+    include/slg/film/imagepipeline/plugins/plugin_backgroundimg_funcs.cl
+    include/slg/film/imagepipeline/plugins/plugin_bloom_funcs.cl
+    include/slg/film/imagepipeline/plugins/plugin_cameraresponse_funcs.cl
+    include/slg/film/imagepipeline/plugins/plugin_coloraberration_funcs.cl
+    include/slg/film/imagepipeline/plugins/plugin_gammacorrection_funcs.cl
+    include/slg/film/imagepipeline/plugins/plugin_gaussianblur3x3_funcs.cl
+    include/slg/film/imagepipeline/plugins/plugin_objectidmask_funcs.cl
+    include/slg/film/imagepipeline/plugins/plugin_optixdenoiser_funcs.cl
+    include/slg/film/imagepipeline/plugins/plugin_premultiplyalpha_funcs.cl
+    include/slg/film/imagepipeline/plugins/plugin_vignetting_funcs.cl
+    include/slg/film/imagepipeline/plugins/plugin_whitebalance_funcs.cl
+    include/slg/film/imagepipeline/plugins/tonemaps/tonemap_reduce_funcs.cl
+    include/slg/film/imagepipeline/plugins/tonemaps/tonemap_autolinear_funcs.cl
+    include/slg/film/imagepipeline/plugins/tonemaps/tonemap_linear_funcs.cl
+    include/slg/film/imagepipeline/plugins/tonemaps/tonemap_luxlinear_funcs.cl
+    include/slg/film/imagepipeline/plugins/tonemaps/tonemap_reinhard02_funcs.cl
+    include/slg/film/sampleresult_funcs.cl
+    include/slg/film/filters/filter_types.cl
+    include/slg/film/filters/filter_funcs.cl
+    include/slg/imagemap/imagemap_types.cl
+    include/slg/imagemap/imagemap_funcs.cl
+    include/slg/lights/light_types.cl
+    include/slg/lights/light_funcs.cl
+    include/slg/lights/strategies/dlsc_types.cl
+    include/slg/lights/strategies/dlsc_funcs.cl
+    include/slg/lights/strategies/lightstrategy_funcs.cl
+    include/slg/lights/visibility/elvc_types.cl
+    include/slg/lights/visibility/elvc_funcs.cl
+    include/slg/samplers/sampler_types.cl
+    include/slg/samplers/sampler_funcs.cl
+    include/slg/samplers/sampler_random_funcs.cl
+    include/slg/samplers/sampler_sobol_funcs.cl
+    include/slg/samplers/sampler_metropolis_funcs.cl
+    include/slg/samplers/sampler_tilepath_funcs.cl
+    include/slg/bsdf/bsdf_types.cl
+    include/slg/bsdf/bsdf_funcs.cl
+    include/slg/bsdf/bsdfutils_funcs.cl
+    include/slg/bsdf/hitpoint_types.cl
+    include/slg/bsdf/hitpoint_funcs.cl
+    include/slg/materials/material_types.cl
+    include/slg/materials/materialdefs_funcs_generic.cl
+    include/slg/materials/materialdefs_funcs_default.cl
+    include/slg/materials/materialdefs_funcs_archglass.cl
+    include/slg/materials/materialdefs_funcs_carpaint.cl
+    include/slg/materials/materialdefs_funcs_clearvol.cl
+    include/slg/materials/materialdefs_funcs_cloth.cl
+    include/slg/materials/materialdefs_funcs_glass.cl
+    include/slg/materials/materialdefs_funcs_glossy2.cl
+    include/slg/materials/materialdefs_funcs_glossycoating.cl
+    include/slg/materials/materialdefs_funcs_glossytranslucent.cl
+    include/slg/materials/materialdefs_funcs_heterogeneousvol.cl
+    include/slg/materials/materialdefs_funcs_homogeneousvol.cl
+    include/slg/materials/materialdefs_funcs_matte.cl
+    include/slg/materials/materialdefs_funcs_matte_translucent.cl
+    include/slg/materials/materialdefs_funcs_metal2.cl
+    include/slg/materials/materialdefs_funcs_mirror.cl
+    include/slg/materials/materialdefs_funcs_mix.cl
+    include/slg/materials/materialdefs_funcs_null.cl
+    include/slg/materials/materialdefs_funcs_roughglass.cl
+    include/slg/materials/materialdefs_funcs_roughmatte_translucent.cl
+    include/slg/materials/materialdefs_funcs_thinfilmcoating.cl
+    include/slg/materials/materialdefs_funcs_velvet.cl
+    include/slg/materials/materialdefs_funcs_disney.cl
+    include/slg/materials/materialdefs_funcs_twosided.cl
+    include/slg/materials/material_funcs_evalops.cl
+    include/slg/materials/material_funcs.cl
+    include/slg/scene/scene_types.cl
+    include/slg/scene/scene_funcs.cl
+    include/slg/scene/sceneobject_types.cl
+    include/slg/textures/hitpoint/texture_hitpoint_funcs.cl
+    include/slg/textures/mapping/mapping_types.cl
+    include/slg/textures/mapping/mapping_funcs.cl
+    include/slg/textures/math/texture_abs_funcs.cl
+    include/slg/textures/math/texture_clamp_funcs.cl
+    include/slg/textures/math/texture_random_funcs.cl
+    include/slg/textures/texture_types.cl
+    include/slg/textures/texture_funcs.cl
+    include/slg/textures/texture_funcs_evalops.cl
+    include/slg/textures/texture_bilerp_funcs.cl
+    include/slg/textures/texture_blackbody_funcs.cl
+    include/slg/textures/texture_blender_noise_funcs.cl
+    include/slg/textures/texture_blender_noise_funcs2.cl
+    include/slg/textures/texture_blender_funcs.cl
+    include/slg/textures/texture_bombing_funcs.cl
+    include/slg/textures/texture_brick_funcs.cl
+    include/slg/textures/texture_bump_funcs.cl
+    include/slg/textures/texture_colordepth_funcs.cl
+    include/slg/textures/texture_densitygrid_funcs.cl
+    include/slg/textures/texture_distort_funcs.cl
+    include/slg/textures/texture_hsv_funcs.cl
+    include/slg/textures/texture_irregulardata_funcs.cl
+    include/slg/textures/texture_noise_funcs.cl
+    include/slg/textures/texture_imagemap_funcs.cl
+    include/slg/textures/texture_others_funcs.cl
+    include/slg/textures/texture_triplanar_funcs.cl
+    include/slg/textures/fresnel/texture_fresnelcolor_funcs.cl
+    include/slg/textures/fresnel/texture_fresnelconst_funcs.cl
+    include/slg/utils/evalstack_funcs.cl
+    include/slg/utils/mortoncurve_funcs.cl
+    include/slg/utils/pathdepthinfo_types.cl
+    include/slg/utils/pathdepthinfo_funcs.cl
+    include/slg/utils/pathvolumeinfo_types.cl
+    include/slg/utils/pathvolumeinfo_funcs.cl
+    include/slg/utils/pathinfo_types.cl
+    include/slg/utils/pathinfo_funcs.cl
+    include/slg/utils/varianceclamping_funcs.cl
+    include/slg/volumes/volume_types.cl
+    include/slg/volumes/volume_funcs.cl
+)
+
+# The SPIR-V bake variants: (render engine, platform vendor) pairs. The
+# names must match the ones used by the spirv-baker tool (see
+# src/slg/kernels/spirvbaker.cpp).
+set(SPIRV_VARIANTS
+  pathocl_generic pathocl_amd pathocl_nvidia
+  tilepathocl_generic tilepathocl_amd tilepathocl_nvidia
+  rtpathocl_generic rtpathocl_amd rtpathocl_nvidia
+)
