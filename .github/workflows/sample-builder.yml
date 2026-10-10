@@ -37,8 +37,58 @@ on:
         value: ${{ jobs.build-samples.outputs.version }}
 
 jobs:
+  # The OpenCL kernels are pre-compiled in SPIR-V format once (the format
+  # is platform independent) and the result is served to all the build legs
+  # (which don't need a clang anymore). The bake is done by a dependency-free
+  # standalone project (build-system/spirv): no LuxCoreDeps, no conan, no
+  # 'make deps', only the system g++ and clang.
+  bake-spirv:
+    name: Bake SPIR-V modules
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main repository (standard context)
+        if: ${{ !env.ACT }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+
+      - name: Checkout main repository (act context)
+        if: env.ACT
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        shell: bash
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y g++ clang cmake ninja-build libboost-dev
+
+          # On Ubuntu, the clang SPIR-V target delegates to the external
+          # SPIRV-LLVM-Translator: install the version matching the clang
+          # one and expose it with the name clang looks for
+          CLANG_MAJOR=$(clang --version | grep -oE 'version [0-9]+' | grep -oE '[0-9]+')
+          sudo apt-get install -y "llvm-spirv-${CLANG_MAJOR}"
+          sudo ln -sf "/usr/bin/llvm-spirv-${CLANG_MAJOR}" /usr/local/bin/llvm-spirv
+
+      - name: Bake the SPIR-V modules
+        shell: bash
+        run: |
+          cmake -S build-system/spirv -B bake-build -G Ninja
+          cmake --build bake-build
+
+          # Check that the modules have actually been baked
+          test -f bake-build/baked/spirvmanifest.txt
+
+      - name: Upload the SPIR-V modules
+        uses: actions/upload-artifact@v4
+        with:
+          name: spirv-baked
+          path: bake-build/baked/
+
   build-samples:
     name: Build samples ${{ matrix.os }}
+    needs: [bake-spirv]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -174,6 +224,12 @@ jobs:
         with:
           arch: ${{ runner.arch == 'ARM64' && 'arm64' || 'x64' }}
 
+      - name: Download the pre-baked SPIR-V modules
+        uses: actions/download-artifact@v4
+        with:
+          name: spirv-baked
+          path: spirv-baked
+
       - name: Set MacOS deployment target
         if: runner.os == 'macOS'
         uses: actions/github-script@v7
@@ -203,16 +259,19 @@ jobs:
             # with C++20 (in particular: joining threads)
 
             # llvm
-            brew install llvm@20
-            LLVM_PREFIX=$(brew --prefix llvm@20)
+            # Note: llvm@21 (as in the wheel-builder) because llvm@20
+            # doesn't implement all the C++23 ranges features used by the
+            # code (i.e. std::ranges::views::join_with)
+            brew install llvm@21
+            LLVM_PREFIX=$(brew --prefix llvm@21)
             echo "CC=clang" >> $GITHUB_ENV
             echo "CXX=clang++" >> $GITHUB_ENV
             echo "AR=llvm-ar" >> $GITHUB_ENV
             echo "RANLIB=llvm-ranlib" >> $GITHUB_ENV
 
             # lld
-            brew install lld@20
-            LLD_PREFIX=$(brew --prefix lld@20)
+            brew install lld@21
+            LLD_PREFIX=$(brew --prefix lld@21)
 
             # Set paths
             echo "PATH=${LLVM_PREFIX}/bin:${LLD_PREFIX}/bin:$PATH" >> $GITHUB_ENV
@@ -231,6 +290,9 @@ jobs:
         shell: cmd
         env:
           CONAN_HOME: ${{ github.workspace }}\.conan2
+          # The pre-baked SPIR-V modules for the OpenCL kernels
+          # pre-compilation
+          LUXRAYS_SPIRV_BAKED_DIR: ${{ github.workspace }}\spirv-baked
         run: |
           rem We have to install 'wheel', despite it is useless for samples,
           rem Otherwise 'make deps' will complain
@@ -298,6 +360,10 @@ jobs:
             ccache -o depend_mode=false
             echo "ccache configuration:"
             ccache -p
+
+            # The pre-baked SPIR-V modules for the OpenCL kernels
+            # pre-compilation (the whole workspace is copied to /project)
+            export LUXRAYS_SPIRV_BAKED_DIR=/project/spirv-baked
 
             # Build
             make deps

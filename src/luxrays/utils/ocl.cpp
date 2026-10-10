@@ -193,18 +193,6 @@ std::string oclErrorString(cl_int error) {
 // oclKernelCache
 //------------------------------------------------------------------------------
 
-std::string oclKernelCache::ToOptsString(const std::vector<std::string> &kernelsParameters) {
-	std::string result;
-	
-	for	(auto const &p : kernelsParameters) {
-		if (result.length() != 0)
-			result += " ";
-		result += p;
-	}
-
-	return result;
-}
-
 cl_program oclKernelCache::ForcedCompile(cl_context context, cl_device_id device,
 		const std::vector<std::string> &kernelsParameters, const std::string &kernelSource,
 		std::string *errorStr) {
@@ -320,34 +308,6 @@ oclKernelPersistentCache::oclKernelPersistentCache(const std::string &applicatio
 }
 
 oclKernelPersistentCache::~oclKernelPersistentCache() {
-}
-
-// Bob Jenkins's One-at-a-Time hash
-// From: http://eternallyconfuzzled.com/tuts/algorithms/jsw_tut_hashing.aspx
-
-std::string oclKernelPersistentCache::HashString(const std::string &ss) {
-	const u_int hash = HashBin(ss.c_str(), ss.length());
-
-	char buf[9];
-	sprintf(buf, "%08x", hash);
-
-	return std::string(buf);
-}
-
-u_int oclKernelPersistentCache::HashBin(const char *s, const std::size_t size) {
-	u_int hash = 0;
-
-	for (u_int i = 0; i < size; ++i) {
-		hash += *s++;
-		hash += (hash << 10);
-		hash ^= (hash >> 6);
-	}
-
-	hash += (hash << 3);
-	hash ^= (hash >> 11);
-	hash += (hash << 15);
-
-	return hash;
 }
 
 cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id device,

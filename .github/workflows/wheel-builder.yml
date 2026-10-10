@@ -52,8 +52,60 @@ on:
   push:
 
 jobs:
+  # The OpenCL kernels are pre-compiled in SPIR-V format once (the format
+  # is platform and python independent) and the result is served to all the
+  # build legs (which don't need a clang anymore)
+  bake-spirv:
+    name: Bake SPIR-V modules
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main repository (standard context)
+        if: ${{ !env.ACT }}
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+
+      - name: Checkout main repository (act context)
+        if: env.ACT
+        uses: actions/checkout@v6
+
+      - name: Install build tools
+        shell: bash
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y g++ clang cmake ninja-build libboost-dev
+
+          # On Ubuntu, the clang SPIR-V target delegates to the external
+          # SPIRV-LLVM-Translator: install the version matching the clang
+          # one and expose it with the name clang looks for
+          CLANG_MAJOR=$(clang --version | grep -oE 'version [0-9]+' | grep -oE '[0-9]+')
+          sudo apt-get install -y "llvm-spirv-${CLANG_MAJOR}"
+          sudo ln -sf "/usr/bin/llvm-spirv-${CLANG_MAJOR}" /usr/local/bin/llvm-spirv
+
+      - name: Bake the SPIR-V modules
+        shell: bash
+        run: |
+          # The bake is done by a dependency-free standalone project (see
+          # build-system/spirv): no LuxCoreDeps, no conan, no 'make deps',
+          # only the system g++ and clang. The configure fails with a clear
+          # error if the clang can not compile OpenCL C in SPIR-V format.
+          cmake -S build-system/spirv -B bake-build -G Ninja
+          cmake --build bake-build
+
+          # Check that the modules have actually been baked
+          test -f bake-build/baked/spirvmanifest.txt
+
+      - name: Upload the SPIR-V modules
+        uses: actions/upload-artifact@v5
+        with:
+          name: spirv-baked
+          path: bake-build/baked/
+
   build-wheels:
     name: Build wheel ${{ matrix.os }}-3.${{ matrix.python-minor }}
+    needs: [bake-spirv]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -166,6 +218,12 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: ${{ runner.arch == 'ARM64' && 'arm64' || 'x64' }}
+
+      - name: Download the pre-baked SPIR-V modules
+        uses: actions/download-artifact@v5
+        with:
+          name: spirv-baked
+          path: spirv-baked
 
       - name: Prepare Linux
         if: runner.os == 'Linux'
@@ -293,6 +351,17 @@ jobs:
             GH_TOKEN=${{ secrets.GITHUB_TOKEN }}
             LUX_BUILD_TYPE=${{ env.BUILD_TYPE }}
             DEPS_WITHOUT_SUDO=1
+          # Note: CIBW_ENVIRONMENT_LINUX REPLACES CIBW_ENVIRONMENT (not in
+          # addition to it): it must repeat the whole environment, plus the
+          # pre-baked SPIR-V modules directory (inside the container, the
+          # repository is mounted under /project)
+          CIBW_ENVIRONMENT_LINUX: >
+            SKBUILD_CMAKE_ARGS='--preset conan-default;--log-level=VERBOSE;-DLUXCORE_VERSION=${{ steps.output-version.outputs.version }};-G Ninja Multi-Config'
+            SKBUILD_CMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+            GH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+            LUX_BUILD_TYPE=${{ env.BUILD_TYPE }}
+            DEPS_WITHOUT_SUDO=1
+            LUXRAYS_SPIRV_BAKED_DIR=/project/spirv-baked
           CIBW_ENVIRONMENT_PASS_LINUX: |
             CC
             CXX
@@ -313,6 +382,12 @@ jobs:
             CONAN_PRESET
             M4
           CIBW_BEFORE_ALL_LINUX: |
+            # The container runs as root and doesn't have sudo: don't let
+            # conan use it for the system package manager (it is also set
+            # through CIBW_ENVIRONMENT but the propagation to before_all is
+            # not guaranteed)
+            export DEPS_WITHOUT_SUDO=1
+
             # Install toolchain (gcc, ccache...)
             dnf install -y epel-release
             dnf install -y almalinux-release-devel
@@ -333,9 +408,11 @@ jobs:
             conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
             conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
 
-            # Install gh
+            # Install gh. No 'gh auth login' here: the GH_TOKEN environment
+            # variable (set through CIBW_ENVIRONMENT) already authenticates
+            # gh and 'gh auth login' would refuse to run while it is set,
+            # aborting the script BEFORE 'make deps' runs
             conda install gh --channel conda-forge -y
-            echo ${{ secrets.GITHUB_TOKEN }} | gh auth login --with-token
 
             # Manylinux_2_34 compatibility (for future use)
             if [[ ${{ env.GLIBC_VERSION }} != 2_28 ]]; then
@@ -385,6 +462,11 @@ jobs:
             docker;
             create_args:
               --mount type=bind,source=${{ env.CCACHE_DIR }},target=/root/.ccache
+          # The pre-baked SPIR-V modules for the OpenCL kernels
+          # pre-compilation (only used on Windows: on Linux the variable is
+          # set through CIBW_ENVIRONMENT_LINUX, on macOS the pre-compilation
+          # is disabled)
+          LUXRAYS_SPIRV_BAKED_DIR: ${{ github.workspace }}\spirv-baked
 
         with:
             package-dir: .

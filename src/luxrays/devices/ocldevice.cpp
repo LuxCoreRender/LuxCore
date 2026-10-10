@@ -229,14 +229,10 @@ std::vector<std::string> OpenCLDevice::GetCompleteProgramParameters(
 	const vector<string> &programParameters
 ) const {
 	std::vector<std::string> oclProgramParameters = programParameters;
+	// Note: no LUXRAYS_OS_* related parameter here: it is not used by the
+	// kernel sources and the kernel cache hash (and the pre-compiled SPIR-V
+	// modules) must be platform independent
 	oclProgramParameters.push_back("-D LUXRAYS_OPENCL_DEVICE");
-#if defined (__APPLE__)
-	oclProgramParameters.push_back("-D LUXRAYS_OS_APPLE");
-#elif defined (WIN32)
-	oclProgramParameters.push_back("-D LUXRAYS_OS_WINDOWS");
-#elif defined (__linux__)
-	oclProgramParameters.push_back("-D LUXRAYS_OS_LINUX");
-#endif
 
 	oclProgramParameters.insert(oclProgramParameters.end(),
 			additionalCompileOpts.begin(), additionalCompileOpts.end());

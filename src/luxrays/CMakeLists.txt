@@ -52,51 +52,9 @@ generate_doc(luxrays)
 #
 ################################################################################
 
-set(LUXRAYS_KERNELS
-  ${PROJECT_SOURCE_DIR}/include/luxrays/luxrays_types.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/color/color_types.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/color/color_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/bvh/bvhbuild_types.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/accelerators/bvh.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/accelerators/mbvh.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/accelerators/optixaccel.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/accelerators/optixemptyaccel.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/exttrianglemesh_types.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/exttrianglemesh_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/randomgen_types.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/randomgen_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/trianglemesh_types.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/matrix4x4_types.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/matrix4x4_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/transform_types.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/transform_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/frame_types.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/frame_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/epsilon_types.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/epsilon_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/ray_types.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/ray_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/point_types.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/vector_types.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/vector_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/normal_types.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/quaternion_types.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/quaternion_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/bbox_types.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/bbox_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/motionsystem_types.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/motionsystem_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/triangle_types.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/triangle_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/geometry/uv_types.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/core/utils_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/devices/cudadevice_math.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/devices/cudadevice_oclemul_types.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/devices/cudadevice_oclemul_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/devices/ocldevice_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/utils/atomic_funcs.cl
-  ${PROJECT_SOURCE_DIR}/include/luxrays/utils/mc_funcs.cl
-)
+# The kernel source file list is shared with the SPIR-V bake project
+include("${PROJECT_SOURCE_DIR}/build-system/cmake/KernelFiles.cmake")
+list(TRANSFORM LUXRAYS_KERNELS PREPEND "${PROJECT_SOURCE_DIR}/")
 
 # Make sure some IDE won't try to compile CL by some built-in rule:
 SET_SOURCE_FILES_PROPERTIES(
@@ -181,51 +139,12 @@ file(MAKE_DIRECTORY ${generated_kernels_dir})
 
 PreprocessOCLKernels(${generated_kernels_dir} luxrays ${LUXRAYS_KERNELS})
 
-set(LUXRAYS_SRCS_KERNELS
-  ${generated_kernels_dir}/luxrays_types_kernel.cpp
-  ${generated_kernels_dir}/cudadevice_math_kernel.cpp
-  ${generated_kernels_dir}/cudadevice_oclemul_types_kernel.cpp
-  ${generated_kernels_dir}/cudadevice_oclemul_funcs_kernel.cpp
-  ${generated_kernels_dir}/ocldevice_funcs_kernel.cpp
-  ${generated_kernels_dir}/bvhbuild_types_kernel.cpp
-  ${generated_kernels_dir}/bvh_kernel.cpp
-  ${generated_kernels_dir}/mbvh_kernel.cpp
-  ${generated_kernels_dir}/optixaccel_kernel.cpp
-  ${generated_kernels_dir}/optixemptyaccel_kernel.cpp
-  ${generated_kernels_dir}/randomgen_types_kernel.cpp
-  ${generated_kernels_dir}/randomgen_funcs_kernel.cpp
-  ${generated_kernels_dir}/trianglemesh_types_kernel.cpp
-  ${generated_kernels_dir}/exttrianglemesh_types_kernel.cpp
-  ${generated_kernels_dir}/exttrianglemesh_funcs_kernel.cpp
-  ${generated_kernels_dir}/matrix4x4_types_kernel.cpp
-  ${generated_kernels_dir}/matrix4x4_funcs_kernel.cpp
-  ${generated_kernels_dir}/transform_types_kernel.cpp
-  ${generated_kernels_dir}/transform_funcs_kernel.cpp
-  ${generated_kernels_dir}/frame_types_kernel.cpp
-  ${generated_kernels_dir}/frame_funcs_kernel.cpp
-  ${generated_kernels_dir}/epsilon_types_kernel.cpp
-  ${generated_kernels_dir}/epsilon_funcs_kernel.cpp
-  ${generated_kernels_dir}/ray_types_kernel.cpp
-  ${generated_kernels_dir}/ray_funcs_kernel.cpp
-  ${generated_kernels_dir}/point_types_kernel.cpp
-  ${generated_kernels_dir}/vector_types_kernel.cpp
-  ${generated_kernels_dir}/vector_funcs_kernel.cpp
-  ${generated_kernels_dir}/normal_types_kernel.cpp
-  ${generated_kernels_dir}/quaternion_types_kernel.cpp
-  ${generated_kernels_dir}/quaternion_funcs_kernel.cpp
-  ${generated_kernels_dir}/bbox_types_kernel.cpp
-  ${generated_kernels_dir}/bbox_funcs_kernel.cpp
-  ${generated_kernels_dir}/motionsystem_types_kernel.cpp
-  ${generated_kernels_dir}/motionsystem_funcs_kernel.cpp
-  ${generated_kernels_dir}/triangle_types_kernel.cpp
-  ${generated_kernels_dir}/triangle_funcs_kernel.cpp
-  ${generated_kernels_dir}/color_types_kernel.cpp
-  ${generated_kernels_dir}/color_funcs_kernel.cpp
-  ${generated_kernels_dir}/uv_types_kernel.cpp
-  ${generated_kernels_dir}/mc_funcs_kernel.cpp
-  ${generated_kernels_dir}/utils_funcs_kernel.cpp
-  ${generated_kernels_dir}/atomic_funcs_kernel.cpp
-)
+# The generated kernel sources are derived from the kernel source files list
+set(LUXRAYS_SRCS_KERNELS)
+foreach(luxrays_kernel ${LUXRAYS_KERNELS})
+  get_filename_component(luxrays_kernel_name ${luxrays_kernel} NAME_WE)
+  list(APPEND LUXRAYS_SRCS_KERNELS ${generated_kernels_dir}/${luxrays_kernel_name}_kernel.cpp)
+endforeach()
 
 SOURCE_GROUP(
     "Source Files\\LuxRays Kernels\\Generated"
