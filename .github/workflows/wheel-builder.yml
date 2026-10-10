@@ -350,6 +350,12 @@ jobs:
             CONAN_PRESET
             M4
           CIBW_BEFORE_ALL_LINUX: |
+            # The container runs as root and doesn't have sudo: don't let
+            # conan use it for the system package manager (it is also set
+            # through CIBW_ENVIRONMENT but the propagation to before_all is
+            # not guaranteed)
+            export DEPS_WITHOUT_SUDO=1
+
             # Install toolchain (gcc, ccache...)
             dnf install -y epel-release
             dnf install -y almalinux-release-devel
