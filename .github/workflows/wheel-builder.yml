@@ -427,9 +427,11 @@ jobs:
             conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
             conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
 
-            # Install gh
+            # Install gh. No 'gh auth login' here: the GH_TOKEN environment
+            # variable (set through CIBW_ENVIRONMENT) already authenticates
+            # gh and 'gh auth login' would refuse to run while it is set,
+            # aborting the script BEFORE 'make deps' runs
             conda install gh --channel conda-forge -y
-            echo ${{ secrets.GITHUB_TOKEN }} | gh auth login --with-token
 
             # Manylinux_2_34 compatibility (for future use)
             if [[ ${{ env.GLIBC_VERSION }} != 2_28 ]]; then
