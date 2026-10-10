@@ -52,8 +52,68 @@ on:
   push:
 
 jobs:
+  # The OpenCL kernels are pre-compiled in SPIR-V format once (the format
+  # is platform and python independent) and the result is served to all the
+  # build legs (which don't need a clang anymore)
+  bake-spirv:
+    name: Bake SPIR-V modules
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Checkout main repository (standard context)
+        if: ${{ !env.ACT }}
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+
+      - name: Checkout main repository (act context)
+        if: env.ACT
+        uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.13
+
+      - name: Install clang
+        shell: bash
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y clang
+
+          # Check the exact capability needed by the bake (i.e. the
+          # compilation of OpenCL C in SPIR-V format)
+          echo "__kernel void LuxCoreSPIRVProbe() {}" > /tmp/spirv-probe.cl
+          clang --target=spirv64-unknown-unknown -x cl -c /tmp/spirv-probe.cl -o /tmp/spirv-probe.spv \
+            || (echo "clang can not compile OpenCL C in SPIR-V format" && false)
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          pip install conan wheel
+          echo "$GH_TOKEN" | gh auth login --with-token
+          make deps
+
+      - name: Bake the SPIR-V modules
+        shell: bash
+        run: |
+          cmake --preset conan-default
+          cmake --build out/build --config Release --target spirv-embedded
+
+          # Check that the modules have actually been baked
+          test -f out/build/generated/spirv/baked/spirvmanifest.txt
+
+      - name: Upload the SPIR-V modules
+        uses: actions/upload-artifact@v5
+        with:
+          name: spirv-baked
+          path: out/build/generated/spirv/baked/
+
   build-wheels:
     name: Build wheel ${{ matrix.os }}-3.${{ matrix.python-minor }}
+    needs: [bake-spirv]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -167,34 +227,11 @@ jobs:
         with:
           arch: ${{ runner.arch == 'ARM64' && 'arm64' || 'x64' }}
 
-      - name: Install LLVM (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          # The runner image ships a preinstalled (older) LLVM: choco install
-          # would be a no-op, upgrade is required to get a recent one
-          # (the spirv64 target is available from LLVM 18)
-          choco upgrade llvm -y --no-progress
-          # Note: choco updates the machine PATH but the current shell
-          # doesn't see it, so clang must be invoked by its full path.
-          # GITHUB_PATH makes the runner PREPEND the directory for the
-          # following steps: the clang bundled with Visual Studio (used as
-          # fallback by find_program) is built without the SPIR-V target.
-          $llvmClang = "C:\Program Files\LLVM\bin\clang.exe"
-          & $llvmClang --version
-
-          # Check the exact capability needed by the build (i.e. the
-          # compilation of OpenCL C in SPIR-V format) instead of the
-          # target list
-          Set-Content -Path "$env:TEMP\spirv-probe.cl" -Value "__kernel void LuxCoreSPIRVProbe() {}"
-          & $llvmClang --target=spirv64-unknown-unknown -x cl -c "$env:TEMP\spirv-probe.cl" -o "$env:TEMP\spirv-probe.spv"
-          if ($LASTEXITCODE -ne 0 -or -not (Test-Path "$env:TEMP\spirv-probe.spv")) {
-            # Diagnosis: the available targets
-            & $llvmClang --print-targets
-            Write-Error "clang can not compile OpenCL C in SPIR-V format (see the target list above)"
-            exit 1
-          }
-          Add-Content $env:GITHUB_PATH "C:\Program Files\LLVM\bin"
+      - name: Download the pre-baked SPIR-V modules
+        uses: actions/download-artifact@v5
+        with:
+          name: spirv-baked
+          path: spirv-baked
 
       - name: Prepare Linux
         if: runner.os == 'Linux'
@@ -322,14 +359,10 @@ jobs:
             GH_TOKEN=${{ secrets.GITHUB_TOKEN }}
             LUX_BUILD_TYPE=${{ env.BUILD_TYPE }}
             DEPS_WITHOUT_SUDO=1
-          # Make the conda-installed clang (used for the OpenCL kernels
-          # pre-compilation in SPIR-V format, see CIBW_BEFORE_ALL_LINUX)
-          # available in the build step: the build shell doesn't source the
-          # conan .bashrc set up by conda init. Only the shim directory
-          # (containing clang alone) is prepended to the PATH, not the whole
-          # conda bin directory: its python would shadow the cibuildwheel
-          # one.
-          CIBW_ENVIRONMENT_LINUX: PATH=/project/.clang-bin:$PATH
+          # The pre-baked SPIR-V modules (from the bake-spirv job) are used
+          # for the OpenCL kernels pre-compilation: inside the container,
+          # the repository is mounted under /project
+          CIBW_ENVIRONMENT_LINUX: LUXRAYS_SPIRV_BAKED_DIR=/project/spirv-baked
           CIBW_ENVIRONMENT_PASS_LINUX: |
             CC
             CXX
@@ -380,21 +413,6 @@ jobs:
             conda install gh --channel conda-forge -y
             echo ${{ secrets.GITHUB_TOKEN }} | gh auth login --with-token
 
-            # Install clang (with SPIR-V target support) for the OpenCL
-            # kernels pre-compilation. Check the exact capability needed
-            # by the build (i.e. the compilation of OpenCL C in SPIR-V
-            # format) instead of the target list
-            conda install "conda-forge::clang>=18" -y
-            echo "__kernel void LuxCoreSPIRVProbe() {}" > /tmp/spirv-probe.cl
-            clang --target=spirv64-unknown-unknown -x cl -c /tmp/spirv-probe.cl -o /tmp/spirv-probe.spv \
-              || (echo "clang can not compile OpenCL C in SPIR-V format" && false)
-
-            # Expose clang on the PATH through a shim directory: the whole
-            # conda bin directory can not be used because its python would
-            # shadow the cibuildwheel one
-            mkdir -p /project/.clang-bin
-            ln -sf /project/miniconda3/bin/clang /project/.clang-bin/clang
-
             # Manylinux_2_34 compatibility (for future use)
             if [[ ${{ env.GLIBC_VERSION }} != 2_28 ]]; then
               dnf install -y perl-FindBin perl-lib
@@ -443,6 +461,11 @@ jobs:
             docker;
             create_args:
               --mount type=bind,source=${{ env.CCACHE_DIR }},target=/root/.ccache
+          # The pre-baked SPIR-V modules for the OpenCL kernels
+          # pre-compilation (only used on Windows: on Linux the variable is
+          # set through CIBW_ENVIRONMENT_LINUX, on macOS the pre-compilation
+          # is disabled)
+          LUXRAYS_SPIRV_BAKED_DIR: ${{ github.workspace }}\spirv-baked
 
         with:
             package-dir: .

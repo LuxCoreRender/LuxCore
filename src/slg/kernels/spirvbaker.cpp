@@ -46,14 +46,10 @@ using namespace slg::ocl;
 
 // The same parameters added by OpenCLDevice::CompilePrograms()
 static void AddDeviceParameters(vector<string> &params) {
+	// Note: no LUXRAYS_OS_* related parameter: it is not used by the kernel
+	// sources and the kernel cache hash must be platform independent
+	// (see OpenCLDevice::GetCompleteProgramParameters())
 	params.push_back("-D LUXRAYS_OPENCL_DEVICE");
-#if defined (__APPLE__)
-	params.push_back("-D LUXRAYS_OS_APPLE");
-#elif defined (WIN32)
-	params.push_back("-D LUXRAYS_OS_WINDOWS");
-#elif defined (__linux__)
-	params.push_back("-D LUXRAYS_OS_LINUX");
-#endif
 }
 
 int main(int argc, char *argv[]) {
