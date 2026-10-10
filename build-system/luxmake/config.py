@@ -10,6 +10,7 @@ This command has also been extended to export compile commands for CMake
 
 from .constants import PARAMS
 from .utils import run_cmake, fail, logger
+from .spirv import get_pre_baked_dir
 
 
 def config(
@@ -32,6 +33,17 @@ def config(
         "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
         f"-S {str(PARAMS.SOURCE_DIR)}",
     ]
+
+    # Use the pre-baked SPIR-V modules, if available (see the spirv
+    # command, i.e. 'make spirv'): the main build will not need a clang
+    # able to compile OpenCL C in SPIR-V format
+    if pre_baked_dir := get_pre_baked_dir():
+        cmd.append(f"-DLUXRAYS_SPIRV_BAKED_DIR={pre_baked_dir}")
+        logger.info(
+            "Using the pre-baked SPIR-V modules from '%s'",
+            str(pre_baked_dir.absolute()),
+        )
+
     run_cmake(cmd)
 
     # Info

@@ -14,7 +14,7 @@ LUX-CMAKE = $(PYTHON) -m build-system.luxmake
 
 build-targets = pyluxcore luxcoreui luxcoreconsole luxcore doc
 
-.PHONY: deps list-presets config luxcore pyluxcore luxcoreui luxcoreconsole install clean clear doc wheel-test
+.PHONY: deps list-presets config spirv luxcore pyluxcore luxcoreui luxcoreconsole install clean clear doc wheel-test
 
 all: luxcore pyluxcore luxcoreui luxcoreconsole
 
@@ -26,6 +26,12 @@ list-presets:
 
 config:
 	$(LUX-CMAKE) config
+
+# Bake the OpenCL kernels in SPIR-V format (dependency-free: no 'make deps'
+# needed). The baked modules are automatically used by the next 'make config'
+# (i.e. by all the build targets).
+spirv:
+	$(LUX-CMAKE) spirv
 
 $(build-targets): %: config
 	$(LUX-CMAKE) build-and-install $*
