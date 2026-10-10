@@ -313,8 +313,11 @@ jobs:
           # Make the conda-installed clang (used for the OpenCL kernels
           # pre-compilation in SPIR-V format, see CIBW_BEFORE_ALL_LINUX)
           # available in the build step: the build shell doesn't source the
-          # conan .bashrc set up by conda init
-          CIBW_ENVIRONMENT_LINUX: PATH=/project/miniconda3/bin:$PATH
+          # conan .bashrc set up by conda init. Only the shim directory
+          # (containing clang alone) is prepended to the PATH, not the whole
+          # conda bin directory: its python would shadow the cibuildwheel
+          # one.
+          CIBW_ENVIRONMENT_LINUX: PATH=/project/.clang-bin:$PATH
           CIBW_ENVIRONMENT_PASS_LINUX: |
             CC
             CXX
@@ -364,6 +367,12 @@ jobs:
             conda install "conda-forge::clang>=18" -y
             clang --print-targets | grep -q spirv64 \
               || (echo "clang lacks the spirv64 target" && false)
+
+            # Expose clang on the PATH through a shim directory: the whole
+            # conda bin directory can not be used because its python would
+            # shadow the cibuildwheel one
+            mkdir -p /project/.clang-bin
+            ln -sf /project/miniconda3/bin/clang /project/.clang-bin/clang
 
             # Manylinux_2_34 compatibility (for future use)
             if [[ ${{ env.GLIBC_VERSION }} != 2_28 ]]; then
