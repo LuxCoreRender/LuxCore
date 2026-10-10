@@ -138,5 +138,9 @@ const unsigned char *GetEmbeddedSPIRVModule(const std::string &hash, std::size_t
 	return reinterpret_cast<const unsigned char *>(module->data());
 }
 
+bool HasEmbeddedSPIRVModules() {
+	return !GetRegistry().empty();
+}
+
 }
 ]])
