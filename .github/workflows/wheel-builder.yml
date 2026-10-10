@@ -108,11 +108,10 @@ jobs:
           # installed) and cmake is installed through pip (it may be
           # missing, depending on the runner environment)
           pip install "conan==2.21" cmake ninja wheel
-          # 'gh' is used only for the dependencies attestation check and is
-          # optional (a warning is printed if it is not available)
-          if command -v gh > /dev/null; then
-            echo "$GH_TOKEN" | gh auth login --with-token
-          fi
+          # Note: 'gh' (used for the dependencies attestation check)
+          # authenticates through the GH_TOKEN environment variable: no
+          # gh auth login is needed (and gh auth login would fail while
+          # GH_TOKEN is set)
           make deps
 
       - name: Bake the SPIR-V modules
