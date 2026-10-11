@@ -71,28 +71,20 @@ target_include_directories(spirv-baker PRIVATE
   "${SOURCE_ROOT}/include"
   "${CMAKE_BINARY_DIR}/generated/include")
 
-# Check the compiler used to bake the modules
-find_program(CLANG_EXECUTABLE NAMES clang clang-20 clang-19 clang-18 clang-17)
-if(NOT CLANG_EXECUTABLE)
-  message(FATAL_ERROR "clang not found: it is required to bake the OpenCL kernels in SPIR-V format")
-endif()
+# Check the compiler chain used to bake the modules: the direct clang SPIR-V
+# back-end, or - when not available (e.g. the official Windows builds don't
+# include it) - any clang plus the llvm-spirv tool (SPIRV-LLVM-Translator)
+include("${CMAKE_CURRENT_SOURCE_DIR}/../cmake/SPIRVCompiler.cmake")
+find_spirv_compiler()
 
-# Check if the clang can compile OpenCL C in SPIR-V format (the target
-# list given by --print-targets is not reliable across builds)
-set(spirv_probe_cl "${CMAKE_BINARY_DIR}/spirv-probe.cl")
-set(spirv_probe_spv "${CMAKE_BINARY_DIR}/spirv-probe.spv")
-file(WRITE ${spirv_probe_cl} "__kernel void LuxCoreSPIRVProbe() {}\n")
-execute_process(
-  COMMAND ${CLANG_EXECUTABLE} --target=spirv64-unknown-unknown -x cl
-  -c ${spirv_probe_cl} -o ${spirv_probe_spv}
-  RESULT_VARIABLE CLANG_SPIRV_PROBE_RESULT
-  OUTPUT_QUIET ERROR_QUIET
-)
-file(REMOVE ${spirv_probe_cl})
-if(NOT CLANG_SPIRV_PROBE_RESULT EQUAL 0)
-  message(FATAL_ERROR "${CLANG_EXECUTABLE} can not compile OpenCL C in SPIR-V format (is the SPIRV-LLVM-Translator, i.e. the llvm-spirv package, installed?)")
+if(SPIRV_COMPILE_MODE STREQUAL "none")
+  if(NOT CLANG_EXECUTABLE)
+    message(FATAL_ERROR "clang not found: it is required to bake the OpenCL kernels in SPIR-V format")
+  else()
+    message(FATAL_ERROR "No way to compile OpenCL C in SPIR-V format: neither a clang including the SPIR-V back-end nor a clang + llvm-spirv (SPIRV-LLVM-Translator) chain is available. Note: the official Windows clang builds don't include the SPIR-V back-end, but the llvm-spirv tool is available for Windows (e.g. in the Intel oneAPI packages).")
+  endif()
 endif()
-file(REMOVE ${spirv_probe_spv})
+message(STATUS "Baking the OpenCL kernels in SPIR-V format with ${CLANG_EXECUTABLE} (${SPIRV_COMPILE_MODE} mode)")
 
 # Bake the kernel sources and parameters for each variant
 set(baked_dir "${CMAKE_BINARY_DIR}/baked")
@@ -123,9 +115,11 @@ foreach(spirv_variant ${SPIRV_VARIANTS})
     OUTPUT ${spirv_spv_file}
     COMMAND ${CMAKE_COMMAND}
       -DCLANG_EXECUTABLE=${CLANG_EXECUTABLE}
+      -DSPIRV_COMPILE_MODE=${SPIRV_COMPILE_MODE}
       -DSRC=${baked_dir}/${spirv_variant}.cl
       -DPARAMS=${baked_dir}/${spirv_variant}.params
       -DDST=${spirv_spv_file}
+      -DLLVM_SPIRV_EXECUTABLE=${LLVM_SPIRV_EXECUTABLE}
       -P "${SOURCE_ROOT}/build-system/cmake/Scripts/CompileSPIRV.cmake"
     DEPENDS
       ${baked_dir}/${spirv_variant}.cl

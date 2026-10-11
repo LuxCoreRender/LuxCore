@@ -488,31 +488,18 @@ if(LUXRAYS_PRECOMPILE_SPIRV AND NOT LUXRAYS_DISABLE_OPENCL AND NOT CMAKE_CROSSCO
     message(STATUS "Using the pre-baked OpenCL kernels in SPIR-V format from ${spirv_baked_dir}")
   else()
     #--------------------------------------------------------------------
-    # Bake the modules with the host clang
+    # Bake the modules with the host clang: the direct clang SPIR-V
+    # back-end, or - when not available (e.g. the official Windows builds
+    # don't include it) - any clang plus the llvm-spirv tool
+    # (SPIRV-LLVM-Translator)
     #--------------------------------------------------------------------
-    find_program(CLANG_EXECUTABLE NAMES clang clang-20 clang-19 clang-18 clang-17)
+    include("${PROJECT_SOURCE_DIR}/build-system/cmake/SPIRVCompiler.cmake")
+    find_spirv_compiler()
 
-    if(NOT CLANG_EXECUTABLE)
-      message(STATUS "clang not found: OpenCL kernels pre-compilation disabled")
+    if(SPIRV_COMPILE_MODE STREQUAL "none")
+      message(STATUS "No way to compile OpenCL C in SPIR-V format (neither a clang including the SPIR-V back-end nor a clang + llvm-spirv chain): OpenCL kernels pre-compilation disabled")
     else()
-      # Check if the clang can compile OpenCL C in SPIR-V format (the target
-      # list given by --print-targets is not reliable across builds)
-      set(spirv_probe_cl "${CMAKE_BINARY_DIR}/spirv-probe.cl")
-      set(spirv_probe_spv "${CMAKE_BINARY_DIR}/spirv-probe.spv")
-      file(WRITE ${spirv_probe_cl} "__kernel void LuxCoreSPIRVProbe() {}\n")
-      execute_process(
-        COMMAND ${CLANG_EXECUTABLE} --target=spirv64-unknown-unknown -x cl
-        -c ${spirv_probe_cl} -o ${spirv_probe_spv}
-        RESULT_VARIABLE CLANG_SPIRV_PROBE_RESULT
-        OUTPUT_QUIET ERROR_QUIET
-      )
-      file(REMOVE ${spirv_probe_cl})
-
-      if(NOT CLANG_SPIRV_PROBE_RESULT EQUAL 0)
-        message(STATUS "${CLANG_EXECUTABLE} can not compile OpenCL C in SPIR-V format: OpenCL kernels pre-compilation disabled")
-      else()
-        file(REMOVE ${spirv_probe_spv})
-        message(STATUS "Pre-compiling the OpenCL kernels in SPIR-V format with ${CLANG_EXECUTABLE}")
+      message(STATUS "Pre-compiling the OpenCL kernels in SPIR-V format with ${CLANG_EXECUTABLE} (${SPIRV_COMPILE_MODE} mode)")
 
         # The tool used to write the kernel sources and parameters. The stub of
         # the embedded SPIR-V registry is included as a source because
@@ -565,9 +552,11 @@ if(LUXRAYS_PRECOMPILE_SPIRV AND NOT LUXRAYS_DISABLE_OPENCL AND NOT CMAKE_CROSSCO
             OUTPUT ${spirv_spv_file}
             COMMAND ${CMAKE_COMMAND}
               -DCLANG_EXECUTABLE=${CLANG_EXECUTABLE}
+              -DSPIRV_COMPILE_MODE=${SPIRV_COMPILE_MODE}
               -DSRC=${spirv_baked_dir}/${spirv_variant}.cl
               -DPARAMS=${spirv_baked_dir}/${spirv_variant}.params
               -DDST=${spirv_spv_file}
+              -DLLVM_SPIRV_EXECUTABLE=${LLVM_SPIRV_EXECUTABLE}
               -P "${PROJECT_SOURCE_DIR}/build-system/cmake/Scripts/CompileSPIRV.cmake"
             DEPENDS
               ${spirv_baked_dir}/${spirv_variant}.cl
@@ -575,7 +564,6 @@ if(LUXRAYS_PRECOMPILE_SPIRV AND NOT LUXRAYS_DISABLE_OPENCL AND NOT CMAKE_CROSSCO
             COMMENT "Compiling ${spirv_variant} in SPIR-V format"
           )
         endforeach()
-      endif()
     endif()
   endif()
 

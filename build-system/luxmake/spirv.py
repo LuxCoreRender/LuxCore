@@ -6,8 +6,10 @@
 
 Bake the OpenCL kernels in SPIR-V format, using the dependency-free
 standalone project (build-system/spirv): no LuxCoreDeps, no conan, no
-'make deps' needed, only the system g++ and a clang able to compile
-OpenCL C in SPIR-V format.
+'make deps' needed, only the system C++ compiler and a way to compile
+OpenCL C in SPIR-V format (a clang including the SPIR-V back-end, or - on
+platforms whose clang builds lack it, e.g. Windows - any clang plus the
+llvm-spirv tool, i.e. the SPIRV-LLVM-Translator).
 
 The baked modules are used by the main build (see the config command and
 the LUXRAYS_SPIRV_BAKED_DIR CMake variable): the SPIR-V format being
