@@ -58,6 +58,7 @@ def clear(
         "build",
         "dependencies",
         "install",
+        "spirv-build",
     ):
         if not PARAMS.BINARY_DIR:
             raise RuntimeError("Invalid binary directory")

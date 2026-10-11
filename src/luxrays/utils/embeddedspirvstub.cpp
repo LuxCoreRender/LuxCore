@@ -29,4 +29,8 @@ const unsigned char *GetEmbeddedSPIRVModule(const std::string &hash, std::size_t
 	return nullptr;
 }
 
+bool HasEmbeddedSPIRVModules() {
+	return false;
+}
+
 }

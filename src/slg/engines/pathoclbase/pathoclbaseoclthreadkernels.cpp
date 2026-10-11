@@ -34,6 +34,7 @@
 #include "slg/slg.h"
 #include "slg/kernels/kernels.h"
 #include "slg/kernels/kernelsources.h"
+#include "luxrays/utils/embeddedspirv.h"
 #include "slg/renderconfig.h"
 #include "slg/engines/pathoclbase/pathoclbase.h"
 #include "slg/samplers/sobol.h"
@@ -175,6 +176,20 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	const bool splitKernels = !isCUDADevice && !hasEmbeddedSPIRV &&
 			renderEngine->renderConfig.GetConfig().Get(
 				Property("opencl.splitkernels.enable")(true)).Get<bool>();
+
+	// SPIR-V modules are embedded in the binaries but none of them matches
+	// these kernels: don't fall back silently to the source compilation.
+	// Note: not a warning for CUDA devices, which use their own compilation
+	// path and are not covered by the SPIR-V pre-compilation.
+	if (!isCUDADevice && !hasEmbeddedSPIRV && luxrays::HasEmbeddedSPIRVModules()) {
+		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] WARNING: the embedded "
+			"pre-compiled SPIR-V modules don't match these kernels: they are probably "
+			"stale (i.e. the kernel sources have been modified after the bake) or the "
+			"kernel parameters differ (e.g. non-default scene.epsilon.* properties) "
+			"or the device doesn't support the SPIR-V ingestion. The kernels will be "
+			"compiled from source. (Re-build the modules, e.g. with 'make spirv' "
+			"followed by 'make <target>'.)");
+	}
 
 	std::vector<HardwareDevice::ProgramRequest> requests;
 	std::unordered_map<std::string, std::size_t> microKernelIndex;

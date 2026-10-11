@@ -45,12 +45,19 @@ using namespace luxrays;
 using namespace slg;
 using namespace slg::ocl;
 
-// The same parameters added by OpenCLDevice::CompilePrograms()
+// The same parameters added by OpenCLDevice::GetCompleteProgramParameters()
 static void AddDeviceParameters(vector<string> &params) {
 	// Note: no LUXRAYS_OS_* related parameter: it is not used by the kernel
 	// sources and the kernel cache hash must be platform independent
 	// (see OpenCLDevice::GetCompleteProgramParameters())
 	params.push_back("-D LUXRAYS_OPENCL_DEVICE");
+
+	// The same options set by PathOCLBaseRenderEngine::Start() (and the film
+	// plugins) on the OpenCL devices (see HardwareDevice::SetAdditionalCompileOpts):
+	// they are part of the kernel hash and they change the generated code, so
+	// the SPIR-V modules must be compiled with them too
+	params.push_back("-cl-fast-relaxed-math");
+	params.push_back("-cl-mad-enable");
 }
 
 int main(int argc, char *argv[]) {

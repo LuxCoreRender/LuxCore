@@ -139,6 +139,11 @@ public:
 		return OCLKernelHashBin(s, size);
 	}
 
+	// Check if a device supports the ingestion of SPIR-V modules (i.e. the
+	// cl_khr_il_program extension and the clCreateProgramWithIL entry point).
+	// The platform of the device is returned through 'platform' if not null.
+	static bool SupportsSPIRVIngestion(cl_device_id device, cl_platform_id *platform = nullptr);
+
 	static std::filesystem::path GetCacheDir(const std::string &applicationName);
 
 	std::string GetApplicationName() {

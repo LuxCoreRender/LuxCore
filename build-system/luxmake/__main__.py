@@ -16,6 +16,7 @@ from .config import config
 from .build import build_and_install, install
 from .wheel import make_wheel
 from .clear import clean, clear
+from .spirv import spirv
 from .windows import win_recompose
 
 
@@ -64,6 +65,10 @@ def main():
     parser_wheel = subparsers.add_parser("win-recompose")
     parser_wheel.add_argument("wheel")
     parser_wheel.set_defaults(func=win_recompose)
+
+    # Spirv
+    parser_spirv = subparsers.add_parser("spirv")
+    parser_spirv.set_defaults(func=spirv)
 
     # Clear
     parser_clear = subparsers.add_parser("clear")

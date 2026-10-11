@@ -36,6 +36,12 @@ namespace luxrays {
 // by a stub.
 const unsigned char *GetEmbeddedSPIRVModule(const std::string &hash, std::size_t *size);
 
+// Return true if pre-compiled SPIR-V modules are embedded in the binaries
+// (i.e. if the SPIR-V pre-compilation was enabled at build time). Used to
+// warn when a kernel that could have used them falls back to the source
+// compilation.
+bool HasEmbeddedSPIRVModules();
+
 }
 
 #endif
