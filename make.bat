@@ -44,6 +44,8 @@ if "%COMMAND%" == "" (
     call :BuildAndInstall doc
 ) else if "%COMMAND%" == "config" (
     call :Config
+) else if "%COMMAND%" == "spirv" (
+    call :Spirv
 ) else if "%COMMAND%" == "package" (
     call :BuildAndInstall package
 ) else if "%COMMAND%" == "install" (
@@ -79,6 +81,12 @@ goto :EOF
 
 :Config
 call %LUXMAKE% config
+goto :EOF
+
+:Spirv
+REM Bake the OpenCL kernels in SPIR-V format (dependency-free: no 'make deps'
+REM needed). The baked modules are automatically used by the next 'make config'
+call %LUXMAKE% spirv
 goto :EOF
 
 :BuildAndInstall
