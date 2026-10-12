@@ -11,7 +11,7 @@
 #   available, even in the official Windows builds, which don't include the
 #   SPIR-V back-end) and the SPIRV-LLVM-Translator (i.e. the llvm-spirv tool)
 #   translates it to SPIR-V. On Windows, the llvm-spirv tool is shipped,
-#   among others, in the Intel oneAPI packages.
+#   among others, in the MSYS2 or Intel oneAPI packages.
 #
 # The mode actually working is verified with a compile probe: the target list
 # given by 'clang --print-targets' is not reliable across builds.

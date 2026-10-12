@@ -14,6 +14,10 @@ llvm-spirv tool, i.e. the SPIRV-LLVM-Translator).
 The baked modules are used by the main build (see the config command and
 the LUXRAYS_SPIRV_BAKED_DIR CMake variable): the SPIR-V format being
 platform independent, they are embedded in the binaries as they are.
+
+See docs/SPIRV_PRECOMPILATION.md for a complete how-to (in particular
+under Windows, where the clang builds lack the SPIR-V back-end and the
+llvm-spirv tool - shipped e.g. by MSYS2 or Intel oneAPI - is needed).
 """
 
 from .constants import PARAMS
