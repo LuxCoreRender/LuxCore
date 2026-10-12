@@ -182,13 +182,42 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	// Note: not a warning for CUDA devices, which use their own compilation
 	// path and are not covered by the SPIR-V pre-compilation.
 	if (!isCUDADevice && !hasEmbeddedSPIRV && luxrays::HasEmbeddedSPIRVModules()) {
-		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] WARNING: the embedded "
-			"pre-compiled SPIR-V modules don't match these kernels: they are probably "
-			"stale (i.e. the kernel sources have been modified after the bake) or the "
-			"kernel parameters differ (e.g. non-default scene.epsilon.* properties) "
-			"or the device doesn't support the SPIR-V ingestion. The kernels will be "
-			"compiled from source. (Re-build the modules, e.g. with 'make spirv' "
-			"followed by 'make <target>'.)");
+		// Note: the message is sent through the LuxRays handler (and not
+		// with SLG_LOG) because the SLG sub-system log is disabled during a
+		// luxcore::KernelCacheFill() call (see KernelCacheFillMode), while
+		// the LuxRays one is left enabled exactly because it carries the
+		// kernel compilation messages.
+		if (slg::LuxRays_DebugHandler) {
+			// Distinguish the case of a device without SPIR-V ingestion
+			// support (a driver limitation, there is nothing to re-build)
+			// from the case of embedded modules not matching these kernels
+			bool supportsIngestion = false;
+			try {
+				const auto& oclDeviceDesc =
+					dynamic_cast<OpenCLDeviceDescriptionConstRef>(intersectionDevice.GetDeviceDesc());
+				supportsIngestion = oclKernelPersistentCache::SupportsSPIRVIngestion(
+					oclDeviceDesc.GetOCLDevice());
+			}
+			catch (std::bad_cast&) {}
+
+			std::stringstream warningSS;
+			warningSS << "[PathOCLBaseRenderThread::" << threadIndex << "] ";
+			if (supportsIngestion) {
+				warningSS << "WARNING: the embedded "
+					"pre-compiled SPIR-V modules don't match these kernels: they are probably "
+					"stale (i.e. the kernel sources have been modified after the bake) or the "
+					"kernel parameters differ (e.g. non-default scene.epsilon.* properties). "
+					"The kernels will be compiled from source. (Re-build the modules, e.g. "
+					"with 'make spirv' followed by 'make <target>'.)";
+			} else {
+				warningSS << "The device doesn't support the ingestion of SPIR-V modules "
+					"(the cl_khr_il_program OpenCL extension is missing, e.g. the NVIDIA "
+					"and the AMD Windows OpenCL drivers): the embedded pre-compiled "
+					"SPIR-V modules can not be used and the kernels will be compiled "
+					"from source. (Expected: nothing to re-build.)";
+			}
+			slg::LuxRays_DebugHandler(warningSS.str().c_str());
+		}
 	}
 
 	std::vector<HardwareDevice::ProgramRequest> requests;
