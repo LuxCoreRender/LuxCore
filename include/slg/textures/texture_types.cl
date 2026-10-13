@@ -496,8 +496,10 @@ typedef struct {
 	unsigned int evalSpectrumOpStartIndex, evalSpectrumOpLength;
 	unsigned int evalBumpOpStartIndex, evalBumpOpLength;
 
-	union {
-		BlenderBlendTexParam blenderBlend;
+	// Note: this is not a union (anymore) because the unions in buffer
+	// layouts are not supported by all the OpenCL compilers (e.g. clspv,
+	// used to run the kernels over Vulkan, doesn't)
+	BlenderBlendTexParam blenderBlend;
  		BlenderCloudsTexParam blenderClouds;
 		BlenderDistortedNoiseTexParam blenderDistortedNoise;
 		BlenderMagicTexParam blenderMagic;
@@ -559,7 +561,6 @@ typedef struct {
 		WireFrameTexParam wireFrameTex;
 		DistortTexParam distortTex;
 		BombingTexParam bombingTex;
-	};
 } Texture;
 
 //------------------------------------------------------------------------------

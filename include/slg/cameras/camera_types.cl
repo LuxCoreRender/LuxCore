@@ -104,11 +104,12 @@ typedef struct {
 
 	CameraBase base;
 
-	union {
-		PerspectiveCamera persp;
-		OrthographicCamera ortho;
-		StereoCamera stereo;
-		EnvironmentCamera env;
-	};
+	// Note: this is not a union (anymore) because the unions in buffer
+	// layouts are not supported by all the OpenCL compilers (e.g. clspv,
+	// used to run the kernels over Vulkan, doesn't)
+	PerspectiveCamera persp;
+	OrthographicCamera ortho;
+	StereoCamera stereo;
+	EnvironmentCamera env;
 } Camera;
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4
