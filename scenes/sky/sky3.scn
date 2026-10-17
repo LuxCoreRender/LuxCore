@@ -12,24 +12,40 @@ scene.objects.Matte.ply = scenes/sky/Matte.ply
 scene.objects.Mirror.material = Mirror
 scene.objects.Mirror.ply = scenes/sky/Mirror.ply
 ################################################################################
-# Prague Sky Model (Wilkie 2021) based sky. Compared to sky2.scn, the direct
-# sun disc is part of the sky light, so there is no separate sun light source.
-scene.lights.skylight.type = sky3
-scene.lights.skylight.dir = 0.166974 -0.59908 0.783085
+# Test of the Prague Sky Model (Wilkie 2021) based sun3 light source alone
+# (the sky3 light below is disabled). The background is black because there
+# is no environment light: only the direct sun illumination is rendered.
+scene.lights.sunlight3.type = sun3
+scene.lights.sunlight3.dir = 0.166974 -0.59908 0.783085
 # Full dataset of the Prague Sky Model (2.2 GB), downloaded from
 # https://github.com/PetrVevoda/pragueskymodel ("Full version")
-# Adjust the path if the file is not next to this scene.
-scene.lights.skylight.dataset = scenes/sky/SkyModelDataset.dat
+scene.lights.sunlight3.dataset = scenes/sky/SkyModelDataset.dat
 # Horizontal visibility in km ([20, 131.8] for the full dataset)
-scene.lights.skylight.visibility = 59.4
+scene.lights.sunlight3.visibility = 59.4
 # Observer altitude in m ([0, 15000] for the full dataset)
-scene.lights.skylight.altitude = 0.0
-scene.lights.skylight.groundalbedo = 0.0
-scene.lights.skylight.gain = 1 1 1
-scene.lights.skylight.ground.enable = 1
-scene.lights.skylight.ground.color = 0.45 0.35 0.3
-#scene.lights.skylight.ground.color = 0.45 0.0 0.0
-# Resolution of the baked radiance map used by OpenCL/CUDA rendering
-#scene.lights.skylight.envmap.width = 2048
-#scene.lights.skylight.envmap.height = 1024
-#scene.lights.skylight.visibilitymapcache.enable = 1
+scene.lights.sunlight3.altitude = 0.0
+scene.lights.sunlight3.groundalbedo = 0.0
+scene.lights.sunlight3.gain = 1 1 1
+# 1.0 is the angular size of the real sun disc; use a larger value to make
+# the disc easier to see in a quick test
+scene.lights.sunlight3.relsize = 1.0
+#scene.lights.sunlight3.relsize = 32.0
+
+################################################################################
+# Prague Sky Model (Wilkie 2021) based sky (with the direct sun disc included)
+#
+#scene.lights.skylight.type = sky3
+#scene.lights.skylight.dir = 0.166974 -0.59908 0.783085
+#scene.lights.skylight.dataset = /home/jojo/Downloads/SkyModelDataset.dat
+## Horizontal visibility in km ([20, 131.8] for the full dataset)
+#scene.lights.skylight.visibility = 59.4
+## Observer altitude in m ([0, 15000] for the full dataset)
+#scene.lights.skylight.altitude = 0.0
+#scene.lights.skylight.groundalbedo = 0.0
+#scene.lights.skylight.gain = 1 1 1
+#scene.lights.skylight.ground.enable = 1
+#scene.lights.skylight.ground.color = 0.45 0.35 0.3
+## Resolution of the baked radiance map used by OpenCL/CUDA rendering
+##scene.lights.skylight.envmap.width = 2048
+##scene.lights.skylight.envmap.height = 1024
+##scene.lights.skylight.visibilitymapcache.enable = 1

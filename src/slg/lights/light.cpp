@@ -60,6 +60,7 @@ string LightSource::LightSourceType2String(const LightSourceType type) {
 		case TYPE_DISTANT: return "DISTANT";
 		case TYPE_IL_SKY2: return "SKY2";
 		case TYPE_IL_SKY3: return "SKY3";
+		case TYPE_SUN3: return "SUN3";
 		case TYPE_LASER: return "LASER";
 		case TYPE_SPHERE: return "SPHERE";
 		case TYPE_MAPSPHERE: return "MAPSPHERE";

@@ -17,11 +17,11 @@
  ***************************************************************************/
 
 #ifndef _SLG_SKY3LIGHT_H
-#define	 SLG_SKY3LIGHT_H
+#define	 _SLG_SKY3LIGHT_H
 
 #include "slg/lights/light.h"
 #include "slg/lights/visibility/envlightvisibilitycache.h"
-#include "slg/lights/data/pragueskymodel/PragueSkyModel.h"
+#include "slg/lights/pragueskyutils.h"
 
 namespace slg {
 
@@ -107,7 +107,8 @@ private:
 	luxrays::Spectrum ComputeSkyRadiance(const luxrays::Vector &w) const;
 	luxrays::Spectrum ComputeRadiance(const luxrays::Vector &w) const;
 
-	std::unique_ptr<PragueSkyModel> model;
+	// Shared dataset (see GetPragueSkyModel())
+	std::shared_ptr<PragueSkyModel> model;
 
 	// Sun angles in the light local frame (as expected by the model)
 	double localSunElevation, localSunAzimuth;
