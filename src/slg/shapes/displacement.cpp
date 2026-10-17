@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <boost/format.hpp>
+#include <oneapi/tbb.h>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/displacement.h"
@@ -83,13 +84,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 	const u_int tangentIndex = params.mapChannels[1];
 	const u_int normalIndex = params.mapChannels[2];
 
-	#pragma omp parallel for
-	for (
-			// Visual C++ 2013 supports only OpenMP 2.5
-#if _OPENMP >= 200805
-			unsigned
-#endif
-			int i = 0; i < vertCount; ++i) {
+	tbb::parallel_for(0u, vertCount, [&](u_int i) {
 		HitPoint hitPoint;
 		
 		hitPoint.fixedDir = Vector(0.f, 0.f, 1.f);
@@ -155,7 +150,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 		}
 
 		newVertices[i] = vertices[i] + disp;
-	}
+	});
 
 	// Make a copy of the original mesh and overwrite vertex information
 	mesh = srcMesh.Copy(
