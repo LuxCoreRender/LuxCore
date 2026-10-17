@@ -220,6 +220,8 @@ set(SLG_CORE_SRCS
   ${PROJECT_SOURCE_DIR}/src/slg/lights/sharpdistantlight.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/lights/sky2light.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/lights/sky3light.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/lights/sun3light.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/lights/pragueskyutils.cpp
   ${PROJECT_SOURCE_DIR}/include/slg/lights/data/pragueskymodel/PragueSkyModel.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/lights/spherelight.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/lights/spotlight.cpp
