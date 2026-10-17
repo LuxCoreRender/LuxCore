@@ -1092,6 +1092,11 @@ OPENCL_FORCE_NOT_INLINE float3 EnvLight_GetRadiance(__global const LightSource *
 			return SunLight_GetRadiance(light,
 					bsdf,
 					dir, directPdfA);
+		case TYPE_SUN3:
+			// SunLight3 uses the same SunLightParam layout
+			return SunLight_GetRadiance(light,
+					bsdf,
+					dir, directPdfA);
 		case TYPE_SHARPDISTANT:
 			// Just return Black
 		case TYPE_DISTANT:
@@ -1151,6 +1156,13 @@ OPENCL_FORCE_INLINE float3 Light_Illuminate(
 					shadowRay, directPdfW
 					LIGHTS_PARAM);
 		case TYPE_SUN:
+			return SunLight_Illuminate(
+					light,
+					worldCenterX, worldCenterY, worldCenterZ, envRadius,
+					bsdf, time, u0, u1,
+					shadowRay, directPdfW);
+		case TYPE_SUN3:
+			// SunLight3 uses the same SunLightParam layout
 			return SunLight_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
@@ -1226,6 +1238,7 @@ OPENCL_FORCE_INLINE bool Light_IsEnvOrIntersectable(__global const LightSource *
 		case TYPE_IL_SKY2:
 		case TYPE_IL_SKY3:
 		case TYPE_SUN:
+		case TYPE_SUN3:
 		case TYPE_TRIANGLE:
 			return true;
 		case TYPE_SPHERE:

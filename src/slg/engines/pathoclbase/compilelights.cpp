@@ -39,6 +39,7 @@
 #include "slg/lights/sharpdistantlight.h"
 #include "slg/lights/sky2light.h"
 #include "slg/lights/sky3light.h"
+#include "slg/lights/sun3light.h"
 #include "slg/lights/spotlight.h"
 #include "slg/lights/sunlight.h"
 #include "slg/lights/trianglelight.h"
@@ -532,6 +533,31 @@ void CompiledScene::CompileLights() {
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.sun.color, sl.color);
 				oclLight->notIntersectable.sun.turbidity = sl.turbidity;
 				oclLight->notIntersectable.sun.relSize= sl.relSize;
+				break;
+			}
+			case TYPE_SUN3: {
+				auto& sl = static_cast<const SunLight3&>(l);
+
+				// LightSource data
+				oclLight->type = slg::ocl::TYPE_SUN3;
+
+				// NotIntersectableLightSource data
+				memcpy(&oclLight->notIntersectable.light2World.m, &sl.lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersectable.light2World.mInv, &sl.lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sl.gain);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, sl.GetTemperatureScale());
+
+				// SunLight3 data (the same SunLightParam layout is used by the
+				// OpenCL/CUDA kernels)
+				sl.GetPreprocessedData(
+						&oclLight->notIntersectable.sun.absoluteDir.x,
+						&oclLight->notIntersectable.sun.x.x,
+						&oclLight->notIntersectable.sun.y.x,
+						&oclLight->notIntersectable.sun.cosThetaMax,
+						&oclLight->notIntersectable.sun.sin2ThetaMax);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.sun.color, sl.color);
+				oclLight->notIntersectable.sun.turbidity = 0.f;
+				oclLight->notIntersectable.sun.relSize = sl.relSize;
 				break;
 			}
 			case TYPE_POINT: {
