@@ -269,10 +269,20 @@ LightSourceUPtr Scene::CreateLightSource(const string &name, const luxrays::Prop
 
 		auto sl = std::make_unique<SkyLight3>();
 		sl->lightToWorld = light2World;
-		sl->datasetFile = props.Get(Property(propName + ".dataset")("SkyModelDataset.dat")).Get<string>();
-		sl->visibility = Max(1.0, props.Get(Property(propName + ".visibility")(59.4)).Get<double>());
-		sl->altitude = Max(0.0, props.Get(Property(propName + ".altitude")(0.0)).Get<double>());
-		sl->groundAlbedo = Clamp(props.Get(Property(propName + ".groundalbedo")(0.0)).Get<double>(), 0.0, 1.0);
+		// When not defined per light source, the Prague Sky Model parameters
+		// fall back to the scene level ones (i.e. scene.pragueskymodel.*)
+		sl->datasetFile = props.Get(
+			std::move(Property(propName + ".dataset")("SkyModelDataset.dat")),
+			"scene.pragueskymodel.dataset")->Get<string>();
+		sl->visibility = Max(1.0, props.Get(
+			std::move(Property(propName + ".visibility")(59.4)),
+			"scene.pragueskymodel.visibility")->Get<double>());
+		sl->altitude = Max(0.0, props.Get(
+			std::move(Property(propName + ".altitude")(0.0)),
+			"scene.pragueskymodel.altitude")->Get<double>());
+		sl->groundAlbedo = Clamp(props.Get(
+			std::move(Property(propName + ".groundalbedo")(0.0)),
+			"scene.pragueskymodel.groundalbedo")->Get<double>(), 0.0, 1.0);
 		sl->hasGround = props.Get(Property(propName + ".ground.enable")(false)).Get<bool>();
 		sl->hasGroundAutoScale = props.Get(Property(propName + ".ground.autoscale")(true)).Get<bool>();
 		sl->groundColor = GetColor(props.Get(Property(propName + ".ground.color")(Spectrum(.75f, .75f, .75f)))).Clamp(0.f);
@@ -337,10 +347,20 @@ LightSourceUPtr Scene::CreateLightSource(const string &name, const luxrays::Prop
 
 		auto sl = std::make_unique<SunLight3>();
 		sl->lightToWorld = light2World;
-		sl->datasetFile = props.Get(Property(propName + ".dataset")("SkyModelDataset.dat")).Get<string>();
-		sl->visibility = Max(1.0, props.Get(Property(propName + ".visibility")(59.4)).Get<double>());
-		sl->altitude = Max(0.0, props.Get(Property(propName + ".altitude")(0.0)).Get<double>());
-		sl->groundAlbedo = Clamp(props.Get(Property(propName + ".groundalbedo")(0.0)).Get<double>(), 0.0, 1.0);
+		// When not defined per light source, the Prague Sky Model parameters
+		// fall back to the scene level ones (i.e. scene.pragueskymodel.*)
+		sl->datasetFile = props.Get(
+			std::move(Property(propName + ".dataset")("SkyModelDataset.dat")),
+			"scene.pragueskymodel.dataset")->Get<string>();
+		sl->visibility = Max(1.0, props.Get(
+			std::move(Property(propName + ".visibility")(59.4)),
+			"scene.pragueskymodel.visibility")->Get<double>());
+		sl->altitude = Max(0.0, props.Get(
+			std::move(Property(propName + ".altitude")(0.0)),
+			"scene.pragueskymodel.altitude")->Get<double>());
+		sl->groundAlbedo = Clamp(props.Get(
+			std::move(Property(propName + ".groundalbedo")(0.0)),
+			"scene.pragueskymodel.groundalbedo")->Get<double>(), 0.0, 1.0);
 		sl->relSize = Max(1.0, props.Get(Property(propName + ".relsize")(1.0)).Get<double>());
 		sl->localSunDir = Normalize(props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
 

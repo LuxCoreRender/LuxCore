@@ -2,6 +2,18 @@ scene.camera.lookat.orig = 8.51502 -6.443411 1.72403
 scene.camera.lookat.target = 1.199165 0.311952 0.805705
 scene.camera.fieldofview = 56.145
 ################################################################################
+# Shared Prague Sky Model parameters: used by every sky3/sun3 light that
+# does not define its own (e.g. scene.lights.<name>.dataset)
+# Full dataset of the Prague Sky Model (2.2 GB), downloaded from
+# https://github.com/PetrVevoda/pragueskymodel ("Full version")
+scene.pragueskymodel.dataset = scenes/sky/SkyModelDataset.dat
+# Horizontal visibility in km ([20, 131.8] for the full dataset)
+scene.pragueskymodel.visibility = 131.8
+# Observer altitude in m ([0, 15000] for the full dataset)
+scene.pragueskymodel.altitude = 0
+# Ground albedo in [0, 1]
+scene.pragueskymodel.groundalbedo = 0.0
+################################################################################
 scene.materials.Matte.type = matte
 scene.materials.Matte.kd = 0.40197 0.40197 0.40197
 scene.materials.Mirror.type = mirror
@@ -12,40 +24,27 @@ scene.objects.Matte.ply = scenes/sky/Matte.ply
 scene.objects.Mirror.material = Mirror
 scene.objects.Mirror.ply = scenes/sky/Mirror.ply
 ################################################################################
-# Test of the Prague Sky Model (Wilkie 2021) based sun3 light source alone
-# (the sky3 light below is disabled). The background is black because there
-# is no environment light: only the direct sun illumination is rendered.
+# Prague Sky Model (Wilkie 2021) based sky dome light. Compared to sky2.scn,
+# the direct sun disc comes from the dedicated sun3 light source below (like
+# the sky2 + sun pairing, but based on the same Prague Sky Model for both).
+# The dataset/visibility/altitude/groundalbedo parameters are inherited from
+# scene.pragueskymodel.*
+scene.lights.skylight.type = sky3
+scene.lights.skylight.dir = 0.166974 -0.59908 0.783085
+scene.lights.skylight.gain = 1 1 1
+scene.lights.skylight.ground.enable = 1
+scene.lights.skylight.ground.color = 0.45 0.35 0.3
+#scene.lights.skylight.ground.color = 0.45 0.0 0.0
+# Resolution of the baked radiance map used by OpenCL/CUDA rendering
+#scene.lights.skylight.envmap.width = 2048
+#scene.lights.skylight.envmap.height = 1024
+#scene.lights.skylight.visibilitymapcache.enable = 1
+
+# Direct sun disc (Prague Sky Model radiance after atmospheric transmittance)
 scene.lights.sunlight3.type = sun3
 scene.lights.sunlight3.dir = 0.166974 -0.59908 0.783085
-# Full dataset of the Prague Sky Model (2.2 GB), downloaded from
-# https://github.com/PetrVevoda/pragueskymodel ("Full version")
-scene.lights.sunlight3.dataset = scenes/sky/SkyModelDataset.dat
-# Horizontal visibility in km ([20, 131.8] for the full dataset)
-scene.lights.sunlight3.visibility = 59.4
-# Observer altitude in m ([0, 15000] for the full dataset)
-scene.lights.sunlight3.altitude = 0.0
-scene.lights.sunlight3.groundalbedo = 0.0
 scene.lights.sunlight3.gain = 1 1 1
 # 1.0 is the angular size of the real sun disc; use a larger value to make
 # the disc easier to see in a quick test
-scene.lights.sunlight3.relsize = 1.0
-#scene.lights.sunlight3.relsize = 32.0
-
-################################################################################
-# Prague Sky Model (Wilkie 2021) based sky (with the direct sun disc included)
-#
-#scene.lights.skylight.type = sky3
-#scene.lights.skylight.dir = 0.166974 -0.59908 0.783085
-#scene.lights.skylight.dataset = /home/jojo/Downloads/SkyModelDataset.dat
-## Horizontal visibility in km ([20, 131.8] for the full dataset)
-#scene.lights.skylight.visibility = 59.4
-## Observer altitude in m ([0, 15000] for the full dataset)
-#scene.lights.skylight.altitude = 0.0
-#scene.lights.skylight.groundalbedo = 0.0
-#scene.lights.skylight.gain = 1 1 1
-#scene.lights.skylight.ground.enable = 1
-#scene.lights.skylight.ground.color = 0.45 0.35 0.3
-## Resolution of the baked radiance map used by OpenCL/CUDA rendering
-##scene.lights.skylight.envmap.width = 2048
-##scene.lights.skylight.envmap.height = 1024
-##scene.lights.skylight.visibilitymapcache.enable = 1
+#scene.lights.sunlight3.relsize = 1.0
+scene.lights.sunlight3.relsize = 32.0

@@ -29,13 +29,14 @@ namespace slg {
 // Sky3 implementation
 //
 // A sky dome light source based on the "Prague Sky Model" (Wilkie et al. 2021,
-// Vevoda et al. 2022). It uses the full spectral dataset (sky radiance, sun
-// disc radiance and transmittance, up to 15 km observer altitude) and provides
-// sky + sun radiance converted to RGB via the CIE 1931 2 degree standard
-// observer.
+// Vevoda et al. 2022). It uses the full spectral dataset (sky radiance, up to
+// 15 km observer altitude) and provides sky radiance converted to RGB via the
+// CIE 1931 2 degree standard observer. The direct sun disc is not part of
+// this light: use the dedicated sun3 light source, based on the same model,
+// for it.
 //
 // The model is evaluated on the CPU only. For OpenCL/CUDA rendering the
-// radiance of the dome (sun disc included) is baked, during Preprocess(), into
+// radiance of the dome is baked, during Preprocess(), into
 // a lat-long ImageMap that the GPU kernels sample.
 //------------------------------------------------------------------------------
 

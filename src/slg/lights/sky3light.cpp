@@ -67,14 +67,14 @@ Spectrum SkyLight3::ComputeSkyRadiance(const Vector &w) const {
 		PragueSkyModel::Vector3((double)localDir.x, (double)localDir.y, (double)localDir.z),
 		localSunElevation, localSunAzimuth, (double)visibility, (double)groundAlbedo);
 
-	// Sky radiance + direct sun radiance
+	// Sky radiance only: the direct sun disc is provided by the dedicated
+	// sun3 light source
 	double channelRadiance[64];
 	if (channels > sizeof(channelRadiance) / sizeof(channelRadiance[0]))
 		throw runtime_error("Unsupported number of spectral channels in the Prague Sky Model dataset: " + ToString(channels));
 	for (u_int i = 0; i < channels; ++i) {
 		const double wavelength = PragueSkyModelChannelWavelength(i, channelStart, channelWidth);
-		channelRadiance[i] = model->skyRadiance(params, wavelength) +
-				model->sunRadiance(params, wavelength);
+		channelRadiance[i] = model->skyRadiance(params, wavelength);
 	}
 
 	return PragueSkyModelToSpectrum(channelRadiance, channels, channelStart, channelWidth);
@@ -116,14 +116,12 @@ void SkyLight3::Preprocess() {
 	isGroundBlack = (hasGround && groundColor.Black());
 
 	//----------------------------------------------------------------------
-	// Bake the dome radiance (direct sun included) into a lat-long
-	// ImageMap. The map is used by OpenCL/CUDA rendering and, as
-	// luminance, for the light Distribution2D.
+	// Bake the dome radiance into a lat-long ImageMap. The map is used by
+	// OpenCL/CUDA rendering and, as luminance, for the light
+	// Distribution2D.
 	//----------------------------------------------------------------------
 
 	ImageMapConfig imgMapConfig;
-	// The direct sun radiance is several orders of magnitude above the sky
-	// one: half float storage is not enough
 	imgMapConfig.SetStorageType(ImageMapStorage::FLOAT);
 
 	radianceImageMap = ImageMap::AllocImageMap(3, mapWidth, mapHeight, imgMapConfig);
