@@ -34,6 +34,7 @@
 #include "slg/lights/projectionlight.h"
 #include "slg/lights/sharpdistantlight.h"
 #include "slg/lights/sky2light.h"
+#include "slg/lights/sky3light.h"
 #include "slg/lights/spotlight.h"
 #include "slg/lights/sunlight.h"
 #include "slg/lights/trianglelight.h"
@@ -89,6 +90,7 @@ void Scene::ParseLights(const Properties &props) {
 		auto newLight = CreateLightSource(lightName, props);
 
 		if ((newLight->GetType() == TYPE_IL) ||
+				(newLight->GetType() == TYPE_IL_SKY3) ||
 				(newLight->GetType() == TYPE_MAPPOINT) ||
 				(newLight->GetType() == TYPE_MAPSPHERE) ||
 				(newLight->GetType() == TYPE_PROJECTION))
@@ -253,6 +255,36 @@ LightSourceUPtr Scene::CreateLightSource(const string &name, const luxrays::Prop
 		// Visibility map related options
 		sl->distributionWidth = props.Get(Property(propName + ".distribution.width")(512)).Get<u_int>();
 		sl->distributionHeight = props.Get(Property(propName + ".distribution.height")(256)).Get<u_int>();
+
+		// Visibility map cache related options
+		sl->useVisibilityMapCache = props.Get(Property(propName + ".visibilitymapcache.enable")(false)).Get<bool>();
+		if (sl->useVisibilityMapCache)
+			sl->visibilityMapCacheParams = EnvLightVisibilityCache::Properties2Params(propName, props);
+
+		lightSource = std::move(sl);
+	} else if (lightType == "sky3") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		auto sl = std::make_unique<SkyLight3>();
+		sl->lightToWorld = light2World;
+		sl->datasetFile = props.Get(Property(propName + ".dataset")("SkyModelDataset.dat")).Get<string>();
+		sl->visibility = Max(1.0, props.Get(Property(propName + ".visibility")(59.4)).Get<double>());
+		sl->altitude = Max(0.0, props.Get(Property(propName + ".altitude")(0.0)).Get<double>());
+		sl->groundAlbedo = Clamp(props.Get(Property(propName + ".groundalbedo")(0.0)).Get<double>(), 0.0, 1.0);
+		sl->hasGround = props.Get(Property(propName + ".ground.enable")(false)).Get<bool>();
+		sl->hasGroundAutoScale = props.Get(Property(propName + ".ground.autoscale")(true)).Get<bool>();
+		sl->groundColor = GetColor(props.Get(Property(propName + ".ground.color")(Spectrum(.75f, .75f, .75f)))).Clamp(0.f);
+		sl->localSunDir = Normalize(props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
+
+		sl->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
+		sl->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
+		sl->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
+
+		// Baked radiance map resolution (used by OpenCL/CUDA rendering and for
+		// the light distribution)
+		sl->mapWidth = props.Get(Property(propName + ".envmap.width")(2048)).Get<u_int>();
+		sl->mapHeight = props.Get(Property(propName + ".envmap.height")(1024)).Get<u_int>();
 
 		// Visibility map cache related options
 		sl->useVisibilityMapCache = props.Get(Property(propName + ".visibilitymapcache.enable")(false)).Get<bool>();
@@ -480,6 +512,14 @@ LightSourceUPtr Scene::CreateLightSource(const string &name, const luxrays::Prop
 	}
 
 	lightSource->Preprocess();
+
+	if (lightSource->GetType() == TYPE_IL_SKY3) {
+		// The sky3 light bakes its radiance into an ImageMap during
+		// Preprocess(): register the baked map in the image map cache so it
+		// can be used by OpenCL/CUDA rendering too
+		auto& sl = static_cast<SkyLight3&>(*lightSource);
+		sl.RegisterRadianceImageMap(imgMapCache);
+	}
 
 	return lightSource;
 }
