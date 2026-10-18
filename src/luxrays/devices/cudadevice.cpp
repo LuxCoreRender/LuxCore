@@ -524,7 +524,7 @@ void CUDADevice::FinishQueue() {
 //------------------------------------------------------------------------------
 
 void CUDADevice::AllocBuffer(HardwareDeviceBuffer **hdBuff, const BufferType type,
-		void *src, const size_t size, const string &desc) {
+		const void *src, const size_t size, const string &desc) {
 	if (!*hdBuff)
 		*hdBuff = new CUDADeviceBuffer();
 

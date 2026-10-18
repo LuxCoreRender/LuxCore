@@ -222,12 +222,12 @@ public:
 	size_t GetUsedMemory() const { return usedMemory; }
 
 	virtual void AllocBuffer(HardwareDeviceBuffer **buff, const BufferType type,
-			void *src, const size_t size, const std::string &desc = "") = 0;
+			const void *src, const size_t size, const std::string &desc = "") = 0;
 	virtual void AllocBufferRO(HardwareDeviceBuffer **buff,
-			void *src, const size_t size, const std::string &desc = "") {
+			const void *src, const size_t size, const std::string &desc = "") {
 		AllocBuffer(buff, BUFFER_TYPE_READ_ONLY, src, size, desc);
 	}
-	virtual void AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "") {
+	virtual void AllocBufferRW(HardwareDeviceBuffer **buff, const void *src, const size_t size, const std::string &desc = "") {
 		AllocBuffer(buff, BUFFER_TYPE_READ_WRITE, src, size, desc);
 	}
 	virtual void FreeBuffer(HardwareDeviceBuffer **buff) = 0;
