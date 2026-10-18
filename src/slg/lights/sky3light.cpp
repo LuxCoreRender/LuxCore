@@ -51,6 +51,7 @@ SkyLight3::SkyLight3() : localSunDir(0.f, 0.f, 1.f), visibility(59.4f),
 		localSunElevation(0.0), localSunAzimuth(0.0),
 		channels(0), channelStart(0.0), channelWidth(0.0),
 		isGroundBlack(false),
+		meanRadianceY(0.f),
 		skyDistribution(nullptr), visibilityMapCache(nullptr) {
 }
 
@@ -157,6 +158,13 @@ void SkyLight3::Preprocess() {
 	radianceImageMap->Preprocess();
 
 	skyDistribution = std::make_unique<Distribution2D>(distributionData, mapWidth, mapHeight);
+
+	// The mean dome luminance, used by GetPower() without any further model
+	// evaluation
+	meanRadianceY = 0.f;
+	for (u_int i = 0; i < mapWidth * mapHeight; ++i)
+		meanRadianceY += distributionData[i];
+	meanRadianceY /= mapWidth * mapHeight;
 }
 
 void SkyLight3::RegisterRadianceImageMap(ImageMapCache &imgMapCache) {
@@ -196,16 +204,9 @@ SkyLight3::GetPreprocessedData(float *absoluteUpDirData,
 float SkyLight3::GetPower(SceneConstRef scene) const {
 	const float envRadius = GetEnvRadius(scene);
 
-	float power = 0.f;
-	for (u_int y = 0; y < mapHeight; ++y) {
-		for (u_int x = 0; x < mapWidth; ++x)
-			power += ComputeRadiance(UniformSampleSphere(
-					(y + .5f) / mapHeight,
-					(x + .5f) / mapWidth)).Y();
-	}
-	power /= mapWidth * mapHeight;
-
-	return power * (4.f * M_PI * envRadius * envRadius) * 2.f * M_PI;
+	// Same value the dome baking loop computed for the light
+	// Distribution2D, without any further model evaluation
+	return meanRadianceY * (4.f * M_PI * envRadius * envRadius) * 2.f * M_PI;
 }
 
 Spectrum SkyLight3::GetRadiance(SceneConstRef scene,

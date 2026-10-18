@@ -123,6 +123,11 @@ private:
 
 	bool isGroundBlack;
 
+	// Mean dome luminance, computed during the radiance map baking and used
+	// by GetPower() (it is the same value the dome baking loop computes for
+	// the light Distribution2D)
+	float meanRadianceY;
+
 	// Baked radiance map, moved to the scene image map cache by
 	// RegisterRadianceImageMap()
 	ImageMapUPtr radianceImageMap;
