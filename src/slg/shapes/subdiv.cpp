@@ -1364,8 +1364,9 @@ struct MultiLayerDataEvaluator{
 		using DATA_IN = DATA_BUFFER::element_type;
 
 		// Return-object constructor
-		EvaluatedLayers(size_t num_layers):
-			std::vector<DATA_BUFFER>(num_layers)
+		EvaluatedLayers(size_t num_layers, size_t data_size):
+			std::vector<DATA_BUFFER>(num_layers),
+			dataSize(data_size)
 		{}
 
 		// Return-object releaser
@@ -1373,7 +1374,10 @@ struct MultiLayerDataEvaluator{
 			for (size_t i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 				auto& layer = (*this)[i];
 				auto layerPtr = std::shared_ptr<DATA_IN[]>(std::move(layer));
-				outBuffers[i] = reinterpret_pointer_cast<DATA_OUT[]>(layerPtr);
+				// Transfer the layer ownership and record the evaluated data size,
+				// so that GetLayerSize/GetLayerSpan are valid on the returned
+				// ExtMeshProp
+				outBuffers.SetLayer(i, reinterpret_pointer_cast<DATA_OUT[]>(layerPtr), dataSize);
 			}
 			return outBuffers;
 		}
@@ -1386,6 +1390,7 @@ struct MultiLayerDataEvaluator{
 		//}
 
 		ExtMeshProp<DATA_OUT> outBuffers;
+		size_t dataSize;
 		// TODO
 		//std::array<DATA_OUT *, EXTMESH_MAX_DATA_COUNT> outBuffers;
 	};
@@ -1411,7 +1416,7 @@ struct MultiLayerDataEvaluator{
 		>;
 
 		// Return object
-		EvaluatedLayers<DATA_BUFFER, DATA_OUT> res(EXTMESH_MAX_DATA_COUNT);
+		EvaluatedLayers<DATA_BUFFER, DATA_OUT> res(EXTMESH_MAX_DATA_COUNT, coords.size());
 
 		// Treatment
 		for (size_t layer = 0; layer < EXTMESH_MAX_DATA_COUNT; ++layer) {
