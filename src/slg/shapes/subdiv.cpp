@@ -1521,10 +1521,14 @@ ExtTriangleMeshUPtr ApplySubdiv(
 		tessAlphas.releaseLayers()
 	);
 
-	// Handle AOVs
+	// Handle AOVs: only the layers evaluated from a source layer having values
+	// (GetLayerSpan can not be used here, the evaluated buffers have their own
+	// size)
 	auto tessAOVs_released = tessAOVs.releaseLayers();
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
-		newMesh->SetVertexAOV(i, tessAOVs_released.GetLayerSpan(i));
+		const auto layer = tessAOVs_released.GetLayer(i);
+		if (layer)
+			newMesh->SetVertexAOV(i, layer, size_t(numPoints));
 	}
 
 	return newMesh;

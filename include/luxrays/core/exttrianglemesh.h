@@ -75,7 +75,9 @@ public:
 	void AllocateLayer(const u_int layerIndex, size_t layerSize) {
 		assert(!_size || _size == layerSize);  // Should always be the same size once it
 										  // has been set
-		(*this)[layerIndex] = std::make_shared<T[]>(layerSize);
+		// A zero-size array is not null: keep the layer null or LayerHasValues
+		// would report it as having values
+		(*this)[layerIndex] = (layerSize > 0) ? std::make_shared<T[]>(layerSize) : Layer(nullptr);
 		if (layerSize) _size = layerSize;
 	}
 	auto GetLayer(const u_int layerIndex) const {
