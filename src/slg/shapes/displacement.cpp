@@ -52,9 +52,15 @@ vector<u_int> ComputeVertexTriangleIndex(const ExtTriangleMesh &mesh) {
 	const u_int triCount = mesh.GetTotalTriangleCount();
 	const auto tris = mesh.GetTriangles();
 
-	// One chunk per worker thread, without however splitting small meshes
+	// One chunk per worker thread, without however splitting small meshes more
+	// than necessary and without exceeding a small amount of temporary memory
+	// (chunkCount * vertCount * sizeof(u_int) bytes): the chunk arrays must
+	// stay cache friendly or the scatter pass below becomes memory bound and
+	// slower than with less chunks
+	const u_int maxChunksByMem = Max(2u,
+			(u_int)(size_t(16) * 1024 * 1024 / (size_t(vertCount) * sizeof(u_int) + 1)));
 	const u_int chunkCount = Max(1u, Min(triCount / MIN_TRIS_PER_CHUNK,
-			(u_int)tbb::this_task_arena::max_concurrency()));
+			Min((u_int)tbb::this_task_arena::max_concurrency(), maxChunksByMem)));
 	const u_int trisPerChunk = (triCount + chunkCount - 1) / chunkCount;
 
 	// The minimum triangle index referencing each vertex, per chunk. The chunk
