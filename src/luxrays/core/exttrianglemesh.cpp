@@ -20,6 +20,7 @@
 #include <fstream>
 #include <cstring>
 #include <execution>
+#include <oneapi/tbb.h>
 
 #include <boost/format.hpp>
 #include <boost/serialization/shared_ptr.hpp>
@@ -264,31 +265,66 @@ void ExtTriangleMesh::ComputeNormals() {
 	if (not bool(normals))
 		normals = NormalBuffer(vertices.Count());
 
-	for (auto i = 0; i < vertices.Count(); ++i)
-		normals[i] = Normal(0.f, 0.f, 0.f);
-	for (auto i = 0; i < tris.Count(); ++i) {
-		const Vector e1 = vertices[tris[i].v[1]] - vertices[tris[i].v[0]];
-		const Vector e2 = vertices[tris[i].v[2]] - vertices[tris[i].v[0]];
-		const Normal N = Normal(Normalize(Cross(e1, e2)));
-		normals[tris[i].v[0]] += N;
-		normals[tris[i].v[1]] += N;
-		normals[tris[i].v[2]] += N;
-	}
-	//int printedWarning = 0;
-	for (auto i = 0; i < vertices.Count(); ++i) {
-		normals[i] = Normalize(normals[i]);
-		// Check for degenerate triangles/normals, they can freeze the GPU
-		if (isnan(normals[i].x) || isnan(normals[i].y) || isnan(normals[i].z)) {
-			/*if (printedWarning < 15) {
-				SDL_LOG("The model contains a degenerate normal (index " << i << ")");
-				++printedWarning;
-			} else if (printedWarning == 15) {
-				SDL_LOG("The model contains more degenerate normals");
-				++printedWarning;
-			}*/
-			normals[i] = Normal(0.f, 0.f, 1.f);
+	const u_int vertCount = (u_int)vertices.Count();
+	const u_int triCount = (u_int)tris.Count();
+
+	// The minimum number of triangles for a chunk to be worth the temporary
+	// memory it requires
+	constexpr u_int MIN_TRIS_PER_CHUNK = 32768;
+
+	// One chunk per worker thread, without however splitting small meshes more
+	// than necessary and without exceeding a reasonable amount of temporary
+	// memory (chunkCount * vertCount * sizeof(Normal) bytes)
+	const u_int maxChunksByMem = Max(2u,
+			(u_int)(size_t(96) * 1024 * 1024 / (size_t(vertCount) * sizeof(Normal) + 1)));
+	const u_int chunkCount = Max(1u, Min(triCount / MIN_TRIS_PER_CHUNK,
+			Min((u_int)tbb::this_task_arena::max_concurrency(), maxChunksByMem)));
+	const u_int trisPerChunk = (triCount + chunkCount - 1) / chunkCount;
+
+	// Each chunk records, in its own private array, the sum of the (not
+	// normalized) normals of the triangles referencing a vertex. As every write
+	// targets a chunk-private array, no lock or atomic operation is required,
+	// and the result is deterministic: the chunks are combined below, in chunk
+	// order, for every vertex.
+	//
+	// Note: this changes the order of the floating point additions, compared
+	// to a serial pass over the triangles, so the computed normals can differ
+	// by an ULP from the ones computed before.
+	vector<Normal> chunkSums(size_t(chunkCount) * vertCount, Normal(0.f, 0.f, 0.f));
+	tbb::parallel_for(0u, chunkCount, [&](u_int chunkIndex) {
+		Normal *sums = &chunkSums[size_t(chunkIndex) * vertCount];
+
+		const u_int startTri = chunkIndex * trisPerChunk;
+		const u_int endTri = Min(startTri + trisPerChunk, triCount);
+		for (u_int triIndex = startTri; triIndex < endTri; ++triIndex) {
+			const Vector e1 = vertices[tris[triIndex].v[1]] - vertices[tris[triIndex].v[0]];
+			const Vector e2 = vertices[tris[triIndex].v[2]] - vertices[tris[triIndex].v[0]];
+
+			// The normal is normalized with a single division and 3
+			// multiplications, instead of the 3 divisions of Normalize: this
+			// changes the result by an ULP, like the chunked accumulation below
+			const Vector c = Cross(e1, e2);
+			const float invLen = 1.f / sqrtf(c.x * c.x + c.y * c.y + c.z * c.z);
+			const Normal N(c.x * invLen, c.y * invLen, c.z * invLen);
+
+			sums[tris[triIndex].v[0]] += N;
+			sums[tris[triIndex].v[1]] += N;
+			sums[tris[triIndex].v[2]] += N;
 		}
-	}
+	});
+
+	// Combine the chunk results and normalize
+	tbb::parallel_for(0u, vertCount, [&](u_int vertIndex) {
+		Normal N(0.f, 0.f, 0.f);
+		for (u_int chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex)
+			N += chunkSums[size_t(chunkIndex) * vertCount + vertIndex];
+
+		N = Normalize(N);
+		// Check for degenerate triangles/normals, they can freeze the GPU
+		if (isnan(N.x) || isnan(N.y) || isnan(N.z))
+			N = Normal(0.f, 0.f, 1.f);
+		normals[vertIndex] = N;
+	});
 }
 
 void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
@@ -339,8 +375,9 @@ ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(
 	if (meshTris.has_value()) {
 		ts = std::move(meshTris.value());
 	} else {
-		ts.Allocate(tris.Count());
-		ts.Set(tris);
+		// Share the triangles instead of copying them: the triangles of a
+		// copied mesh are never modified in place (only the vertices are)
+		ts = TriangleBuffer::Share(tris);
 	}
 
 	NormalBuffer ns;
