@@ -22,7 +22,13 @@
 
 #include <span>
 
+#include <execution>
+
 using namespace luxrays;
+
+// The minimum buffer size, in bytes, above which the copies are done in
+// parallel
+constexpr size_t PARALLEL_COPY_THRESHOLD = 1024 * 1024;
 
 //------------------------------------------------------------------------------
 // Buffer
@@ -55,8 +61,9 @@ void Buffer<TYPE, SUBTYPE, PAD>::Allocate(size_t count) {
 	effectiveSize = sizeof(TYPE) * count;
 	totalSize = effectiveSize + padSize;
 
-	// Allocate buffer
-	data = std::make_unique<std::byte[]>(totalSize);
+	// Allocate the buffer without initializing it: the content is always
+	// overwritten by the callers, with Set or a fill pass
+	data = std::unique_ptr<std::byte[]>(new std::byte[totalSize]);
 
 	// Add padding
 	// Embree requires a padding field at the end
@@ -126,11 +133,14 @@ void Buffer<TYPE, SUBTYPE, PAD>::Set(const Buffer<TYPE, SUBTYPE, PAD>& from) {
 		Allocate(from.effectiveSize);
 	}
 
-	// Copy
+	// Copy, in parallel for the large buffers
 	const auto from_bytes = std::span<std::byte>(from.data.get(), from.totalSize);
 	auto to_bytes = std::span<std::byte>(data.get(), totalSize);
 
-	std::copy(from_bytes.begin(), from_bytes.end(), to_bytes.begin());
+	if (from_bytes.size() > PARALLEL_COPY_THRESHOLD)
+		std::copy(std::execution::par, from_bytes.begin(), from_bytes.end(), to_bytes.begin());
+	else
+		std::copy(from_bytes.begin(), from_bytes.end(), to_bytes.begin());
 }
 
 template< typename TYPE, typename SUBTYPE, std::array PAD >
@@ -141,8 +151,11 @@ void Buffer<TYPE, SUBTYPE, PAD>::Set(std::span<const TYPE> from) {
 		Allocate(from_count);
 	}
 
-	// Copy
-	std::copy(from.begin(), from.end(), asType.begin());
+	// Copy, in parallel for the large buffers
+	if (from.size() * sizeof(TYPE) > PARALLEL_COPY_THRESHOLD)
+		std::copy(std::execution::par, from.begin(), from.end(), asType.begin());
+	else
+		std::copy(from.begin(), from.end(), asType.begin());
 }
 
 template< typename TYPE, typename SUBTYPE, std::array PAD >
@@ -155,8 +168,11 @@ void Buffer<TYPE, SUBTYPE, PAD>::Set(std::span<const SUBTYPE> from) {
 		Allocate(count);
 	}
 
-	// Copy
-	std::copy(from.begin(), from.end(), asSubType.begin());
+	// Copy, in parallel for the large buffers
+	if (from.size() * sizeof(SUBTYPE) > PARALLEL_COPY_THRESHOLD)
+		std::copy(std::execution::par, from.begin(), from.end(), asSubType.begin());
+	else
+		std::copy(from.begin(), from.end(), asSubType.begin());
 }
 
 
