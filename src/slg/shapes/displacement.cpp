@@ -94,11 +94,14 @@ vector<u_int> ComputeVertexTriangleIndex(const ExtTriangleMesh &mesh) {
 
 // Computes the geometry differentials of each vertex from the triangle
 // referencing it with the lowest index (see ComputeVertexTriangleIndex). The
-// vertices not referenced by any triangle keep zeroed differentials.
+// vertices not referenced by any triangle get zeroed differentials.
+//
+// The differential buffers are passed uninitialized: this function writes all
+// their entries.
 void ComputeVertexDifferentials(const ExtTriangleMesh &mesh,
 		const vector<u_int> &triangleIndex,
-		vector<Vector> &dpdu, vector<Vector> &dpdv,
-		vector<Normal> &dndu, vector<Normal> &dndv) {
+		std::span<Vector> dpdu, std::span<Vector> dpdv,
+		std::span<Normal> dndu, std::span<Normal> dndv) {
 	if (mesh.GetTotalTriangleCount() == 0)
 		return;
 
@@ -110,10 +113,15 @@ void ComputeVertexDifferentials(const ExtTriangleMesh &mesh,
 		const Triangle &tri = tris[triIndex];
 
 		// A vertex is always a corner of its associated triangle. If it is
-		// not, the vertex is not referenced by any triangle (index 0): it
-		// keeps zeroed differentials
-		if (tri.v[0] != vertIndex && tri.v[1] != vertIndex && tri.v[2] != vertIndex)
+		// not, the vertex is not referenced by any triangle (index 0): it gets
+		// zeroed differentials
+		if (tri.v[0] != vertIndex && tri.v[1] != vertIndex && tri.v[2] != vertIndex) {
+			dpdu[vertIndex] = Vector(0.f, 0.f, 0.f);
+			dpdv[vertIndex] = Vector(0.f, 0.f, 0.f);
+			dndu[vertIndex] = Normal(0.f, 0.f, 0.f);
+			dndv[vertIndex] = Normal(0.f, 0.f, 0.f);
 			return;
+		}
 
 		const Normal shadeN = mesh.GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex);
 		mesh.GetDifferentials(Transform::TRANS_IDENTITY, triIndex, shadeN, 0,
@@ -145,10 +153,17 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 
 	// I need to build the dpdu, dpdv, dndu, dndv for each vertex. They are mostly
 	// used for vector displacement but they may be used by the texture too.
-	vector<Vector> dpdu(vertCount);
-	vector<Vector> dpdv(vertCount);
-	vector<Normal> dndu(vertCount);
-	vector<Normal> dndv(vertCount);
+	// They are allocated uninitialized: ComputeVertexDifferentials writes all
+	// the entries, the ones of the vertices not referenced by any triangle
+	// included
+	const std::unique_ptr<Vector[]> dpduStorage(new Vector[vertCount]);
+	const std::unique_ptr<Vector[]> dpdvStorage(new Vector[vertCount]);
+	const std::unique_ptr<Normal[]> dnduStorage(new Normal[vertCount]);
+	const std::unique_ptr<Normal[]> dndvStorage(new Normal[vertCount]);
+	const std::span<Vector> dpdu(dpduStorage.get(), vertCount);
+	const std::span<Vector> dpdv(dpdvStorage.get(), vertCount);
+	const std::span<Normal> dndu(dnduStorage.get(), vertCount);
+	const std::span<Normal> dndv(dndvStorage.get(), vertCount);
 
 	// The lowest-indexed triangle referencing each vertex. Unreferenced
 	// vertices get index 0.
