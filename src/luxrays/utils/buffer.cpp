@@ -63,7 +63,7 @@ void Buffer<TYPE, SUBTYPE, PAD>::Allocate(size_t count) {
 
 	// Allocate the buffer without initializing it: the content is always
 	// overwritten by the callers, with Set or a fill pass
-	data = std::unique_ptr<std::byte[]>(new std::byte[totalSize]);
+	data = std::make_unique_for_overwrite<std::byte[]>(totalSize);
 
 	// Add padding
 	// Embree requires a padding field at the end
@@ -122,6 +122,21 @@ std::span<const std::byte> Buffer<TYPE, SUBTYPE, PAD>::GetPad() const {
 template< typename TYPE, typename SUBTYPE, std::array PAD >
 std::span<TYPE> Buffer<TYPE, SUBTYPE, PAD>::Subset(std::size_t offset, std::size_t count) {
 	return asType.subspan(offset, count);
+}
+
+// Share: build a Buffer sharing the storage of 'from', without copying the
+// content
+template< typename TYPE, typename SUBTYPE, std::array PAD >
+Buffer<TYPE, SUBTYPE, PAD> Buffer<TYPE, SUBTYPE, PAD>::Share(const Buffer &from) {
+	Buffer res;
+
+	res.data = from.data;
+	res.totalSize = from.totalSize;
+	res.effectiveSize = from.effectiveSize;
+	res.asType = from.asType;
+	res.asSubType = from.asSubType;
+
+	return res;
 }
 
 // Set: Copy 'from' into 'this'
