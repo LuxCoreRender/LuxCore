@@ -67,6 +67,10 @@ public:
 	// Allocate internal container for count objects of type TYPE
 	void Allocate(std::size_t count);
 
+	// Returns a Buffer sharing the storage of 'from', without copying the
+	// content: the shared content must never be modified afterwards
+	static Buffer Share(const Buffer &from);
+
 	// Getters
 	std::span<TYPE> GetObjects() const;
 	std::span<SUBTYPE> GetSubObjects() const;
@@ -102,8 +106,8 @@ public:
 
 
 private:
-	// Underlying storage
-	std::unique_ptr<std::byte[]> data;
+	// Underlying storage (shared, to allow Buffer::Share)
+	std::shared_ptr<std::byte[]> data;
 	static constexpr std::array pad{PAD};
 
 	// Sizes (in bytes)

@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <boost/format.hpp>
+#include <oneapi/tbb.h>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/displacement.h"
@@ -26,6 +27,111 @@
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+
+
+namespace {
+
+// The minimum number of triangles for a chunk to be worth the temporary memory
+// it requires
+constexpr u_int MIN_TRIS_PER_CHUNK = 1024;
+
+// The triangle index of the vertices not referenced by any triangle
+constexpr u_int NO_TRIANGLE = 0xffffffffu;
+
+// Returns, for each vertex, the index of the lowest-indexed triangle
+// referencing it, or 0 if the vertex is not referenced by any triangle.
+//
+// The triangle array is partitioned in chunks and every chunk records, in its
+// own private array, the minimum index of the triangles referencing a vertex.
+// The chunk results are then combined with a per-vertex minimum. As every
+// write targets a chunk-private array, no lock or atomic operation is
+// required, and the result is deterministic: the minimum always wins, exactly
+// like a serial first-wins pass over the triangles.
+vector<u_int> ComputeVertexTriangleIndex(const ExtTriangleMesh &mesh) {
+	const u_int vertCount = mesh.GetTotalVertexCount();
+	const u_int triCount = mesh.GetTotalTriangleCount();
+	const auto tris = mesh.GetTriangles();
+
+	// One chunk per worker thread, without however splitting small meshes more
+	// than necessary and without exceeding a small amount of temporary memory
+	// (chunkCount * vertCount * sizeof(u_int) bytes): the chunk arrays must
+	// stay cache friendly or the scatter pass below becomes memory bound and
+	// slower than with less chunks
+	const u_int maxChunksByMem = Max(2u,
+			(u_int)(size_t(16) * 1024 * 1024 / (size_t(vertCount) * sizeof(u_int) + 1)));
+	const u_int chunkCount = Max(1u, Min(triCount / MIN_TRIS_PER_CHUNK,
+			Min((u_int)tbb::this_task_arena::max_concurrency(), maxChunksByMem)));
+	const u_int trisPerChunk = (triCount + chunkCount - 1) / chunkCount;
+
+	// The minimum triangle index referencing each vertex, per chunk. The chunk
+	// arrays are disjoint so the writes are race free
+	vector<u_int> chunkMins(size_t(chunkCount) * vertCount, NO_TRIANGLE);
+	tbb::parallel_for(0u, chunkCount, [&](u_int chunkIndex) {
+		u_int *mins = &chunkMins[size_t(chunkIndex) * vertCount];
+
+		const u_int startTri = chunkIndex * trisPerChunk;
+		const u_int endTri = Min(startTri + trisPerChunk, triCount);
+		for (u_int triIndex = startTri; triIndex < endTri; ++triIndex) {
+			const Triangle &tri = tris[triIndex];
+			for (u_int j = 0; j < 3; ++j)
+				mins[tri.v[j]] = Min(mins[tri.v[j]], triIndex);
+		}
+	});
+
+	// Combine the chunk results: the lowest-indexed triangle referencing each
+	// vertex wins
+	vector<u_int> triangleIndex(vertCount, 0);
+	tbb::parallel_for(0u, vertCount, [&](u_int vertIndex) {
+		u_int triIndex = NO_TRIANGLE;
+		for (u_int chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex)
+			triIndex = Min(triIndex,
+					chunkMins[size_t(chunkIndex) * vertCount + vertIndex]);
+		triangleIndex[vertIndex] = (triIndex == NO_TRIANGLE) ? 0u : triIndex;
+	});
+
+	return triangleIndex;
+}
+
+// Computes the geometry differentials of each vertex from the triangle
+// referencing it with the lowest index (see ComputeVertexTriangleIndex). The
+// vertices not referenced by any triangle get zeroed differentials.
+//
+// The differential buffers are passed uninitialized: this function writes all
+// their entries.
+void ComputeVertexDifferentials(const ExtTriangleMesh &mesh,
+		const vector<u_int> &triangleIndex,
+		std::span<Vector> dpdu, std::span<Vector> dpdv,
+		std::span<Normal> dndu, std::span<Normal> dndv) {
+	if (mesh.GetTotalTriangleCount() == 0)
+		return;
+
+	const u_int vertCount = (u_int)triangleIndex.size();
+	const auto tris = mesh.GetTriangles();
+
+	tbb::parallel_for(0u, vertCount, [&](u_int vertIndex) {
+		const u_int triIndex = triangleIndex[vertIndex];
+		const Triangle &tri = tris[triIndex];
+
+		// A vertex is always a corner of its associated triangle. If it is
+		// not, the vertex is not referenced by any triangle (index 0): it gets
+		// zeroed differentials
+		if (tri.v[0] != vertIndex && tri.v[1] != vertIndex && tri.v[2] != vertIndex) {
+			dpdu[vertIndex] = Vector(0.f, 0.f, 0.f);
+			dpdv[vertIndex] = Vector(0.f, 0.f, 0.f);
+			dndu[vertIndex] = Normal(0.f, 0.f, 0.f);
+			dndv[vertIndex] = Normal(0.f, 0.f, 0.f);
+			return;
+		}
+
+		const Normal shadeN = mesh.GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex);
+		mesh.GetDifferentials(Transform::TRANS_IDENTITY, triIndex, shadeN, 0,
+				&dpdu[vertIndex], &dpdv[vertIndex],
+				&dndu[vertIndex], &dndv[vertIndex]);
+	});
+}
+
+} // namespace
+
 
 DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const Texture &dispMap,
 		const Params &params) {
@@ -47,49 +153,32 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 
 	// I need to build the dpdu, dpdv, dndu, dndv for each vertex. They are mostly
 	// used for vector displacement but they may be used by the texture too.
-	vector<Vector> dpdu(vertCount);
-	vector<Vector> dpdv(vertCount);
-	vector<Normal> dndu(vertCount);
-	vector<Normal> dndv(vertCount);
+	// They are allocated uninitialized: ComputeVertexDifferentials writes all
+	// the entries, the ones of the vertices not referenced by any triangle
+	// included
+	const std::unique_ptr<Vector[]> dpduStorage(new Vector[vertCount]);
+	const std::unique_ptr<Vector[]> dpdvStorage(new Vector[vertCount]);
+	const std::unique_ptr<Normal[]> dnduStorage(new Normal[vertCount]);
+	const std::unique_ptr<Normal[]> dndvStorage(new Normal[vertCount]);
+	const std::span<Vector> dpdu(dpduStorage.get(), vertCount);
+	const std::span<Vector> dpdv(dpdvStorage.get(), vertCount);
+	const std::span<Normal> dndu(dnduStorage.get(), vertCount);
+	const std::span<Normal> dndv(dndvStorage.get(), vertCount);
 
-	vector<u_int> triangleIndex(vertCount);
+	// The lowest-indexed triangle referencing each vertex. Unreferenced
+	// vertices get index 0.
+	const vector<u_int> triangleIndex = ComputeVertexTriangleIndex(srcMesh);
 
-	// Go trough the faces and save the information
-	vector<bool> doneVerts(vertCount, false);
-	const auto triCount = srcMesh.GetTotalTriangleCount();
+	// Compute the geometry differentials of the vertices
+	ComputeVertexDifferentials(srcMesh, triangleIndex, dpdu, dpdv, dndu, dndv);
+
 	const auto tris(srcMesh.GetTriangles());
-	for (u_int i = 0; i < triCount; ++i) {
-		const Triangle &tri = tris[i];
-
-		for (u_int j = 0; j < 3; ++j) {
-			const u_int vertIndex = tri.v[j];
-
-			if (!doneVerts[vertIndex]) {
-				const Normal shadeN = srcMesh.GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex);
-
-				// Compute geometry differentials
-				srcMesh.GetDifferentials(Transform::TRANS_IDENTITY, i, shadeN, 0,
-						&dpdu[vertIndex], &dpdv[vertIndex],
-						&dndu[vertIndex], &dndv[vertIndex]);
-
-				triangleIndex[vertIndex] = i;
-
-				doneVerts[vertIndex] = true;
-			}
-		}
-	}
 
 	const u_int binormalIndex = params.mapChannels[0];
 	const u_int tangentIndex = params.mapChannels[1];
 	const u_int normalIndex = params.mapChannels[2];
 
-	#pragma omp parallel for
-	for (
-			// Visual C++ 2013 supports only OpenMP 2.5
-#if _OPENMP >= 200805
-			unsigned
-#endif
-			int i = 0; i < vertCount; ++i) {
+	tbb::parallel_for(0u, vertCount, [&](u_int i) {
 		HitPoint hitPoint;
 		
 		hitPoint.fixedDir = Vector(0.f, 0.f, 1.f);
@@ -155,13 +244,16 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 		}
 
 		newVertices[i] = vertices[i] + disp;
-	}
+	});
 
 	// Make a copy of the original mesh and overwrite vertex information
+	//
+	// The source normals are copied only if they are not about to be entirely
+	// overwritten by ComputeNormals below
 	mesh = srcMesh.Copy(
 		std::move(newVertices),
 		std::nullopt,
-		std::nullopt,
+		params.normalSmooth ? std::optional<NormalBuffer>(NormalBuffer()) : std::nullopt,
 		std::nullopt,
 		std::nullopt,
 		std::nullopt
