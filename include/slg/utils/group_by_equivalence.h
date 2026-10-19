@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <vector>
 #include <utility>
 #include <functional>
@@ -31,14 +32,18 @@ namespace slg {
 
 namespace equiv {
 
+// The elements are mesh scale indices, below 2^32 (the same premise as the
+// Union-Find note in the implementation), so the relations and the classes
+// are 32 bit: the streams carry one index per 4 bytes instead of one per 8
+//
 // The equivalence classes (one inner vector per class), allocated with
 // the TBB scalable allocator like every container of this path: the
 // classes are sliced serially by the class build and only read
 // afterwards (the parallel consumers never allocate), so the benefit
 // over the default allocator is mostly consistency
-using Classes = std::vector<std::vector<size_t, tbb::scalable_allocator<size_t>>,
-		tbb::scalable_allocator<std::vector<size_t, tbb::scalable_allocator<size_t>>>>;
-using Relation = std::pair<size_t, size_t>;
+using Classes = std::vector<std::vector<uint32_t, tbb::scalable_allocator<uint32_t>>,
+		tbb::scalable_allocator<std::vector<uint32_t, tbb::scalable_allocator<uint32_t>>>>;
+using Relation = std::pair<uint32_t, uint32_t>;
 using RelationSpan = std::span<const Relation>;
 // Vector of relations, as returned by the generators, allocated with the
 // TBB scalable allocator: the generator is evaluated in parallel (one call

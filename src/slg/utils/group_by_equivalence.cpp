@@ -354,15 +354,16 @@ slg::equiv::Classes BuildClassesFromUnionFind(const UnionFind& uf, const size_t 
 		}
 			});
 
-	// The scatter itself
-	ScalableVector<size_t> classEntries(numElements);
+	// The scatter itself (the entries are 32 bit elements, like the
+	// relation stream)
+	ScalableVector<uint32_t> classEntries(numElements);
 	tbb::parallel_for(size_t(0), classChunkCount, [&](size_t k) {
 		const size_t iBegin = k * classChunkSize;
 		const size_t iEnd = std::min(iBegin + classChunkSize, numElements);
 
 		uint32_t * const cursor = chunkCounts.data() + k * classCount;
 		for (size_t i = iBegin; i < iEnd; ++i)
-			classEntries[cursor[rootOfElement[i]]++] = i;
+			classEntries[cursor[rootOfElement[i]]++] = static_cast<uint32_t>(i);
 	});
 
 	// Slice the entries into the output classes (the slot ranges are
