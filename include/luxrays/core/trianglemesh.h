@@ -69,7 +69,7 @@ public:
 	virtual Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const = 0;
 
 	virtual std::span<Point> GetVertices() const = 0;
-	virtual std::span<Triangle> GetTriangles() const = 0;
+	virtual std::span<const Triangle> GetTriangles() const = 0;
 	virtual size_t GetTotalVertexCount() const = 0;
 	virtual size_t GetTotalTriangleCount() const = 0;
 
@@ -103,8 +103,8 @@ public:
 
 	virtual std::span<Point> GetVertices() const { return vertices.GetObjects(); }
 	virtual std::span<float> GetVerticesAsFloats() const { return vertices.GetSubObjects(); }
-	virtual std::span<Triangle> GetTriangles() const { return tris; }
-	virtual std::span<Triangle::subtype_t> GetTrianglesAsInts() const { return tris.GetSubObjects(); }
+	virtual std::span<const Triangle> GetTriangles() const { return tris.GetObjects(); }
+	virtual std::span<const Triangle::subtype_t> GetTrianglesAsInts() const { return tris.GetSubObjects(); }
 	virtual size_t GetTotalVertexCount() const { return vertices.Count(); }
 	virtual size_t GetTotalTriangleCount() const { return tris.Count(); }
 
@@ -213,7 +213,7 @@ public:
 	}
 
 	virtual std::span<Point> GetVertices() const { return mesh->GetVertices(); }
-	virtual std::span<Triangle> GetTriangles() const { return mesh->GetTriangles(); }
+	virtual std::span<const Triangle> GetTriangles() const { return mesh->GetTriangles(); }
 	virtual size_t GetTotalVertexCount() const { return mesh->GetTotalVertexCount(); }
 	virtual size_t GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
 
@@ -318,7 +318,7 @@ public:
 	}
 
 	virtual std::span<Point> GetVertices() const { return mesh->GetVertices(); }
-	virtual std::span<Triangle> GetTriangles() const { return mesh->GetTriangles(); }
+	virtual std::span<const Triangle> GetTriangles() const { return mesh->GetTriangles(); }
 	virtual size_t GetTotalVertexCount() const { return mesh->GetTotalVertexCount(); }
 	virtual size_t GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
 

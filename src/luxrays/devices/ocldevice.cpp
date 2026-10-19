@@ -528,7 +528,7 @@ void OpenCLDevice::FinishQueue() {
 //------------------------------------------------------------------------------
 
 void OpenCLDevice::AllocBuffer(const cl_mem_flags clFlags, cl_mem *buff,
-		void *src, const size_t size, const string &desc) {
+		const void *src, const size_t size, const string &desc) {
 	// Check if the buffer is too big
 	if (deviceDesc.GetMaxMemoryAllocSize() < size) {
 		// This is now only a WARNING and not an ERROR because NVIDIA reported
@@ -576,14 +576,16 @@ void OpenCLDevice::AllocBuffer(const cl_mem_flags clFlags, cl_mem *buff,
 				" buffer size: " << ToMemString(size));
 
 	cl_int error;
-	*buff = clCreateBuffer(oclContext, clFlags, size, src, &error);
+	// The OpenCL API takes a non const host pointer but only reads the data
+	// (CL_MEM_COPY_HOST_PTR / CL_MEM_USE_HOST_PTR)
+	*buff = clCreateBuffer(oclContext, clFlags, size, const_cast<void *>(src), &error);
 	CHECK_OCL_ERROR(error);
 
 	AllocMemory(OpenCLDeviceBuffer::GetSize(*buff));
 }
 
 void OpenCLDevice::AllocBuffer(HardwareDeviceBuffer **buff, const BufferType type,
-		void *src, const size_t size, const string &desc) {
+		const void *src, const size_t size, const string &desc) {
 	if (!*buff)
 		*buff = new OpenCLDeviceBuffer();
 

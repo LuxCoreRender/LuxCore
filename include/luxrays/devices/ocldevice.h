@@ -340,7 +340,7 @@ public:
 	//--------------------------------------------------------------------------
 
 	virtual void AllocBuffer(HardwareDeviceBuffer **buff, const BufferType type,
-		void *src, const size_t size, const std::string &desc = "");
+		const void *src, const size_t size, const std::string &desc = "");
 
 	virtual void FreeBuffer(HardwareDeviceBuffer **buff);
 
@@ -353,7 +353,7 @@ protected:
 	) override;
 
 	void AllocBuffer(const cl_mem_flags clFlags, cl_mem *buff,
-			void *src, const size_t size, const std::string &desc = "");
+			const void *src, const size_t size, const std::string &desc = "");
 
 	OpenCLDeviceDescriptionConstRef deviceDesc;
 
