@@ -260,13 +260,9 @@ void ExtTriangleMesh::Delete() {
 	delete[] bevelBoundingCylinders;
 }
 
-NormalBuffer ExtTriangleMesh::ComputeNormals() {
-	bool allocated;
-	if (not bool(normals)) {
-		allocated = true;
+void ExtTriangleMesh::ComputeNormals() {
+	if (not bool(normals))
 		normals = NormalBuffer(vertices.Count());
-	} else
-		allocated = false;
 
 	for (auto i = 0; i < vertices.Count(); ++i)
 		normals[i] = Normal(0.f, 0.f, 0.f);
@@ -293,8 +289,6 @@ NormalBuffer ExtTriangleMesh::ComputeNormals() {
 			normals[i] = Normal(0.f, 0.f, 1.f);
 		}
 	}
-
-	return allocated ? std::move(normals) : NormalBuffer();
 }
 
 void ExtTriangleMesh::ApplyTransform(const Transform &trans) {

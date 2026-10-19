@@ -379,7 +379,9 @@ public:
 	const auto& GetAllAlphas() const { return alphas; }
 
 
-	NormalBuffer ComputeNormals();
+	// Computes the vertex normals in place: the normal buffer of the mesh is
+	// always valid afterwards
+	void ComputeNormals();
 
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE; }
 
