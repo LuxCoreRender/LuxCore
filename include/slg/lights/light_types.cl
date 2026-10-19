@@ -25,7 +25,7 @@
 typedef enum {
 	TYPE_IL, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT, TYPE_MAPPOINT,
 	TYPE_SPOT, TYPE_PROJECTION, TYPE_IL_CONSTANT, TYPE_SHARPDISTANT, TYPE_DISTANT,
-	TYPE_IL_SKY2, TYPE_LASER, TYPE_SPHERE, TYPE_MAPSPHERE,
+	TYPE_IL_SKY2, TYPE_LASER, TYPE_SPHERE, TYPE_MAPSPHERE, TYPE_IL_SKY3, TYPE_SUN3,
 	LIGHT_SOURCE_TYPE_COUNT
 } LightSourceType;
 
@@ -46,7 +46,18 @@ typedef struct {
 } SkyLight2Param;
 
 typedef struct {
+	Vector absoluteUpDir;
+	Spectrum scaledGroundColor;
+	int hasGround;
+	unsigned int imageMapIndex;
+	unsigned int distributionOffset;
+	int useVisibilityMapCache;
+} SkyLight3Param;
+
+typedef struct {
 	Vector absoluteDir;
+	// Note: for TYPE_SUN3 the turbidity field (not used by the kernels) is
+	// reused to store cosThetaHorizon
 	float turbidity, relSize;
 	// XY Vectors for cone sampling
 	Vector x, y;
@@ -121,6 +132,7 @@ typedef struct {
 	union {
 		SunLightParam sun;
 		SkyLight2Param sky2;
+		SkyLight3Param sky3;
 		InfiniteLightParam infinite;
 		PointLightParam point;
 		MapPointLightParam mapPoint;
