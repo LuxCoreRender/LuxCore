@@ -28,7 +28,7 @@ using namespace slg;
 // SunLight3
 //------------------------------------------------------------------------------
 
-SunLight3::SunLight3() : color(1.f), datasetFile("SkyModelDataset.dat"),
+SunLight3::SunLight3() : color(1.f), cosThetaHorizon(0.f), datasetFile("SkyModelDataset.dat"),
 		localSunDir(0.f, 0.f, 1.f), visibility(59.4f), altitude(0.f),
 		groundAlbedo(0.f), relSize(1.f),
 		channels(0), channelStart(0.0), channelWidth(0.0),
@@ -71,12 +71,38 @@ void SunLight3::Preprocess() {
 	const double localSunElevation = asin(Clamp((double)localSunDirN.z, -1.0, 1.0));
 	const double localSunAzimuth = atan2((double)localSunDirN.y, (double)localSunDirN.x);
 
+	absoluteUpDir = Normalize(lightToWorld * Vector(0.f, 0.f, 1.f));
+
+	// The sun disc is occulted by the planet below the local horizon. The
+	// horizon dips with the observer altitude, so with increasing altitude
+	// the sun stays visible at (increasingly) negative elevations. The same
+	// altitude-shifted observer position used by the model (SAFETY_ALTITUDE
+	// = 50 m above the ground) is used here.
+	const double planetRadius = 6378000.0;		// PLANET_RADIUS in PragueSkyModel.cpp
+	const double observerAltitude = (double)altitude + 50.0;	// SAFETY_ALTITUDE
+	const double horizonDip = acos(planetRadius / (planetRadius + observerAltitude)) - 0.5 * M_PI;
+	cosThetaHorizon = (float)(-cos(horizonDip));
+
+	// The transmittance for the disc radiance is evaluated looking at the sun
+	// disc, but never from below the horizon: there the transmittance ray of
+	// the model terminates at the planet surface and the result would be an
+	// almost unattenuated, wrong color. If the sun (partially) touches or is
+	// below the horizon, the radiance of the grazing horizon direction is
+	// used instead.
+	const double evaluationElevation = Max(localSunElevation, -horizonDip);
+	const double cosEvaluationElevation = cos(evaluationElevation);
+	// Sun direction with the elevation clamped to the horizon
+	const Vector localSunEvalDir(
+		(float)(cosEvaluationElevation * cos(localSunAzimuth)),
+		(float)(cosEvaluationElevation * sin(localSunAzimuth)),
+		(float)sin(evaluationElevation));
+
 	// The model assumes a frame with the Z axis pointing up and the observer
 	// at the origin: look at the center of the sun disc
 	const auto params = model->computeParameters(
 		PragueSkyModel::Vector3(0.0, 0.0, (double)altitude),
-		PragueSkyModel::Vector3((double)localSunDirN.x, (double)localSunDirN.y, (double)localSunDirN.z),
-		localSunElevation, localSunAzimuth, (double)visibility, (double)groundAlbedo);
+		PragueSkyModel::Vector3((double)localSunEvalDir.x, (double)localSunEvalDir.y, (double)localSunEvalDir.z),
+		evaluationElevation, localSunAzimuth, (double)visibility, (double)groundAlbedo);
 
 	// Evaluate the sun radiance (disc radiance after atmospheric
 	// transmittance, constant over the disc as in the model) at each
@@ -124,6 +150,8 @@ void SunLight3::GetPreprocessedData(float *absoluteSunDirData,
 float SunLight3::GetPower(SceneConstRef scene) const {
 	const float envRadius = GetEnvRadius(scene);
 
+	// Note: the power of the full disc is returned, ignoring the part
+	// possibly occulted by the horizon
 	return color.Y() * (M_PI * envRadius * envRadius) * 2.f * M_PI * sin2ThetaMax;
 }
 
@@ -140,6 +168,12 @@ Spectrum SunLight3::Emit(SceneConstRef scene,
 	ConcentricSampleDisk(u0, u1, &d1, &d2);
 	const Point rayOrig = worldCenter + envRadius * (absoluteSunDir + d1 * x + d2 * y);
 	const Vector rayDir = -UniformSampleCone(u2, u3, cosThetaMax, x, y, absoluteSunDir);
+
+	// The part of the sun disc below the local horizon is occulted by the
+	// planet: the emitted ray travels from the sun disc toward the scene, so
+	// the direction toward the sun is -rayDir
+	if (Dot(-rayDir, absoluteUpDir) < cosThetaHorizon)
+		return Spectrum();
 
 	const float uniformConePdf = UniformConePdf(cosThetaMax);
 	emissionPdfW = uniformConePdf / (M_PI * envRadius * envRadius);
@@ -164,6 +198,11 @@ Spectrum SunLight3::Illuminate(SceneConstRef scene, const BSDF &bsdf,
 	// Check if the point can be inside the sun cone of light
 	const float cosAtLight = Dot(absoluteSunDir, shadowRayDir);
 	if (cosAtLight <= cosThetaMax)
+		return Spectrum();
+
+	// The part of the sun disc below the local horizon is occulted by the
+	// planet
+	if (Dot(shadowRayDir, absoluteUpDir) < cosThetaHorizon)
 		return Spectrum();
 
 	const Point worldCenter = scene.GetDataSet().GetBSphere().center;
@@ -197,6 +236,11 @@ Spectrum SunLight3::GetRadiance(SceneConstRef scene,
 	const float yD = Dot(-dir, y);
 	const float zD = Dot(-dir, absoluteSunDir);
 	if ((cosThetaMax == 1.f) || (zD < 0.f) || ((xD * xD + yD * yD) > sin2ThetaMax))
+		return Spectrum();
+
+	// The part of the sun disc below the local horizon is occulted by the
+	// planet
+	if (Dot(-dir, absoluteUpDir) < cosThetaHorizon)
 		return Spectrum();
 
 	const float uniformConePdf = UniformConePdf(cosThetaMax);

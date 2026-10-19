@@ -556,7 +556,10 @@ void CompiledScene::CompileLights() {
 						&oclLight->notIntersectable.sun.cosThetaMax,
 						&oclLight->notIntersectable.sun.sin2ThetaMax);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.sun.color, sl.color);
-				oclLight->notIntersectable.sun.turbidity = 0.f;
+				// The turbidity field (not used by the kernels) is reused to
+				// store the cosThetaHorizon used by the sun3 kernels for the
+				// horizon occultation test
+				oclLight->notIntersectable.sun.turbidity = sl.cosThetaHorizon;
 				oclLight->notIntersectable.sun.relSize = sl.relSize;
 				break;
 			}

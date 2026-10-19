@@ -520,6 +520,70 @@ OPENCL_FORCE_INLINE float3 SunLight_Illuminate(__global const LightSource *sunLi
 }
 
 //------------------------------------------------------------------------------
+// Sun3Light
+//
+// Same as SunLight, but the part of the sun disc below the local horizon is
+// occulted by the planet (per ray, so a partially set sun disc is rendered
+// cut at the horizon). SunLight3 reuses the SunLightParam layout: the turbidity
+// field (not used by the kernels) holds cosThetaHorizon.
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE float3 Sun3Light_GetRadiance(__global const LightSource *sun3Light,
+		__global const BSDF *bsdf, const float3 dir, float *directPdfA) {
+	const float3 up = normalize(Transform_ApplyVector(
+			&sun3Light->notIntersectable.light2World, MAKE_FLOAT3(0.f, 0.f, 1.f)));
+
+	// The part of the sun disc below the local horizon is occulted by the
+	// planet
+	if (dot(-dir, up) < sun3Light->notIntersectable.sun.turbidity)
+		return BLACK;
+
+	return SunLight_GetRadiance(sun3Light, bsdf, dir, directPdfA);
+}
+
+OPENCL_FORCE_INLINE float3 Sun3Light_Illuminate(__global const LightSource *sun3Light,
+		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
+		const float sceneRadius,
+		__global const BSDF *bsdf, const float time, const float u0, const float u1,
+		__global Ray *shadowRay, float *directPdfW) {
+
+	const float3 up = normalize(Transform_ApplyVector(
+			&sun3Light->notIntersectable.light2World, MAKE_FLOAT3(0.f, 0.f, 1.f)));
+
+	const float cosThetaMax = sun3Light->notIntersectable.sun.cosThetaMax;
+	const float3 sunDir = VLOAD3F(&sun3Light->notIntersectable.sun.absoluteDir.x);
+	const float3 shadowRayDir = UniformSampleCone(u0, u1, cosThetaMax, VLOAD3F(&sun3Light->notIntersectable.sun.x.x), VLOAD3F(&sun3Light->notIntersectable.sun.y.x), sunDir);
+
+	// Check if the point can be inside the sun cone of light
+	const float cosAtLight = dot(sunDir, shadowRayDir);
+	if (cosAtLight <= cosThetaMax)
+		return BLACK;
+
+	// The part of the sun disc below the local horizon is occulted by the
+	// planet
+	if (dot(shadowRayDir, up) < sun3Light->notIntersectable.sun.turbidity)
+		return BLACK;
+
+	const float3 worldCenter = MAKE_FLOAT3(worldCenterX, worldCenterY, worldCenterZ);
+	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
+
+	const float3 pSurface = BSDF_GetRayOrigin(bsdf, worldCenter - VLOAD3F(&bsdf->hitPoint.p.x));
+	const float3 toCenter = worldCenter - pSurface;
+	const float centerDistance = dot(toCenter, toCenter);
+	const float approach = dot(toCenter, shadowRayDir);
+	const float shadowRayDistance = approach + sqrt(max(0.f, envRadius * envRadius -
+		centerDistance + approach * approach));
+
+	*directPdfW = UniformConePdf(cosThetaMax);
+
+	// Setup the shadow ray
+	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
+	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
+
+	return VLOAD3F(sun3Light->notIntersectable.sun.color.c);
+}
+
+//------------------------------------------------------------------------------
 // TriangleLight
 //------------------------------------------------------------------------------
 
@@ -1093,8 +1157,7 @@ OPENCL_FORCE_NOT_INLINE float3 EnvLight_GetRadiance(__global const LightSource *
 					bsdf,
 					dir, directPdfA);
 		case TYPE_SUN3:
-			// SunLight3 uses the same SunLightParam layout
-			return SunLight_GetRadiance(light,
+			return Sun3Light_GetRadiance(light,
 					bsdf,
 					dir, directPdfA);
 		case TYPE_SHARPDISTANT:
@@ -1162,8 +1225,7 @@ OPENCL_FORCE_INLINE float3 Light_Illuminate(
 					bsdf, time, u0, u1,
 					shadowRay, directPdfW);
 		case TYPE_SUN3:
-			// SunLight3 uses the same SunLightParam layout
-			return SunLight_Illuminate(
+			return Sun3Light_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
 					bsdf, time, u0, u1,
