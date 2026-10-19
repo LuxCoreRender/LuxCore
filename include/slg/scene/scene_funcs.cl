@@ -61,13 +61,19 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 	// Check if there is volume scatter event
 	if (rayVolumeIndex != NULL_INDEX) {
 		// This applies volume transmittance too
-		// Note: by using passThrough here, I introduce subtle correlation
-		// between scattering events and pass-through events
+		//
+		// The scattering uses its own pseudo-random number: passThrough is
+		// also the pass-through event of the hit point (i.e. used by glass to
+		// choose between reflection and transmission) and the segments
+		// without a scattering event would always select the same BSDF event
+		Seed scatterSeed;
+		Rnd_InitFloat(passThrough, &scatterSeed);
+		const float scatterU = Rnd_FloatValue(&scatterSeed);
 		float3 connectionEmission = BLACK;
 
 		const float t = Volume_Scatter(&mats[rayVolumeIndex], ray,
 				hit ? rayHit->t : ray->maxt,
-				passThrough, volInfo->scatteredStart,
+				scatterU, volInfo->scatteredStart,
 				connectionThroughput, &connectionEmission,
 				tmpHitPoint
 				TEXTURES_PARAM);

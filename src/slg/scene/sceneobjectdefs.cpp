@@ -74,6 +74,7 @@ void SceneObjectDefinitions::DefineIntersectableLights
 
 		tl->lightMaterial = &obj.GetMaterial();
 		tl->volume = tl->lightMaterial->GetExteriorVolume();
+		tl->autoVolume = !tl->volume;
 		tl->sceneObject = &obj;
 		// This is initialized in LightSourceDefinitions::Preprocess()
 		tl->meshIndex = NULL_INDEX;
