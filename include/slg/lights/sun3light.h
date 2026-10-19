@@ -71,6 +71,10 @@ public:
 	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	luxrays::Spectrum color;
+	// Cosine of the zenith angle of the local horizon: a direction with
+	// dot(direction, up) below this value is under the horizon and the sun
+	// disc is occulted by the planet there
+	float cosThetaHorizon;
 
 	std::string datasetFile;
 	luxrays::Vector localSunDir;
@@ -88,6 +92,8 @@ private:
 	double channelStart, channelWidth;
 
 	luxrays::Vector absoluteSunDir;
+	// World up direction of the light local frame
+	luxrays::Vector absoluteUpDir;
 	// XY Vectors for cone sampling
 	luxrays::Vector x, y;
 	float cosThetaMax, sin2ThetaMax;

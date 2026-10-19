@@ -56,6 +56,8 @@ typedef struct {
 
 typedef struct {
 	Vector absoluteDir;
+	// Note: for TYPE_SUN3 the turbidity field (not used by the kernels) is
+	// reused to store cosThetaHorizon
 	float turbidity, relSize;
 	// XY Vectors for cone sampling
 	Vector x, y;
