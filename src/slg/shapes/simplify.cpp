@@ -495,6 +495,9 @@ public:
 		ResizeTriangles(triCount);
 		for (size_t t = 0; t < triCount; ++t)
 			std::copy_n(&srcTris[3*t], 3, &triangleFlip[t].v[0]);
+		// The records start all stale: no triangle version can match a
+		// vertex one before the first evaluation
+		std::fill(triangleNV.begin(), triangleNV.end(), 0xffffffffu);
 	}
 
 	~Simplify() {
@@ -1114,6 +1117,12 @@ private:
 			candidateVertexIndex[i] = minErrorIndex;
 			if (evalCacheActive)
 				candidateValid[i] = 1;
+			// Capture the corner neighborhood versions: the record is
+			// valid while they all match (the evaluation is a pure function
+			// of the corner stars)
+			triangleNV[triOffset + 0] = vertexNV[triFlip.v[0]].load(std::memory_order_relaxed);
+			triangleNV[triOffset + 1] = vertexNV[triFlip.v[1]].load(std::memory_order_relaxed);
+			triangleNV[triOffset + 2] = vertexNV[triFlip.v[2]].load(std::memory_order_relaxed);
 		};
 
 		// The touched triangles of the previous collapse phase (the
@@ -1196,6 +1205,18 @@ private:
 				[&](size_t i) {
 					if (triangleDeleted[i])
 						return;
+					// Skip the records whose corner neighborhoods did not
+					// change since their evaluation: the record is a pure
+					// function of the corner stars, and the neighborhood
+					// versions cover all their inputs
+					{
+						const auto &v = triangleFlip[i].v;
+						const size_t nvOffset = 3 * i;
+						if ((triangleNV[nvOffset + 0] == vertexNV[v[0]].load(std::memory_order_relaxed)) &&
+								(triangleNV[nvOffset + 1] == vertexNV[v[1]].load(std::memory_order_relaxed)) &&
+								(triangleNV[nvOffset + 2] == vertexNV[v[2]].load(std::memory_order_relaxed)))
+							return;
+					}
 					evaluateTriangle(i);
 			});
 		}
@@ -1802,6 +1823,7 @@ private:
 		CacheAlignedVector<unsigned char> dirty;
 		CacheAlignedVector<u_int> candidateVertexIndex;
 		CacheAlignedVector<unsigned char> candidateValid;
+		CacheAlignedVector<u_int> nv;
 	} compactionScratch;
 	// The persistent candidate vertex map of the sparse closure path
 	// (ComputeCandidateClosures): only the entries of the current
@@ -1814,6 +1836,25 @@ private:
 	// The endpoints set by the previous sparse call (the clear list)
 	ScalableVector<u_int> candVertexSet;
 
+	// The neighborhood version cache. The neighborhood version of a
+	// vertex changes when the vertex or one of its neighbors moves: a
+	// triangle record captures the versions of its three corners at
+	// evaluation time, and it is still valid while they all match (the
+	// evaluation is a pure function of the stars of the corners, and any
+	// triangle of a corner star carries the corner, so the version bumps
+	// of the moved vertex stars cover every record input)
+	//
+	// The per vertex versions are relaxed fetch_adds (the accepted atomic
+	// pattern of the reference counts): the bump walks of a weld run on
+	// the stars of its own collapse endpoints, the one case where the
+	// two segment star arithmetic is valid, and the bumps on the shared
+	// neighbors of concurrent closures are plain counter increments
+	ScalableVector<std::atomic<u_int>> vertexNV;
+	// The corner versions captured by each triangle record, interleaved
+	// like the errors (3 per triangle), cache aligned like the other
+	// triangle fields
+	CacheAlignedVector<u_int> triangleNV;
+
 	size_t GetTriangleCount() const { return triangleFlip.size(); }
 
 	void ResizeTriangles(const size_t count) {
@@ -1824,6 +1865,7 @@ private:
 		triangleDirty.resize(count);
 		candidateVertexIndex.resize(count);
 		candidateValid.resize(count);
+		triangleNV.resize(count * 3);
 	}
 
 	// The vertex fields in homogeneous vectors (structure of arrays),
@@ -1855,6 +1897,11 @@ private:
 		vertexTcount.resize(count);
 		vertexQ.resize(count);
 		vertexInvalidatedGen.resize(count);
+		// The atomics are not copyable: construct the array once instead
+		// of growing it (ResizeVertices runs once, at the mesh
+		// initialization)
+		if (vertexNV.empty())
+			vertexNV = ScalableVector<std::atomic<u_int>>(count);
 	}
 	// The vertex -> triangle references in homogeneous vectors (structure
 	// of arrays): the closure CSR passes (the count, the fill and the
@@ -2366,6 +2413,16 @@ private:
 		auto processReference = [&](const size_t k, const SimplifyRef &r) {
 			const size_t tid = r.tid;
 
+			// The corners of the reference (the triangles of the walked
+			// star) carry every neighbor of the moved vertex: their
+			// neighborhood versions change, and with them the records of
+			// the triangles that depend on their stars
+			{
+				const auto &vBump = triangleFlip[tid].v;
+				for (size_t j = 0; j < 3; ++j)
+					vertexNV[vBump[j]].fetch_add(1, std::memory_order_relaxed);
+			}
+
 			if (triangleDeleted[tid])
 				return;
 
@@ -2637,6 +2694,8 @@ private:
 			GatherTriangleField(triangleFlip, compactionScratch.flip,
 					compactionScratch.index, dst, 1);
 			GatherTriangleField(triangleErr, compactionScratch.err,
+					compactionScratch.index, dst, 3);
+			GatherTriangleField(triangleNV, compactionScratch.nv,
 					compactionScratch.index, dst, 3);
 			GatherTriangleField(triangleErrChoice, compactionScratch.errChoice,
 					compactionScratch.index, dst, 1);
