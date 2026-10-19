@@ -372,9 +372,9 @@ public:
 		  comparator(p_comparator) {}
 
 	// Returns a vector of pairs for the given range
-	std::vector<std::pair<size_t, size_t>> operator()(
+	std::vector<slg::equiv::Relation> operator()(
 		size_t r1, size_t r2) const {
-		std::vector<std::pair<size_t, size_t>> pairs;
+		std::vector<slg::equiv::Relation> pairs;
 		auto it = partition.begin();
 		std::advance(it, r1);
 		for (auto i = r1; i < r2; ++i, ++it) {
@@ -396,7 +396,7 @@ public:
 					for (const auto& [adjIdx, adjPoint] : adjPoints) {
 						if (idx >= adjIdx) continue;
 						if (compare_points(curPoint, adjPoint, comparator)) {
-							pairs.emplace_back(idx, adjIdx);
+							pairs.emplace_back(static_cast<uint32_t>(idx), static_cast<uint32_t>(adjIdx));
 						}
 					}
 				}  // for dx, dy, dz
@@ -421,7 +421,7 @@ ClusterMap GroupPoints(const Partition& partition, size_t numPoints, u_int toler
 	const NearlyEqualComparator comparator(tolerance);
 
 	// Generate all pairs using PointPairGenerator
-	std::vector<std::pair<size_t, size_t>> allPairs;
+	std::vector<slg::equiv::Relation> allPairs;
 	const PointPairGenerator pairGenerator(partition, comparator);
 	const size_t partition_size = partition.size();
 	constexpr size_t grain = 1024;
@@ -432,13 +432,13 @@ ClusterMap GroupPoints(const Partition& partition, size_t numPoints, u_int toler
 	// Use parallel_reduce to collect all pairs
 	allPairs = tbb::parallel_reduce(
 		tbb::blocked_range<size_t>(0, partition_size, grain),
-		std::vector<std::pair<size_t, size_t>>(),
-		[pairGenerator](const tbb::blocked_range<size_t>& r, std::vector<std::pair<size_t, size_t>> localPairs) -> std::vector<std::pair<size_t, size_t>> {
+		std::vector<slg::equiv::Relation>(),
+		[pairGenerator](const tbb::blocked_range<size_t>& r, std::vector<slg::equiv::Relation> localPairs) -> std::vector<slg::equiv::Relation> {
 			auto pairs = pairGenerator(r.begin(), r.end());
 			localPairs.insert(localPairs.end(), pairs.begin(), pairs.end());
 			return localPairs;
 		},
-		[](std::vector<std::pair<size_t, size_t>> a, const std::vector<std::pair<size_t, size_t>>& b) -> std::vector<std::pair<size_t, size_t>> {
+		[](std::vector<slg::equiv::Relation> a, const std::vector<slg::equiv::Relation>& b) -> std::vector<slg::equiv::Relation> {
 			a.insert(a.end(), b.begin(), b.end());
 			return a;
 		},
