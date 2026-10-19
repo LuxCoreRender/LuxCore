@@ -247,10 +247,13 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 	});
 
 	// Make a copy of the original mesh and overwrite vertex information
+	//
+	// The source normals are copied only if they are not about to be entirely
+	// overwritten by ComputeNormals below
 	mesh = srcMesh.Copy(
 		std::move(newVertices),
 		std::nullopt,
-		std::nullopt,
+		params.normalSmooth ? std::optional<NormalBuffer>(NormalBuffer()) : std::nullopt,
 		std::nullopt,
 		std::nullopt,
 		std::nullopt
