@@ -22,13 +22,26 @@
 
 #include <span>
 
-#include <execution>
+#include <oneapi/tbb.h>
 
 using namespace luxrays;
 
 // The minimum buffer size, in bytes, above which the copies are done in
 // parallel
 constexpr size_t PARALLEL_COPY_THRESHOLD = 1024 * 1024;
+
+// The parallel copy of the large buffers runs on TBB: std::copy with an
+// execution policy is not available on every platform (e.g. Apple libc++
+// has no <execution>), while oneTBB is a dependency of every build. One
+// contiguous std::copy_n per block keeps the memcpy of the serial copy
+// inside every block
+template<typename T>
+void ParallelCopy(const T *src, T *dst, const size_t count) {
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, count, 16384),
+		[&](const tbb::blocked_range<size_t> &r) {
+			std::copy_n(src + r.begin(), r.size(), dst + r.begin());
+		});
+}
 
 //------------------------------------------------------------------------------
 // Buffer
@@ -153,7 +166,7 @@ void Buffer<TYPE, SUBTYPE, PAD>::Set(const Buffer<TYPE, SUBTYPE, PAD>& from) {
 	auto to_bytes = std::span<std::byte>(data.get(), totalSize);
 
 	if (from_bytes.size() > PARALLEL_COPY_THRESHOLD)
-		std::copy(std::execution::par, from_bytes.begin(), from_bytes.end(), to_bytes.begin());
+		ParallelCopy(from_bytes.data(), to_bytes.data(), from_bytes.size());
 	else
 		std::copy(from_bytes.begin(), from_bytes.end(), to_bytes.begin());
 }
@@ -168,7 +181,7 @@ void Buffer<TYPE, SUBTYPE, PAD>::Set(std::span<const TYPE> from) {
 
 	// Copy, in parallel for the large buffers
 	if (from.size() * sizeof(TYPE) > PARALLEL_COPY_THRESHOLD)
-		std::copy(std::execution::par, from.begin(), from.end(), asType.begin());
+		ParallelCopy(from.data(), asType.data(), from.size());
 	else
 		std::copy(from.begin(), from.end(), asType.begin());
 }
@@ -185,7 +198,7 @@ void Buffer<TYPE, SUBTYPE, PAD>::Set(std::span<const SUBTYPE> from) {
 
 	// Copy, in parallel for the large buffers
 	if (from.size() * sizeof(SUBTYPE) > PARALLEL_COPY_THRESHOLD)
-		std::copy(std::execution::par, from.begin(), from.end(), asSubType.begin());
+		ParallelCopy(from.data(), asSubType.data(), from.size());
 	else
 		std::copy(from.begin(), from.end(), asSubType.begin());
 }
