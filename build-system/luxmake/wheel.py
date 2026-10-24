@@ -160,12 +160,15 @@ def make_wheel(args):
         extensions = [
             f.name
             for f in extension_path.iterdir()
-            if f.is_file() and f.name.startswith("pyluxcore")
+            if f.is_file()
+            and f.name.startswith("pyluxcore")
+            and f.suffix in (".pyd", ".so")
         ]
         for extension in extensions:
             break
         else:
             raise RuntimeError(f"No extension in {extension_path}")
+        ext_version = None
         try:
             ext_version = re.search(r"\.[^.]*?(\d+)", extension).group(1)
         except AttributeError:
@@ -179,9 +182,14 @@ def make_wheel(args):
             )
 
         soabi = sysconfig.get_config_var("SOABI")
-        abi_version = re.search(r"(\d+)", soabi).group(1)
+        # SOABI is not defined on Windows: use the running interpreter version
+        abi_version = (
+            re.search(r"(\d+)", soabi).group(1)
+            if soabi
+            else f"{sys.version_info.major}{sys.version_info.minor}"
+        )
 
-        if ext_version != abi_version:
+        if ext_version is not None and ext_version != abi_version:
             raise RuntimeError(
                 "Cannot build wheel: "
                 f"Extension Python version ({ext_version}) is different "
@@ -250,7 +258,7 @@ def make_wheel(args):
         logger.info("Repairing wheel")
         input_path = raw_wheel_dir / wheelname
         logging.basicConfig(level=logging.DEBUG)
-        args = [
+        repair_args = [
             "-l",
             wheel_lib_dir,
             *_get_lib_paths(),
@@ -258,7 +266,7 @@ def make_wheel(args):
             PARAMS.WHEELHOUSE_DIR,
             input_path,
         ]
-        run_module("repairwheel", args)
+        run_module("repairwheel", repair_args)
 
         # And, for Windows, recompose
         if platform.system() == "Windows":
