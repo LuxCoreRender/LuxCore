@@ -269,6 +269,10 @@ if(MSVC)
   ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS)
   # Enable Unicode
   ADD_DEFINITIONS(-D_UNICODE)
+  # Use the header-only flavor of the fmt library: fmt symbols are already
+  # embedded (as header-only code) in the static OpenImageIO.lib, and pulling
+  # in the static fmt.lib too would duplicate them at link time (LNK2005/LNK1169)
+  ADD_DEFINITIONS(-DFMT_HEADER_ONLY)
   if(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64")
     # SSE/AVX flags are only valid for x86/x64 targets
     ADD_DEFINITIONS(-D__SSE2__ -D__SSE__ -D__MMX__)
