@@ -136,22 +136,41 @@ void SkyLight3::Preprocess() {
 	#pragma omp parallel for schedule(static, 1)
 	for (int y = 0; y < (int)mapHeight; ++y) {
 		const bool belowHorizonRow = (y > (int)(mapHeight / 2));
+		// sin(theta) at the row center: the solid angle of a texel is
+		// proportional to it (the lat-long mapping is uniform in theta,
+		// not in cos(theta))
+		const float sinTheta = sinf(M_PI * (y + .5f) / mapHeight);
 		for (u_int x = 0; x < mapWidth; ++x) {
 			const u_int index = x + y * mapWidth;
 
 			Spectrum radiance;
 			if (skipGroundRows && belowHorizonRow) {
 				// Black ground: nothing to evaluate
-			} else
-				radiance = ComputeRadiance(UniformSampleSphere(
+			} else {
+				// The texel (x, y) must hold the radiance of the
+				// direction mapped to u=(x+.5)/W, v=(y+.5)/H by the
+				// lat-long mapping: this is the convention used both by
+				// the OpenCL/CUDA kernels (EnvLightSource_ToLatLongMapping
+				// + ImageMap_GetSpectrum) and by the CPU lat-long pdf to
+				// look the map up (a standard equirectangular mapping,
+				// uniform in theta with the zenith in row 0)
+				Vector dir;
+				FromLatLongMapping(
+						(x + .5f) / mapWidth,
 						(y + .5f) / mapHeight,
-						(x + .5f) / mapWidth));
+						&dir);
+				radiance = ComputeRadiance(dir);
+			}
 
 			pixels[index * 3 + 0] = radiance.c[0];
 			pixels[index * 3 + 1] = radiance.c[1];
 			pixels[index * 3 + 2] = radiance.c[2];
 
-			distributionData[index] = radiance.Y();
+			// Weight the texel luminance by its solid angle so that the
+			// Distribution2D pdf (per unit u/v, converted to per solid
+			// angle with the lat-long mapping pdf) is proportional to the
+			// radiance
+			distributionData[index] = radiance.Y() * sinTheta;
 		}
 	}
 
@@ -159,12 +178,15 @@ void SkyLight3::Preprocess() {
 
 	skyDistribution = std::make_unique<Distribution2D>(distributionData, mapWidth, mapHeight);
 
-	// The mean dome luminance, used by GetPower() without any further model
-	// evaluation
+	// The mean dome luminance over the sphere, used by GetPower() without
+	// any further model evaluation. distributionData[] holds the texel
+	// luminance weighted by sin(theta) (i.e. by the texel solid angle), so
+	// its sum is the integral of the luminance over the sphere up to the
+	// constant factor sin(pi/(2*H))/W
 	meanRadianceY = 0.f;
 	for (u_int i = 0; i < mapWidth * mapHeight; ++i)
 		meanRadianceY += distributionData[i];
-	meanRadianceY /= mapWidth * mapHeight;
+	meanRadianceY *= sinf(M_PI / (2.f * mapHeight)) / mapWidth;
 }
 
 void SkyLight3::RegisterRadianceImageMap(ImageMapCache &imgMapCache) {
