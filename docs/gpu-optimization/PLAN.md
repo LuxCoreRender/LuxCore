@@ -65,7 +65,7 @@ All implemented tasks are merged for testing on `gpu-opt/combined` (not into
 | T2.4 | Non-default CUDA stream per device plus a CUDA graph for the per-iteration sequence (1 trace + 10 micro-kernels). OptiX launch must use the same stream. | rejected for now: launches are async and already hidden; gain < 1%, and a graph needs updates on every arg change | Est. 1-3%. |
 | T2.5 | Interleave the material and texture evaluation stacks: element i of thread t at `stacks[i * globalSize + t]` instead of `stacks[t * maxSize + i]`, so stack pushes/pops of a warp are coalesced. | done (unverified image), branch `gpu-opt/T2.5-evalstack-interleave`: A/B LuxBall +1.1%, DLSC +1.7%, DanishMood +18% | Lossless (addresses only). |
 | T2.6 | Write `SampleResult` AOV channels only when a film channel reads them (same conditions as `Film_AddSampleResultColor` / variance clamping); clear only `radianceGroupCount` radiance groups. | done (unverified image), branch `gpu-opt/T2.6-sampleresult-channels`: A/B vs T2.5 LuxBall +2.8%, DLSC +3.7% | Lossless (film gets the same values). |
-| T2.7 | Structure-of-arrays for the remaining per-path structs used by the hot kernels (`GPUTaskState` incl. `BSDF`, `GPUTask.tmpHitPoint`, `SampleResult`, `EyePathInfo`): every access of a warp to an AoS field touches up to 32 sectors. Needs a word-interleaved layout or field-by-field split; large refactor of all `->` accesses in the kernels. Cycles stores its integrator state as one array per field. | open | Profile first (T0.4); est. large on small scenes. |
+| T2.7 | Structure-of-arrays for the remaining per-path structs used by the hot kernels (`GPUTaskState` incl. `BSDF`, `GPUTask.tmpHitPoint`, `SampleResult`, `EyePathInfo`): every access of a warp to an AoS field touches up to 32 sectors. Needs a word-interleaved layout or field-by-field split; large refactor of all `->` accesses in the kernels. Cycles stores its integrator state as one array per field. | superseded by T5.3. T2.7a (private BSDF copy in `MK_GENERATE_NEXT_VERTEX_RAY`, branch `gpu-opt/T2.7-local-bsdf`): no gain, the copy still reads the AoS buffer | Profile first (T0.4); est. large on small scenes. |
 
 ## Phase 3: large (start only if Phase 1-2 results justify it)
 
@@ -87,6 +87,42 @@ with no structure in the diff image.
 | ID | Task | Status | Acceptance |
 |---|---|---|---|
 | T4.1 | Path guiding with SD-trees (Mueller, Gross, Novak 2017, `cgf13227-sup-0002-s1.pdf` has the sampling and refinement pseudocode). Training passes of doubling length: the GPU records radiance per vertex (position, direction, value) into a buffer, the CPU builds the spatial binary tree + directional quadtrees between passes and uploads them flattened, `MK_GENERATE_NEXT_VERTEX_RAY` samples a mix of BSDF and guide (one-sample MIS, BSDF fraction 0.5, never 0 so the estimator stays unbiased). Only the last pass, or inverse-variance weighted passes, go to the film. Optional follow-up: variance-aware target density from Rath et al. 2020 (`a151-rath/`). Off for specular-only bounces. New property, off by default until it wins. | open | Unbiased (mean within seed spread vs reference); lower RMSE at equal time on DanishMood / LynxSpider (indirect-heavy). Large: design note in `PROGRESS.md` first. |
+
+## Phase 5: memory-bound kernels (roadmap from Nsight Compute, 2026-10-26)
+
+Goal set by the user: Octane-class speed on the RTX 5070. Octane is not
+installed here, so parity cannot be measured directly; progress is tracked
+in M samples/sec and kernel ms per M samples on the bench scenes.
+
+Measured on LuxBall with Nsight Compute (`gpu-opt/combined`, details in
+`PROGRESS.md`): the heavy kernels issue an instruction in only 6-9% of
+cycles. Warps wait on memory (`long_scoreboard` stall 14-28 cycles per issued
+instruction, everything else under 3). Three causes, each a multiplier:
+
+1. Few warps to hide latency: 247-255 registers per thread, 12-16% achieved
+   occupancy (about 7 of 48 warps per SM).
+2. Uncoalesced per-path structs: 4-11 sectors per global load request and
+   16-32 per store request (ideal for 4-byte fields: 4). Kernels that mainly
+   write state are LSU-throttled (`MK_GENERATE_CAMERA_RAY` `lg_throttle`
+   150, `MK_SPLAT_SAMPLE` 252).
+3. Partly empty warps: 4.8 (`MK_RT_DL`), 15.8 (`MK_RT_NEXT_VERTEX`) and
+   9-26 (queued kernels) active threads per warp instruction out of 32.
+
+OptiX traversal is 1.5% of GPU time and the Sobol sampler about 2.5%
+(RANDOM sampler A/B): neither is a lever.
+
+Order: T5.1, T5.2, T5.3, T5.5, T5.6, T5.7 (= T3.3), T5.4. All lossless
+(same math, different memory layout, schedule or dead code removal).
+
+| ID | Task | Status | Acceptance |
+|---|---|---|---|
+| T5.1 | Kernel-local temporaries on CUDA: `GPUTask.tmpHitPoint`, `tmpBsdf` and `tmpPathDepthInfo` are only used inside one micro-kernel call (light sample point, shadow-ray transparency, volume textures, DL BSDF sampling). Declare them as kernel locals on CUDA (local memory is interleaved per thread, so coalesced, and cached in L1); keep the global buffer on OpenCL, whose `__global` pointers cannot point to private memory. | todo | Kernel profile: `MK_DL_ILLUMINATE`, `MK_RT_DL`, `MK_RT_NEXT_VERTEX` faster; image identical. |
+| T5.2 | Queues for `MK_RT_NEXT_VERTEX` and `MK_RT_DL`: double-buffered across iterations (the kernel that sets the state appends to the next iteration's queue; pass-through hits that keep tracing re-append). Today both run over all paths and their warps are 50-85% empty. | todo | Lanes per warp instruction up; kernel time down; image identical. |
+| T5.3 | Transposed storage for the persistent per-path structs on CUDA (`GPUTaskState` incl. `BSDF`, `EyePathInfo`, `SampleResult`, `GPUTaskDirectLight`): word `w` of path `p` at `buf[w * taskCount + p]`. A kernel copies the words it uses into a private struct at entry (coalesced: 4 sectors per warp load) and writes back only what it changes. The struct code stays as is. Replaces T2.7. | todo | Sectors per request near 4; large gain on all heavy kernels; image identical. |
+| T5.4 | Smaller `HitPoint`: `localToWorld` (128 B, a third of `BSDF`) is per-mesh data; look it up or recompute it from mesh index and ray time where it is used instead of storing it per path. Check every reader first. | todo | Bit-identical transform values; less traffic in `MK_RT_NEXT_VERTEX`. |
+| T5.5 | Feature specialization beyond material/texture types (extends T3.2): compile out light types, volumes, PhotonGI, bake maps, shadow catcher, holdout, hybrid back/forward and unused AOVs when the scene does not use them. Goal: fewer registers, higher occupancy; then re-sweep `cuda.kernel.maxregisters` (T1.6). | todo | Registers per heavy kernel well under 255 on LuxBall/DLSC; speed up; image identical. |
+| T5.6 | Fuse `MK_HIT_OBJECT` + `MK_DL_ILLUMINATE` + `MK_DL_SAMPLE_BSDF` (they always run back to back in one iteration on the same paths) into one kernel that loads the BSDF once. Same code and sample order, so the image is unchanged. | todo | Fused time < sum of the three (30 ms per M samples on LuxBall). |
+| T5.7 | Material sorting (T3.3) for the BSDF kernels: 9-26 active lanes per warp instruction today. | todo | See T3.3. |
 
 ## References
 
