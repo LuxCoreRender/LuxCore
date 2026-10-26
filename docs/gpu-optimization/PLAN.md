@@ -69,6 +69,20 @@ All implemented tasks are merged for testing on `gpu-opt/combined` (not into
 |---|---|---|---|
 | T3.1 | Per-state work queues (stream compaction), as in Laine 2013 section 4.4 and Padilla 2026 section 3.1: the kernel that sets a path's next state appends the path index to that state's queue (one counter + index array per state, preallocated, 4 bytes x taskCount each). Each micro-kernel then reads `queue[gid]` and exits if `gid >= count`. CUDA has no indirect dispatch, so keep launching `taskCount` threads: idle threads only read the counter, not the path state. Aggregate the atomics per warp (ballot + one `atomic_add` per warp); Laine measured +40% from this, though recent NVCC/NVRTC may already do it automatically, so check the PTX first. Changes the render loop, kernel args and every micro-kernel. | done (unverified), branch `gpu-opt/T3.1-path-queues`; A/B DLSC +5.5%, DanishMood +16% | Est. 10-25%. Design note in `PROGRESS.md` first. |
 | T3.2 | Scene-feature kernel specialization: compile-time defines for used material/texture/light types, volumes, PhotonGI, etc., with `#if` guards in kernel code. Cost: recompiles when the feature set changes; must keep `kernelcachefill` working. Alternative from Laine 2013 section 4.3: split `MK_HIT_OBJECT` / BSDF evaluation into per-material kernels fed by per-material queues (needs T3.1), with expensive materials in their own kernel and simple ones grouped. | done (unverified), branch `gpu-opt/T3.2-kernel-specialization`: opt-in `opencl.kernel.specialize.enable` | Est. 10-30% depending on scene. Design note first. |
+| T3.3 | Material-coherent shading: before `MK_HIT_OBJECT` (and `MK_DL_ILLUMINATE` / `MK_DL_SAMPLE_BSDF`, which also evaluate the BSDF), reorder that state's queue by material index so a warp evaluates one material. Counting sort over the T3.1 queue: per-material counters (atomics), prefix sum, scatter into a second index array. Cycles X ("shader sorting") and pbrt-v4 (per-material queues) both do this. Only the processing order changes, so the image is bit-identical up to float summation order of the film. Skip the sort when the scene has one material, or when the queue is small (sort cost > gain). | open | Gain on DLSC / LynxSpider / DanishMood, no loss on LuxBall. Image within noise. |
+
+## Phase 4: less noise per second (unbiased variance reduction)
+
+The user accepts less noise as long as the image is unbiased and has no
+visible structure. These tasks change the noise, not the expected image, so
+the image check differs from Phases 1-3: compare against a high-spp
+reference of the baseline (e.g. 16K spp). Pass = mean difference within the
+seed-to-seed spread and lower RMSE to the reference at equal render time,
+with no structure in the diff image.
+
+| ID | Task | Status | Acceptance |
+|---|---|---|---|
+| T4.1 | Path guiding with SD-trees (Mueller, Gross, Novak 2017, `cgf13227-sup-0002-s1.pdf` has the sampling and refinement pseudocode). Training passes of doubling length: the GPU records radiance per vertex (position, direction, value) into a buffer, the CPU builds the spatial binary tree + directional quadtrees between passes and uploads them flattened, `MK_GENERATE_NEXT_VERTEX_RAY` samples a mix of BSDF and guide (one-sample MIS, BSDF fraction 0.5, never 0 so the estimator stays unbiased). Only the last pass, or inverse-variance weighted passes, go to the film. Optional follow-up: variance-aware target density from Rath et al. 2020 (`a151-rath/`). Off for specular-only bounces. New property, off by default until it wins. | open | Unbiased (mean within seed spread vs reference); lower RMSE at equal time on DanishMood / LynxSpider (indirect-heavy). Large: design note in `PROGRESS.md` first. |
 
 ## References
 
@@ -89,6 +103,40 @@ Extract text with `pdftotext -layout <file> <out.txt>` (available in Git Bash).
   index lists (T3.1). Neither design saturated any GPU unit, so latency,
   memory traffic and synchronization are the limits, which supports layout
   and queue work over more arithmetic tuning.
+
+- Mueller, Gross, Novak, "Practical Path Guiding for Efficient
+  Light-Transport Simulation", CGF 36(4), EGSR 2017 (doi 10.1111/cgf.13227).
+  SD-tree: binary tree over space, quadtree over directions, trained in
+  passes of doubling sample count. Unbiased when mixed with BSDF sampling.
+  Basis of T4.1. Supplementary pseudocode: `cgf13227-sup-0002-s1.pdf`.
+- `a151-rath/`: Rath, Grittmann, Herholz, Vevoda, Slusallek, Krivanek,
+  "Variance-Aware Path Guiding", SIGGRAPH 2020 (supplemental, code under
+  `supplemental/path-guiding/code`). Guides toward the variance-optimal
+  density instead of the radiance product; refinement for T4.1.
+- `125-134.pdf`, `bekaert_colorpage.pdf`: Bekaert, Sbert, Halton,
+  "Accelerating Path Tracing by Re-Using Paths", EGWR 2002. Unbiased, about
+  10x on indirect light, but pixels in a tile share paths: correlated,
+  blocky noise (their figure 5). Rejected: visible structure.
+- Laine, Karras, Aila 2013 (above) and pbrt-v4 chapter 15 "Wavefront
+  Rendering on GPUs": per-material queues and kernels (T3.3 alternative).
+- Cycles X (code.blender.org 2021-04 and 2021-11): wavefront kernels with
+  per-state queues (done in T3.1), shader sorting (T3.3), decoupled shadow
+  kernel (LuxCore already has `MK_RT_DL`), adaptive sample batching for
+  occupancy (LuxCore already adapts 1-128 iterations per batch), scrambling
+  distance (+1-5%, rejected: correlates samples between pixels), hair
+  transparency baking (not applicable, LuxCore has no hair transparency
+  per shadow hit). The Cycles X slides (Google Docs) and the OTOY
+  performance page (HTTP 403) could not be read.
+- Blender 2019 "Accelerating Cycles using NVIDIA RTX": OptiX for traversal
+  (LuxCore already does this) and the OptiX denoiser (out of scope).
+- ReSTIR DI/GI and GRIS (NVIDIA 2020-2022): spatiotemporal resampling for
+  real-time. Rejected for final renders: spatial reuse correlates
+  neighbouring pixels (structured noise at low spp), the practical variants
+  are biased, and temporal reuse needs animation frames.
+- Interactive path tracing of sparse volumes (NVIDIA 2021): NanoVDB +
+  unbiased tracking + reconstruction. Rejected: the reconstruction is a
+  denoiser, and replacing LuxCore's ray-marched heterogeneous volumes with
+  tracking estimators changes the converged image.
 
 ## Out of scope
 
