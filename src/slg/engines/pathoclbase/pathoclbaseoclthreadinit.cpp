@@ -358,6 +358,12 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	//--------------------------------------------------------------------------
 
 	intersectionDevice.AllocBufferRW(&tasksStateBuff, nullptr, sizeof(slg::ocl::pathoclbase::GPUTaskState) * taskCount, "GPUTaskState");
+
+	//--------------------------------------------------------------------------
+	// Allocate pathStatesBuff
+	//--------------------------------------------------------------------------
+
+	intersectionDevice.AllocBufferRW(&pathStatesBuff, nullptr, sizeof(slg::ocl::pathoclbase::PathState) * taskCount, "PathState");
 }
 
 void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {

@@ -306,6 +306,7 @@ void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	intersectionDevice.SetKernelArg(initKernel, argIndex++, tasksBuff);
 	intersectionDevice.SetKernelArg(initKernel, argIndex++, tasksDirectLightBuff);
 	intersectionDevice.SetKernelArg(initKernel, argIndex++, tasksStateBuff);
+	intersectionDevice.SetKernelArg(initKernel, argIndex++, pathStatesBuff);
 	intersectionDevice.SetKernelArg(initKernel, argIndex++, taskStatsBuff);
 	intersectionDevice.SetKernelArg(initKernel, argIndex++, samplerSharedDataBuff);
 	intersectionDevice.SetKernelArg(initKernel, argIndex++, samplesBuff);
@@ -333,6 +334,7 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, tasksBuff);
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, tasksDirectLightBuff);
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, tasksStateBuff);
+	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, pathStatesBuff);
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, taskStatsBuff);
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, pixelFilterBuff);
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, samplerSharedDataBuff);

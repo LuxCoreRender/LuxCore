@@ -85,10 +85,10 @@ typedef struct {
 	unsigned int lightID;
 } DirectLightIlluminateInfo;
 
-// The state used to keep track of the rendered path
+// The state used to keep track of the rendered path. The PathState itself
+// is kept in a separate array (pathStates) so the state checks done by every
+// micro-kernel read contiguous memory.
 typedef struct {
-	PathState state;
-
 	Spectrum throughput;
 	BSDF bsdf; // Variable size structure
 

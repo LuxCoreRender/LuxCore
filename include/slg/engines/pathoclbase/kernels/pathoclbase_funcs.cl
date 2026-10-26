@@ -131,8 +131,8 @@ OPENCL_FORCE_INLINE void GenerateEyePath(
 			dofSampleX, dofSampleY);
 #endif
 
-	// Initialize the path state
-	taskState->state = MK_RT_NEXT_VERTEX;
+	// Initialize the path state (the caller sets pathStates[gid] to
+	// MK_RT_NEXT_VERTEX)
 	VSTORE3F(WHITE, taskState->throughput.c);
 	taskState->albedoToDo = true;
 	VSTORE3F(BLACK, sampleResult->albedo.c);  // Just in case albedoToDo is never true
@@ -452,6 +452,7 @@ OPENCL_FORCE_INLINE bool DirectLight_BSDFSampling(
 		, __global GPUTask *tasks \
 		, __global GPUTaskDirectLight *tasksDirectLight \
 		, __global GPUTaskState *tasksState \
+		, __global PathState *pathStates \
 		, __global GPUTaskStats *taskStats \
 		KERNEL_ARGS_FAST_PIXEL_FILTER \
 		, __global void *samplerSharedDataBuff \
@@ -552,6 +553,7 @@ __kernel void Init(
 		__global GPUTask *tasks,
 		__global GPUTaskDirectLight *tasksDirectLight,
 		__global GPUTaskState *tasksState,
+		__global PathState *pathStates,
 		__global GPUTaskStats *taskStats,
 		__global void *samplerSharedDataBuff,
 		__global void *samplesBuff,
@@ -572,7 +574,7 @@ __kernel void Init(
 	__global TilePathSamplerSharedData *samplerSharedData = (__global TilePathSamplerSharedData *)samplerSharedDataBuff;
 
 	if (gid >= filmWidth * filmHeight * Sqr(samplerSharedData->aaSamples)) {
-		taskState->state = MK_DONE;
+		pathStates[gid] = MK_DONE;
 		// Mark the ray like like one to NOT trace
 		rays[gid].flags = RAY_FLAGS_MASKED;
 
@@ -621,11 +623,12 @@ __kernel void Init(
 				tileStartX, tileStartY
 #endif
 				SAMPLER_PARAM);
+		pathStates[gid] = MK_RT_NEXT_VERTEX;
 	} else {
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
-		taskState->state = MK_DONE;
+		pathStates[gid] = MK_DONE;
 #else
-		taskState->state = MK_GENERATE_CAMERA_RAY;
+		pathStates[gid] = MK_GENERATE_CAMERA_RAY;
 #endif
 		// Mark the ray like like one to NOT trace
 		rays[gid].flags = RAY_FLAGS_MASKED;

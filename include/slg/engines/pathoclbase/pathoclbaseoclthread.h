@@ -256,6 +256,7 @@ protected:
 	luxrays::HardwareDeviceBuffer *tasksBuff;
 	luxrays::HardwareDeviceBuffer *tasksDirectLightBuff;
 	luxrays::HardwareDeviceBuffer *tasksStateBuff;
+	luxrays::HardwareDeviceBuffer *pathStatesBuff;
 	luxrays::HardwareDeviceBuffer *samplerSharedDataBuff;
 	luxrays::HardwareDeviceBuffer *samplesBuff;
 	luxrays::HardwareDeviceBuffer *sampleDataBuff;
