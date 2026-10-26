@@ -85,3 +85,47 @@ Not measured yet (T0.3).
   T3.2 got the per-material-kernel alternative.
 - Priority after Phase 1: T2.1, then T3.1. Both papers point to memory
   layout and wasted threads, not arithmetic, as the limit.
+
+### 2026-10-26: first measurements, bench fixes, register report
+
+- T0.3 (sequential runs, 60 s, median of 3, M samples/sec), `main`:
+  LuxBall 11.93, DLSC 12.40, LuxCore2.1Benchmark 13.49, DanishMood 10.54,
+  LynxSpider 5.54. Run-to-run spread up to about 2%.
+- T1.1-T1.3 measured right after (same session): LuxBall 11.33, DLSC 12.18,
+  LuxCore2.1Benchmark 13.43, DanishMood 9.96, LynxSpider 5.31 (-1% to -5%).
+  Sequential runs over ~1 h are affected by GPU clock/temperature drift, so
+  this is not conclusive. Re-measured with interleaved A/B runs (below).
+- Image check flaw found: two baseline renders with the **same seed** differ
+  only by float ordering, so their RMSE (the old noise floor) is far below
+  real sampling noise. T1.1-T1.3 "failed" on LuxBall/DLSC/DanishMood with
+  RMSE 2.5-4.6x that floor, which says nothing about bias: any change to the
+  generated code changes the noise pattern. Fix in `bench.py`: baseline run
+  i uses seed 1+i (noise floor = two independent renders); compare also
+  prints the mean brightness change (bias check). User: less noise than the
+  baseline is fine; the requirement is no bias and no visible structure.
+- `bench.py speed` used the final samples/sec line, which is printed after
+  the halt and counts shutdown time (e.g. 12.04 at 20 s vs 11.47 final).
+  Now uses the last line within the halt time.
+- New `bench.py ab`: interleaved runs of two builds/settings.
+- Register report (`ptxas -v -arch=sm_120` on the cached PTX; strip the
+  4-byte header of the cache file and set `.version 8.7` because the
+  bundled NVRTC 12.9 emits PTX 8.8 and toolkit 12.8 ptxas reads up to 8.7):
+
+  | Kernel | regs | stack/spill |
+  |---|---|---|
+  | MK_RT_NEXT_VERTEX | 246 | 176 B stack |
+  | MK_HIT_NOTHING | 64 | 80 B |
+  | MK_HIT_OBJECT | 255 | 192 B, 24 B spill |
+  | MK_RT_DL | 248 | 176 B |
+  | MK_DL_ILLUMINATE | 244 | 144 B |
+  | MK_DL_SAMPLE_BSDF | 254 | 160 B |
+  | MK_GENERATE_NEXT_VERTEX_RAY | 244 | 176 B |
+  | MK_SPLAT_SAMPLE | 40 | 160 B |
+  | MK_NEXT_SAMPLE | 39 | 16 B |
+  | MK_GENERATE_CAMERA_RAY | 59 | 0 |
+
+  ~250 registers per thread allows about 8 resident warps per SM: the heavy
+  kernels are latency bound. Register pressure (T1.6 cap, T3.2
+  specialization) is likely a bigger lever than wasted threads.
+- T3.1 (queues) first A/B: LuxBall 11.87 -> 11.89 (+0.2%), DLSC
+  12.44 -> 13.13 (+5.5%). Remaining scenes pending.
