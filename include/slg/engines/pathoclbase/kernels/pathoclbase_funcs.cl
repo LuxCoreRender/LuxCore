@@ -52,8 +52,11 @@ OPENCL_FORCE_INLINE int PathState_QueueIndex(const PathState state) {
 			return PATH_QUEUE_NEXT_SAMPLE;
 		case MK_GENERATE_CAMERA_RAY:
 			return PATH_QUEUE_GENERATE_CAMERA_RAY;
+		case MK_RT_NEXT_VERTEX:
+			return PATH_QUEUE_RT_NEXT_VERTEX;
+		case MK_RT_DL:
+			return PATH_QUEUE_RT_DL;
 		default:
-			// MK_RT_NEXT_VERTEX and MK_RT_DL are queued by QueueRTPaths,
 			// MK_DONE has no queue
 			return -1;
 	}
@@ -80,21 +83,9 @@ OPENCL_FORCE_INLINE uint PathQueue_Reserve(__global uint *pathQueueCounts, const
 #endif
 }
 
-// Sets the state of path gid and queues the path for the micro-kernel of
+// Sets the state of path gid: QueuePaths queues it for the micro-kernel of
 // that state
-OPENCL_FORCE_INLINE void PathState_Set(const size_t gid, const PathState state,
-		__global PathState *pathStates,
-		__global uint *pathQueues, __global uint *pathQueueCounts) {
-	pathStates[gid] = state;
-
-	const int queueIndex = PathState_QueueIndex(state);
-	if (queueIndex >= 0) {
-		const uint pos = PathQueue_Reserve(pathQueueCounts, queueIndex);
-		pathQueues[queueIndex * get_global_size(0) + pos] = gid;
-	}
-}
-
-#define PATH_STATE_SET(state) PathState_Set(gid, (state), pathStates, pathQueues, pathQueueCounts)
+#define PATH_STATE_SET(state) pathStates[gid] = (state)
 
 // Used by the micro-kernels with a queue: one thread for each queued path.
 // Kernels are launched with taskCount threads, the threads past the number of
@@ -110,16 +101,19 @@ __kernel void ResetPathQueues(__global uint *pathQueueCounts) {
 		pathQueueCounts[gid] = 0;
 }
 
-// Queues the paths waiting for a ray to be traced, so the micro-kernels run
-// after the next trace get full warps
-__kernel void QueueRTPaths(__global PathState *pathStates,
-		__global uint *pathQueues, __global uint *pathQueueCounts) {
+// Queues the paths in the given state for its micro-kernel, run right before
+// it. Scanning the states keeps each queue in ascending path order (the
+// threads of a warp append consecutive paths), so the warps of the
+// micro-kernel access nearby paths and their rays, hits and sample results
+// share cache sectors. Pushing in PATH_STATE_SET() gives the queues in the
+// order the atomics arrive.
+__kernel void QueuePaths(__global PathState *pathStates,
+		__global uint *pathQueues, __global uint *pathQueueCounts,
+		const uint state) {
 	const size_t gid = get_global_id(0);
 
-	const PathState pathState = pathStates[gid];
-	const int queueIndex = (pathState == MK_RT_NEXT_VERTEX) ? PATH_QUEUE_RT_NEXT_VERTEX :
-		((pathState == MK_RT_DL) ? PATH_QUEUE_RT_DL : -1);
-	if (queueIndex >= 0) {
+	if (pathStates[gid] == state) {
+		const int queueIndex = PathState_QueueIndex((PathState)state);
 		const uint pos = PathQueue_Reserve(pathQueueCounts, queueIndex);
 		pathQueues[queueIndex * get_global_size(0) + pos] = gid;
 	}

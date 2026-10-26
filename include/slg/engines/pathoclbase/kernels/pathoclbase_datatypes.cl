@@ -53,14 +53,9 @@ typedef enum {
 	MK_DONE = 10
 } PathState;
 
-// Work queues: each micro-kernel runs only on the paths queued for it.
-// The queues up to PATH_QUEUE_GENERATE_CAMERA_RAY are for the states entered
-// only from micro-kernels that run earlier in the same iteration (or from
-// Init): PathState_Set() fills them and they are consumed within one
-// iteration. MK_RT_NEXT_VERTEX and MK_RT_DL are entered across iterations:
-// their queues are built from the path states by QueueRTPaths at the end of
-// each iteration (and after Init). All queues are reset at the end of an
-// iteration.
+// Work queues: each micro-kernel runs only on the paths queued for it. The
+// QueuePaths kernel fills the queue of a state right before its micro-kernel
+// and all queues are reset at the end of an iteration.
 typedef enum {
 	PATH_QUEUE_HIT_NOTHING = 0,
 	PATH_QUEUE_HIT_OBJECT = 1,
