@@ -204,3 +204,37 @@ Not measured yet (T0.3).
   picks 256-1024 per kernel unless `opencl.gpu.workgroup.size` is set.
   Forcing 64 was requested and not done (smaller blocks; LuxBall 32 vs auto
   was within noise).
+
+### 2026-10-26: where the GPU time goes on a small scene (T0.4), T2.5, T2.6
+
+- Nsight Systems 2026.1.3 hangs `luxcoreconsole` (even `--help`), so T0.4
+  adds `opencl.kernel.profile.enable` (sync + wall time per kernel).
+- LuxBall, combined branch, 1M paths, 11.5 M samples/sec (profiling costs
+  about 1%):
+
+  | Kernel | share | registers |
+  |---|---|---|
+  | GENERATE_NEXT_VERTEX_RAY | 21.1% | 255 |
+  | DL_ILLUMINATE | 17.7% | 255 (12 B spill) |
+  | RT_NEXT_VERTEX | 13.3% | 252 |
+  | GENERATE_CAMERA_RAY | 13.2% | 60 |
+  | DL_SAMPLE_BSDF | 11.3% | 255 |
+  | RT_DL | 9.6% | 252 |
+  | HIT_OBJECT | 6.9% | 255 (376 B spill) |
+  | SPLAT_SAMPLE | 3.4% | 40 |
+  | NEXT_SAMPLE | 1.8% | 46 |
+  | OptiX trace | **1.6%** | - |
+
+- `nvidia-smi dmon` during LuxBall: SM 100%, memory controller 37%, 120 W
+  of 250 W at full clocks. Ray tracing is almost free; the time is in the
+  shading/bookkeeping kernels, which are latency-bound (few warps per SM,
+  uncoalesced array-of-structs accesses), not bandwidth-bound.
+- GENERATE_CAMERA_RAY has 60 registers and still costs 13%: it cleared
+  ~340 B of `SampleResult` per sample (8 radiance groups + 19 AOVs) with
+  uncoalesced writes. T2.6 removes the writes of unused channels.
+- T2.5 (interleaved eval stacks), A/B vs combined: LuxBall +1.1%, DLSC
+  +1.7%, DanishMood +18.4%. T2.6 vs T2.5: LuxBall +2.8%, DLSC +3.7%,
+  DanishMood +16% (DanishMood is noisy: T2.5 alone measured 6.36 and 5.59
+  in two A/Bs, likely its PhotonGI cache build inside the 20 s).
+- Next lever (T2.7): structure-of-arrays for `GPUTaskState`/`BSDF`,
+  `tmpHitPoint`, `SampleResult`.
