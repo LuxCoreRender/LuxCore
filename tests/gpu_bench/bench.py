@@ -50,7 +50,7 @@ COMMON_PROPS = {
 COMPARE_OUTPUT_INDEX = 99
 COMPARE_FILE = "rgb.hdr"
 
-SAMPLES_SEC_RE = re.compile(r"Avg\. samples/sec\s+([\d.]+)M")
+SAMPLES_SEC_RE = re.compile(r"\[Elapsed time:\s*(\d+)/\d+sec\].*?Avg\. samples/sec\s+([\d.]+)M")
 OUTPUT_FILENAME_RE = re.compile(r'^\s*(film\.outputs\.\d+\.filename)\s*=\s*"?([^"\r\n]+)"?', re.MULTILINE)
 
 
@@ -93,11 +93,14 @@ def run_console(binary, scene, scenes_dir, run_dir, props, temp_dir):
     return log
 
 
-def parse_samples_sec(log):
-    matches = SAMPLES_SEC_RE.findall(log)
+def parse_samples_sec(log, halttime):
+    matches = [(int(t), float(v)) for t, v in SAMPLES_SEC_RE.findall(log)]
     if not matches:
         raise RuntimeError("no 'Avg. samples/sec' line in log")
-    return float(matches[-1])
+    # The final line is printed after the halt and counts shutdown time
+    # as render time, so use the last line within the halt time
+    in_time = [v for t, v in matches if t <= halttime]
+    return in_time[-1] if in_time else matches[-1][1]
 
 
 def read_hdr(path):
@@ -177,7 +180,7 @@ def cmd_speed(args):
         for i in range(args.runs):
             log = run_console(args.bin, scene, args.scenes_dir, base / f"run{i}",
                               {**props, "batch.halttime": str(args.halttime), "batch.haltspp": "0"}, temp_dir)
-            runs.append(parse_samples_sec(log))
+            runs.append(parse_samples_sec(log, args.halttime))
         results[scene] = {"runs": runs, "median": statistics.median(runs)}
         print(f"{scene}: {results[scene]['median']:.3f} M samples/sec {runs}", flush=True)
 
@@ -186,6 +189,36 @@ def cmd_speed(args):
     print("\n| Scene | M samples/sec (median) |\n|---|---|")
     for scene, r in results.items():
         print(f"| {scene} | {r['median']:.3f} |")
+
+
+def cmd_ab(args):
+    # A and B runs alternate, so GPU clock and temperature drift during a long
+    # session affect both sides alike
+    common = parse_props(args.D)
+    sides = [(args.a[0], Path(args.a[1]), {**common, **parse_props(args.da)}),
+             (args.b[0], Path(args.b[1]), {**common, **parse_props(args.db)})]
+    rows = []
+    for scene in args.scenes:
+        runs = {label: [] for label, _, _ in sides}
+        for label, binary, props in sides:
+            base = args.out / "ab" / label / scene
+            run_console(binary, scene, args.scenes_dir, base / "warmup",
+                        {**props, "batch.halttime": "15", "batch.haltspp": "0"}, args.out / label / "tmp")
+        for i in range(args.runs):
+            for label, binary, props in sides:
+                base = args.out / "ab" / label / scene
+                log = run_console(binary, scene, args.scenes_dir, base / f"run{i}",
+                                  {**props, "batch.halttime": str(args.halttime), "batch.haltspp": "0"},
+                                  args.out / label / "tmp")
+                runs[label].append(parse_samples_sec(log, args.halttime))
+        med_a = statistics.median(runs[args.a[0]])
+        med_b = statistics.median(runs[args.b[0]])
+        rows.append((scene, med_a, med_b))
+        print(f"{scene}: {args.a[0]} {med_a:.3f} {runs[args.a[0]]}, {args.b[0]} {med_b:.3f} {runs[args.b[0]]}", flush=True)
+
+    print(f"\n| Scene | {args.a[0]} | {args.b[0]} | change |\n|---|---|---|---|")
+    for scene, med_a, med_b in rows:
+        print(f"| {scene} | {med_a:.3f} | {med_b:.3f} | {(med_b - med_a) / med_a:+.1%} |")
 
 
 def cmd_image(args):
@@ -198,8 +231,12 @@ def cmd_image(args):
     for scene in args.scenes:
         for i in range(args.repeat):
             run_dir = args.out / args.label / "image" / scene / f"run{i}"
+            # Run i uses seed + i: the noise floor is the difference between
+            # two independent renders, so a candidate that gives another
+            # (equally valid) noise pattern is not flagged
             run_console(args.bin, scene, args.scenes_dir, run_dir,
-                        {**props, f"film.outputs.{COMPARE_OUTPUT_INDEX}.filename": str(run_dir / COMPARE_FILE)},
+                        {**props, "renderengine.seed": str(args.seed + i),
+                         f"film.outputs.{COMPARE_OUTPUT_INDEX}.filename": str(run_dir / COMPARE_FILE)},
                         args.out / args.label / "tmp")
         print(f"{scene}: {args.repeat} image(s) at {args.haltspp} spp", flush=True)
 
@@ -212,16 +249,23 @@ def cmd_compare(args):
             return read_hdr(args.out / label / "image" / scene / f"run{i}" / COMPARE_FILE)
 
         base0 = img(args.baseline, 0)
-        noise = rmse(base0, img(args.baseline, 1))
-        cand = rmse(img(args.candidate, 0), base0)
+        base1 = img(args.baseline, 1)
+        cand_img = img(args.candidate, 0)
+        noise = rmse(base0, base1)
+        cand = rmse(cand_img, base0)
         ok = cand <= args.tolerance * noise if noise > 0 else cand == 0
         ok_all &= ok
-        rows.append((scene, noise, cand, ok))
+        # Mean brightness change relative to the baseline: shows a bias that
+        # RMSE can hide in the noise
+        mean0 = statistics.fmean(base0)
+        noise_bias = (statistics.fmean(base1) - mean0) / mean0
+        cand_bias = (statistics.fmean(cand_img) - mean0) / mean0
+        rows.append((scene, noise, cand, noise_bias, cand_bias, ok))
 
-    print(f"\n| Scene | noise floor RMSE | candidate RMSE | pass (<= {args.tolerance}x) |")
-    print("|---|---|---|---|")
-    for scene, noise, cand, ok in rows:
-        print(f"| {scene} | {noise:.6g} | {cand:.6g} | {'yes' if ok else 'NO'} |")
+    print(f"\n| Scene | noise floor RMSE | candidate RMSE | seed mean diff | candidate mean diff | pass (<= {args.tolerance}x) |")
+    print("|---|---|---|---|---|---|")
+    for scene, noise, cand, noise_bias, cand_bias, ok in rows:
+        print(f"| {scene} | {noise:.6g} | {cand:.6g} | {noise_bias:+.3%} | {cand_bias:+.3%} | {'yes' if ok else 'NO'} |")
     print("\nAlso inspect diff images for structure; RMSE alone can hide local errors.")
     return 0 if ok_all else 1
 
@@ -248,6 +292,18 @@ def main():
     add_render_args(p)
     p.add_argument("--haltspp", type=int, default=256)
     p.add_argument("--repeat", type=int, default=2, help="2 for a baseline (noise floor), 1 for a candidate")
+    p.add_argument("--seed", type=int, default=1, help="seed of the first run; run i uses seed + i")
+
+    p = sub.add_parser("ab", help="interleaved speed runs of two builds or settings")
+    p.add_argument("--scenes", nargs="+", default=SCENES)
+    p.add_argument("--scenes-dir", type=Path, default=DEFAULT_SCENES_DIR)
+    p.add_argument("--a", nargs=2, required=True, metavar=("LABEL", "BIN"))
+    p.add_argument("--b", nargs=2, required=True, metavar=("LABEL", "BIN"))
+    p.add_argument("-D", nargs=2, action="append", metavar=("PROP", "VALUE"), help="override for both sides")
+    p.add_argument("--da", nargs=2, action="append", metavar=("PROP", "VALUE"), help="override for side A only")
+    p.add_argument("--db", nargs=2, action="append", metavar=("PROP", "VALUE"), help="override for side B only")
+    p.add_argument("--runs", type=int, default=3)
+    p.add_argument("--halttime", type=int, default=30)
 
     p = sub.add_parser("compare")
     p.add_argument("--scenes", nargs="+", default=SCENES)
@@ -258,6 +314,8 @@ def main():
     args = parser.parse_args()
     if args.command == "speed":
         cmd_speed(args)
+    elif args.command == "ab":
+        cmd_ab(args)
     elif args.command == "image":
         cmd_image(args)
     else:
