@@ -585,6 +585,8 @@ void CompiledScene::CompileLights() {
 				memcpy(&oclLight->notIntersectable.light2World.mInv, &alignedWorld2Light->mInv, sizeof(float[4][4]));
 
 				memcpy(&oclLight->notIntersectable.projection.lightProjection.m, &lightProjection->m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersectable.projection.lightProjectionInv.m, &lightProjection->mInv, sizeof(float[4][4]));
+				oclLight->notIntersectable.projection.area = pl.GetArea();
 				break;
 			}
 			case TYPE_IL_CONSTANT: {

@@ -32,6 +32,9 @@ typedef struct {
 	float yon, hither;
 	float shutterOpen, shutterClose;
 
+	// The view direction (Camera::GetDir()), used by the light tracing
+	Vector dir;
+
 	unsigned int volumeIndex;
 
 	// Used for camera motion blur
@@ -71,6 +74,9 @@ typedef struct {
 	float bokehScaleX, bokehScaleY;
 
 	int enableOculusRiftBarrel;
+
+	// The area of the image plane at distance 1, used by the light tracing
+	float pixelArea;
 } PerspectiveCamera;
 
 typedef struct {

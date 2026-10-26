@@ -80,6 +80,9 @@ protected:
 	PerspectiveCamera(const CameraType type, const luxrays::Point &o, const luxrays::Point &t,
 			const luxrays::Vector &u, const float *region = NULL);
 
+public:
+	float GetPixelArea() const { return pixelArea; }
+
 private:
 	static void OculusRiftBarrelPostprocess(const float x, const float y, float *barrelX, float *barrelY);
 

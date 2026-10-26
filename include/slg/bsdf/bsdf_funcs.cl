@@ -103,6 +103,9 @@ OPENCL_FORCE_INLINE void BSDF_InitVolume(
 		__global Ray *ray,
 		const uint volumeIndex, const float t, const float passThroughEvent) {
 	bsdf->hitPoint.throughShadowTransparency = throughShadowTransparency;
+#if defined(PARAM_LIGHT_TRACING)
+	bsdf->hitPoint.fromLight = false;
+#endif
 	bsdf->hitPoint.passThroughEvent = passThroughEvent;
 
 	const float3 rayOrig = VLOAD3F(&ray->o.x);
@@ -189,10 +192,17 @@ OPENCL_FORCE_INLINE float BSDF_ShadowTerminatorAvoidanceFactor(const float3 Ni, 
 OPENCL_FORCE_INLINE float3 BSDF_Evaluate(__global const BSDF *bsdf,
 		const float3 generatedDir, BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL) {
-	//const Vector &eyeDir = fromLight ? generatedDir : hitPoint.fixedDir;
-	//const Vector &lightDir = fromLight ? hitPoint.fixedDir : generatedDir;
+#if defined(PARAM_LIGHT_TRACING)
+	// Note: with fromLight, *directPdfW is still the pdf of sampling lightDir
+	// from eyeDir (the light tracing doesn't use it)
+	const bool fromLight = bsdf->hitPoint.fromLight;
+	const float3 fixedDir = VLOAD3F(&bsdf->hitPoint.fixedDir.x);
+	const float3 eyeDir = fromLight ? generatedDir : fixedDir;
+	const float3 lightDir = fromLight ? fixedDir : generatedDir;
+#else
 	const float3 eyeDir = VLOAD3F(&bsdf->hitPoint.fixedDir.x);
 	const float3 lightDir = generatedDir;
+#endif
 	const float3 geometryN = VLOAD3F(&bsdf->hitPoint.geometryN.x);
 	const float3 interpolatedN =  VLOAD3F(&bsdf->hitPoint.interpolatedN.x);
 	const float3 shadeN =  VLOAD3F(&bsdf->hitPoint.shadeN.x);
@@ -241,6 +251,12 @@ OPENCL_FORCE_INLINE float3 BSDF_Evaluate(__global const BSDF *bsdf,
 				((shadeN.x != interpolatedN.x) || (shadeN.y != interpolatedN.y) || (shadeN.z != interpolatedN.z)))
 			result *= BSDF_ShadowTerminatorAvoidanceFactor(BSDF_GetLandingInterpolatedN(bsdf),
 					BSDF_GetLandingShadeN(bsdf), lightDir);
+
+#if defined(PARAM_LIGHT_TRACING)
+		// Adjoint BSDF (not for volumes)
+		if (fromLight)
+			result *= (absDotEyeDirNG / absDotLightDirNG);
+#endif
 	}
 
 	return result;
@@ -268,11 +284,29 @@ OPENCL_FORCE_INLINE float3 BSDF_Sample(__global const BSDF *bsdf, const float u0
 		// Shadow terminator artefact avoidance
 		const float3 shadeN = VLOAD3F(&bsdf->hitPoint.shadeN.x);
 		const float3 interpolatedN = VLOAD3F(&bsdf->hitPoint.interpolatedN.x);
+#if defined(PARAM_LIGHT_TRACING)
+		const float3 lightDir = bsdf->hitPoint.fromLight ? fixedDir : *sampledDir;
+#else
+		const float3 lightDir = *sampledDir;
+#endif
 		if ((*event & REFLECT) &&
 				(*event & (DIFFUSE | GLOSSY)) &&
 				((shadeN.x != interpolatedN.x) || (shadeN.y != interpolatedN.y) || (shadeN.z != interpolatedN.z)))
 			result *= BSDF_ShadowTerminatorAvoidanceFactor(BSDF_GetLandingInterpolatedN(bsdf),
-					BSDF_GetLandingShadeN(bsdf), *sampledDir);
+					BSDF_GetLandingShadeN(bsdf), lightDir);
+
+#if defined(PARAM_LIGHT_TRACING)
+		// Adjoint BSDF (not for volumes). Material_Sample() returns the eye
+		// path value f * |cos(sampledDir)| / pdf. For a reciprocal BSDF the
+		// light path value is f * |cos(fixedDir)| / pdf; the refractive
+		// materials apply their non-reciprocal part themselves (see
+		// HitPoint_IsFromLight()).
+		if (bsdf->hitPoint.fromLight) {
+			const float3 geometryN = VLOAD3F(&bsdf->hitPoint.geometryN.x);
+			result *= fabs(CosTheta(localFixedDir) / CosTheta(localSampledDir)) *
+					(fabs(dot(*sampledDir, geometryN)) / fabs(dot(fixedDir, geometryN)));
+		}
+#endif
 	}
 
 	return result;

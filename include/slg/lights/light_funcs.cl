@@ -1137,4 +1137,353 @@ OPENCL_FORCE_INLINE float Light_GetAvgPassThroughTransparency(
 	} else
 		return 1.f;
 }
+
+#if defined(PARAM_LIGHT_TRACING)
+
+//------------------------------------------------------------------------------
+// Light emission for the light tracing (as LightSource::Emit())
+//
+// The functions return the emitted radiance and set the ray and its pdf
+// (emissionPdfW). Emission maps (map point, map sphere and triangle lights
+// with an IES/image map) are sampled uniformly: the CPU code samples their
+// distribution, not available on the GPU (same expected value).
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE float3 Light_EmitLocal(__global const LightSource *light,
+		const float3 localDir, float3 *rayDir) {
+	*rayDir = normalize(Transform_ApplyVector(&light->notIntersectable.light2World, localDir));
+	return localDir;
+}
+
+OPENCL_FORCE_INLINE float2 Light_EmissionMapUV(const float3 localDir) {
+	return MAKE_FLOAT2(SphericalPhi(localDir) * (1.f / (2.f * M_PI_F)), SphericalTheta(localDir) * M_1_PI_F);
+}
+
+// Ray origin on the disk of the scene bounding sphere seen from rayDir
+OPENCL_FORCE_INLINE float3 Light_EmitEnvOrigin(const float3 worldCenter, const float envRadius,
+		const float3 rayDir, const float u0, const float u1) {
+	float3 x, y;
+	CoordinateSystem(-rayDir, &x, &y);
+	float d1, d2;
+	ConcentricSampleDisk(u0, u1, &d1, &d2);
+
+	const float3 pDisk = worldCenter + envRadius * (d1 * x + d2 * y);
+	return pDisk - envRadius * rayDir;
+}
+
+OPENCL_FORCE_INLINE float3 SphereLight_Emit(__global const LightSource *sphereLight,
+		const float u0, const float u1, const float u2, const float u3,
+		float3 *rayOrig, float3 *rayDir, float *emissionPdfW) {
+	const float3 absolutePos = VLOAD3F(&sphereLight->notIntersectable.sphere.absolutePos.x);
+	const float radius = sphereLight->notIntersectable.sphere.radius;
+	const float invArea = 1.f / (4.f * M_PI_F * radius * radius);
+
+	const float3 normal = UniformSampleSphere(u0, u1);
+	*rayOrig = absolutePos + radius * normal;
+
+	float3 localDirOut = CosineSampleHemisphereWithPdf(u2, u3, emissionPdfW);
+	// Cannot really not emit the particle, so just bias it to the correct angle
+	localDirOut.z = fmax(localDirOut.z, DEFAULT_COS_EPSILON_STATIC);
+	*emissionPdfW *= invArea;
+
+	float3 x, y;
+	CoordinateSystem(normal, &x, &y);
+	*rayDir = localDirOut.x * x + localDirOut.y * y + localDirOut.z * normal;
+
+	return VLOAD3F(sphereLight->notIntersectable.sphere.emittedFactor.c) *
+			(invArea * localDirOut.z * M_1_PI_F);
+}
+
+OPENCL_FORCE_INLINE float3 TriangleLight_Emit(__global const LightSource *triLight,
+		__global HitPoint *tmpHitPoint,
+		const float time, const float u0, const float u1, const float u2, const float u3,
+		const float passThroughEvent,
+		float3 *rayOrig, float3 *rayDir, float *emissionPdfW
+		MATERIALS_PARAM_DECL) {
+	// A safety check to avoid NaN/Inf
+	if ((triLight->triangle.invTriangleArea == 0.f) || (triLight->triangle.invMeshArea == 0.f))
+		return BLACK;
+
+	const uint meshIndex = triLight->triangle.meshIndex;
+	const uint triangleIndex = triLight->triangle.triangleIndex;
+	const uint materialIndex = sceneObjs[meshIndex].materialIndex;
+
+	float3 localDirOut;
+	float3 emissionColor = WHITE;
+	if (triLight->triangle.imageMapIndex != NULL_INDEX) {
+		// The emission map can emit even backward
+		localDirOut = UniformSampleSphere(u2, u3);
+		*emissionPdfW = UniformSpherePdf();
+
+		__global const ImageMap *imageMap = &imageMapDescs[triLight->triangle.imageMapIndex];
+		const float2 uv = Light_EmissionMapUV(localDirOut);
+		emissionColor = ImageMap_GetSpectrum(
+				imageMap,
+				uv.x, uv.y
+				IMAGEMAPS_PARAM) / triLight->triangle.average;
+	} else {
+		const float cosThetaMax = Material_GetEmittedCosThetaMax(materialIndex
+				MATERIALS_PARAM);
+		if (cosThetaMax >= 1.f) {
+			// Emission theta is 0
+			localDirOut = MAKE_FLOAT3(0.f, 0.f, 1.f);
+			*emissionPdfW = 1.f;
+		} else if (cosThetaMax > 0.f) {
+			// Emission theta is less than 90 degrees
+			localDirOut = UniformSampleCone(u2, u3, cosThetaMax,
+					MAKE_FLOAT3(1.f, 0.f, 0.f), MAKE_FLOAT3(0.f, 1.f, 0.f), MAKE_FLOAT3(0.f, 0.f, 1.f));
+			*emissionPdfW = UniformConePdf(cosThetaMax);
+		} else
+			localDirOut = CosineSampleHemisphereWithPdf(u2, u3, emissionPdfW);
+
+		// Cannot really not emit the particle, so just bias it to the correct angle
+		localDirOut.z = fmax(localDirOut.z, DEFAULT_COS_EPSILON_STATIC);
+	}
+
+	if (*emissionPdfW == 0.f)
+		return BLACK;
+	*emissionPdfW *= triLight->triangle.invTriangleArea;
+
+	// Origin
+	Transform localToWorld;
+	ExtMesh_GetLocal2World(time, meshIndex, triangleIndex, &localToWorld EXTMESH_PARAM);
+
+	float b0, b1, b2;
+	float3 samplePoint;
+	ExtMesh_Sample(&localToWorld,
+			meshIndex, triangleIndex,
+			u0, u1,
+			&samplePoint, &b0, &b1, &b2
+			EXTMESH_PARAM);
+
+	// Build a temporary HitPoint (as TriangleLight::Emit(), the fixed
+	// direction is the geometry normal)
+	const float3 geometryN = ExtMesh_GetGeometryNormal(&localToWorld, meshIndex, triangleIndex EXTMESH_PARAM);
+	HitPoint_Init(tmpHitPoint, false,
+		meshIndex, triangleIndex,
+		samplePoint, geometryN,
+		b1, b2,
+		passThroughEvent,
+		&localToWorld, time
+		MATERIALS_PARAM);
+	tmpHitPoint->fromLight = true;
+
+	Frame frame;
+	HitPoint_GetFrame(tmpHitPoint, &frame);
+	*rayDir = Frame_ToWorld_Private(&frame, localDirOut);
+
+	// With an IES/map the light can be emitted from the back face too so I
+	// have to use rayDir here instead of intoObject
+	*rayOrig = samplePoint + geometryN * MachineEpsilon_E_Float3(samplePoint) *
+			((dot(*rayDir, geometryN) > 0.f) ? 1.f : -1.f);
+
+	return Material_GetEmittedRadiance(materialIndex,
+			tmpHitPoint, triLight->triangle.invMeshArea
+			MATERIALS_PARAM) * emissionColor * fabs(localDirOut.z);
+}
+
+OPENCL_FORCE_INLINE float3 Light_Emit(__global const LightSource *light,
+		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
+		const float sceneRadius,
+		__global HitPoint *tmpHitPoint,
+		const float time, const float u0, const float u1, const float u2, const float u3,
+		const float passThroughEvent,
+		float3 *rayOrig, float3 *rayDir, float *emissionPdfW
+		LIGHTS_PARAM_DECL) {
+	const float3 worldCenter = MAKE_FLOAT3(worldCenterX, worldCenterY, worldCenterZ);
+	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
+	const float envDiskPdf = 1.f / (M_PI_F * envRadius * envRadius);
+
+	switch (light->type) {
+		case TYPE_IL_CONSTANT: {
+			*emissionPdfW = UniformSpherePdf() * envDiskPdf;
+
+			// A ray between 2 points of the scene bounding sphere
+			const float3 p1 = worldCenter + envRadius * UniformSampleSphere(u0, u1);
+			const float3 p2 = worldCenter + envRadius * UniformSampleSphere(u2, u3);
+			*rayOrig = p1;
+			*rayDir = normalize(p2 - p1);
+
+			return VLOAD3F(light->notIntersectable.temperatureScale.c) *
+					VLOAD3F(light->notIntersectable.gain.c) *
+					VLOAD3F(light->notIntersectable.constantInfinite.color.c);
+		}
+		case TYPE_IL:
+		case TYPE_IL_SKY2: {
+			const bool isSky2 = (light->type == TYPE_IL_SKY2);
+
+			float2 sampleUV;
+			float distPdf;
+			Distribution2D_SampleContinuous(&envLightDistribution[isSky2 ?
+					light->notIntersectable.sky2.distributionOffset :
+					light->notIntersectable.infinite.distributionOffset],
+					u0, u1, &sampleUV, &distPdf);
+			if (distPdf == 0.f)
+				return BLACK;
+
+			float3 dir;
+			float latLongMappingPdf;
+			EnvLightSource_FromLatLongMapping(sampleUV.x, sampleUV.y, &dir, &latLongMappingPdf);
+			if (latLongMappingPdf == 0.f)
+				return BLACK;
+
+			// dir is the direction toward the light
+			if (!isSky2)
+				dir = normalize(Transform_ApplyVector(&light->notIntersectable.light2World, dir));
+			*rayDir = -dir;
+			*rayOrig = Light_EmitEnvOrigin(worldCenter, envRadius, *rayDir, u2, u3);
+			*emissionPdfW = distPdf * latLongMappingPdf * envDiskPdf;
+
+			if (isSky2)
+				return Sky2Light_ComputeRadiance(light, dir);
+			else {
+				__global const ImageMap *imageMap = &imageMapDescs[light->notIntersectable.infinite.imageMapIndex];
+				return VLOAD3F(light->notIntersectable.temperatureScale.c) *
+						VLOAD3F(light->notIntersectable.gain.c) *
+						ImageMap_GetSpectrum(
+							imageMap,
+							sampleUV.x, sampleUV.y
+							IMAGEMAPS_PARAM);
+			}
+		}
+		case TYPE_SUN: {
+			const float cosThetaMax = light->notIntersectable.sun.cosThetaMax;
+			const float3 sunDir = VLOAD3F(&light->notIntersectable.sun.absoluteDir.x);
+			const float3 x = VLOAD3F(&light->notIntersectable.sun.x.x);
+			const float3 y = VLOAD3F(&light->notIntersectable.sun.y.x);
+
+			float d1, d2;
+			ConcentricSampleDisk(u0, u1, &d1, &d2);
+			*rayOrig = worldCenter + envRadius * (sunDir + d1 * x + d2 * y);
+			*rayDir = -UniformSampleCone(u2, u3, cosThetaMax, x, y, sunDir);
+			*emissionPdfW = UniformConePdf(cosThetaMax) * envDiskPdf;
+
+			return VLOAD3F(light->notIntersectable.sun.color.c);
+		}
+		case TYPE_SHARPDISTANT:
+		case TYPE_DISTANT: {
+			const float3 lightDir = VLOAD3F(&light->notIntersectable.sharpDistant.absoluteLightDir.x);
+
+			float3 x, y;
+			float uDisk0, uDisk1;
+			if (light->type == TYPE_DISTANT) {
+				const float cosThetaMax = light->notIntersectable.distant.cosThetaMax;
+				x = VLOAD3F(&light->notIntersectable.distant.x.x);
+				y = VLOAD3F(&light->notIntersectable.distant.y.x);
+				*rayDir = UniformSampleCone(u0, u1, cosThetaMax, x, y, lightDir);
+				*emissionPdfW = UniformConePdf(cosThetaMax) * envDiskPdf;
+				uDisk0 = u2;
+				uDisk1 = u3;
+			} else {
+				CoordinateSystem(lightDir, &x, &y);
+				*rayDir = lightDir;
+				*emissionPdfW = envDiskPdf;
+				uDisk0 = u0;
+				uDisk1 = u1;
+			}
+
+			float d1, d2;
+			ConcentricSampleDisk(uDisk0, uDisk1, &d1, &d2);
+			*rayOrig = worldCenter - envRadius * (lightDir + d1 * x + d2 * y);
+
+			return VLOAD3F(light->notIntersectable.temperatureScale.c) *
+					VLOAD3F(light->notIntersectable.gain.c) *
+					VLOAD3F(light->notIntersectable.sharpDistant.color.c);
+		}
+		case TYPE_TRIANGLE:
+			return TriangleLight_Emit(light, tmpHitPoint, time, u0, u1, u2, u3, passThroughEvent,
+					rayOrig, rayDir, emissionPdfW
+					MATERIALS_PARAM);
+		case TYPE_POINT:
+			*rayOrig = VLOAD3F(&light->notIntersectable.point.absolutePos.x);
+			*rayDir = UniformSampleSphere(u0, u1);
+			*emissionPdfW = 1.f / (4.f * M_PI_F);
+
+			return VLOAD3F(light->notIntersectable.point.emittedFactor.c) * (1.f / (4.f * M_PI_F));
+		case TYPE_MAPPOINT: {
+			*rayOrig = VLOAD3F(&light->notIntersectable.mapPoint.absolutePos.x);
+			const float3 localFromLight = Light_EmitLocal(light, UniformSampleSphere(u0, u1), rayDir);
+			*emissionPdfW = 1.f / (4.f * M_PI_F);
+
+			__global const ImageMap *imageMap = &imageMapDescs[light->notIntersectable.mapPoint.imageMapIndex];
+			const float2 uv = Light_EmissionMapUV(localFromLight);
+			return VLOAD3F(light->notIntersectable.mapPoint.emittedFactor.c) *
+					ImageMap_GetSpectrum(
+						imageMap,
+						uv.x, uv.y
+						IMAGEMAPS_PARAM) / (4.f * M_PI_F * light->notIntersectable.mapPoint.average);
+		}
+		case TYPE_SPOT: {
+			const float cosTotalWidth = light->notIntersectable.spot.cosTotalWidth;
+
+			*rayOrig = VLOAD3F(&light->notIntersectable.spot.absolutePos.x);
+			const float3 localFromLight = Light_EmitLocal(light,
+					UniformSampleCone(u0, u1, cosTotalWidth,
+						MAKE_FLOAT3(1.f, 0.f, 0.f), MAKE_FLOAT3(0.f, 1.f, 0.f), MAKE_FLOAT3(0.f, 0.f, 1.f)),
+					rayDir);
+			*emissionPdfW = UniformConePdf(cosTotalWidth);
+
+			return VLOAD3F(light->notIntersectable.spot.emittedFactor.c) *
+					(SpotLight_LocalFalloff(localFromLight, cosTotalWidth, light->notIntersectable.spot.cosFalloffStart) /
+					fabs(CosTheta(localFromLight)));
+		}
+		case TYPE_PROJECTION: {
+			__global const ProjectionLightParam *projection = &light->notIntersectable.projection;
+
+			*rayOrig = VLOAD3F(&projection->absolutePos.x);
+			const float3 ps = Matrix4x4_ApplyPoint(&projection->lightProjectionInv,
+					MAKE_FLOAT3(u0 * (projection->screenX1 - projection->screenX0) + projection->screenX0,
+						u1 * (projection->screenY1 - projection->screenY0) + projection->screenY0, 0.f));
+			Light_EmitLocal(light, ps, rayDir);
+
+			const float cosAtLight = dot(*rayDir, VLOAD3F(&projection->lightNormal.x));
+			*emissionPdfW = 1.f / (projection->area * cosAtLight * cosAtLight * cosAtLight);
+
+			float3 result = VLOAD3F(projection->emittedFactor.c);
+			if (projection->imageMapIndex != NULL_INDEX) {
+				__global const ImageMap *imageMap = &imageMapDescs[projection->imageMapIndex];
+				result *= ImageMap_GetSpectrum(
+						imageMap,
+						u0, u1
+						IMAGEMAPS_PARAM);
+			}
+
+			return result;
+		}
+		case TYPE_LASER: {
+			const float3 lightDir = VLOAD3F(&light->notIntersectable.laser.absoluteLightDir.x);
+			const float radius = light->notIntersectable.laser.radius;
+
+			float3 x, y;
+			CoordinateSystem(lightDir, &x, &y);
+			float d1, d2;
+			ConcentricSampleDisk(u0, u1, &d1, &d2);
+
+			*rayOrig = VLOAD3F(&light->notIntersectable.laser.absoluteLightPos.x) - radius * (d1 * x + d2 * y);
+			*rayDir = lightDir;
+			*emissionPdfW = 1.f / (M_PI_F * radius * radius);
+
+			return VLOAD3F(light->notIntersectable.laser.emittedFactor.c);
+		}
+		case TYPE_SPHERE:
+			return SphereLight_Emit(light, u0, u1, u2, u3, rayOrig, rayDir, emissionPdfW);
+		case TYPE_MAPSPHERE: {
+			const float3 result = SphereLight_Emit(light, u0, u1, u2, u3, rayOrig, rayDir, emissionPdfW);
+
+			const float3 localFromLight = normalize(Transform_InvApplyVector(
+					&light->notIntersectable.light2World, *rayDir));
+			__global const ImageMap *imageMap = &imageMapDescs[light->notIntersectable.mapSphere.imageMapIndex];
+			const float2 uv = Light_EmissionMapUV(localFromLight);
+
+			return result * ImageMap_GetSpectrum(
+					imageMap,
+					uv.x, uv.y
+					IMAGEMAPS_PARAM) * (1.f / light->notIntersectable.mapSphere.average);
+		}
+		default:
+			return BLACK;
+	}
+}
+
+#endif
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

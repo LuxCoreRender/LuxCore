@@ -18,6 +18,15 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+// True for the hit points of light paths (adjoint BSDF evaluation). The
+// field exists only for the light tracing kernels (PARAM_LIGHT_TRACING): the
+// other kernels don't initialize it and the code reading it is removed.
+#if defined(PARAM_LIGHT_TRACING)
+#define HitPoint_IsFromLight(hitPoint) ((hitPoint)->fromLight)
+#else
+#define HitPoint_IsFromLight(hitPoint) false
+#endif
+
 // The transformation from local object to world reference frame of the
 // hit point: the one computed in BSDF_Init() (same function and inputs, so
 // the same values). Points without a mesh (volume scatter points, default
@@ -41,6 +50,9 @@ OPENCL_FORCE_INLINE void HitPoint_Init(__global HitPoint *hitPoint, const bool t
 		const Transform *localToWorld, const float time
 		MATERIALS_PARAM_DECL) {
 	hitPoint->throughShadowTransparency = throughShadowTransp;
+#if defined(PARAM_LIGHT_TRACING)
+	hitPoint->fromLight = false;
+#endif
 	hitPoint->time = time;
 	hitPoint->passThroughEvent = passThroughEvnt;
 
@@ -89,6 +101,9 @@ OPENCL_FORCE_INLINE void HitPoint_InitDefault(__global HitPoint *hitPoint) {
 	hitPoint->meshIndex = NULL_INDEX;
 
 	hitPoint->throughShadowTransparency = false;
+#if defined(PARAM_LIGHT_TRACING)
+	hitPoint->fromLight = false;
+#endif
 	hitPoint->passThroughEvent = 0.f;
 
 	VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 0.f), &hitPoint->p.x);

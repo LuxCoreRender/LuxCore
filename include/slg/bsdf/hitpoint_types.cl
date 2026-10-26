@@ -58,5 +58,8 @@ typedef struct {
 	unsigned int objectID;
 
 	int intoObject, throughShadowTransparency;
+
+	// Set only by the light tracing kernels (see HitPoint_IsFromLight())
+	int fromLight;
 } HitPoint;
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

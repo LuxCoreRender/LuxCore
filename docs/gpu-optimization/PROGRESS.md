@@ -456,3 +456,78 @@ Kernel profile = `kprof.py` as above (ms of kernel time per M samples, one
   `nvrtc64_130_0.dll` before `nvrtc64_120_0.dll` (`deps/cuew/src/cuew.cpp:625`),
   so it can be tested by copying the DLLs into a bin copy. The driver JIT
   (CUDA 13.5) makes the final SASS, so expect a small effect.
+
+### 2026-10-26: T6.1 GPU light tracing, work in progress (branch `gpu-opt/T6.1-gpu-light-tracing`)
+
+The user asked to implement first and run fewer A/B benchmarks: build the
+feature end to end, check it with image and bias checks, measure at the end.
+
+State: device code written, nothing built or run yet. All new kernel code is
+under `#if defined(PARAM_LIGHT_TRACING)`, a define not set yet, so the eye
+path kernels compile as before. The structs changed for all kernels (fields
+added at the end, no image change expected): `HitPoint.fromLight`,
+`CameraBase.dir`, `PerspectiveCamera.pixelArea`,
+`ProjectionLightParam.lightProjectionInv` / `area`.
+
+Done (device side):
+
+- Adjoint BSDF. Convention: GPU materials keep computing the eye path value;
+  `BSDF_Evaluate()` swaps eye/light directions with `fromLight` and applies
+  the CPU shading normal factor; `BSDF_Sample()` multiplies by
+  `|cos fixedDir / cos sampledDir|` (local frame) and the CPU geometry
+  normal factor. For reciprocal BSDFs this equals the CPU `fromLight`
+  branches (checked: matte, roughmatte, matte/roughmatte translucent,
+  velvet, metal2, glossy2, glossycoating, glossytranslucent, carpaint,
+  disney, mix, twosided). Refractive leaves take their own branch with
+  `HitPoint_IsFromLight()`: glass (no eta^2, Fresnel of the incoming
+  direction), archglass (Fresnel side), roughglass (Fresnel of
+  `cosThetaOH`). Differences from CPU, on purpose: no adjoint factors for
+  volumes (CPU `BSDF::Sample()` applies the geometry factor to volumes too,
+  looks like a CPU bug); cloth gets the cosine factor (CPU cloth `fromLight`
+  sample has none, also looks like a CPU bug).
+- Perspective camera: `PerspectiveCamera_SampleLens()`,
+  `PerspectiveCamera_GetSamplePosition()` (clipping plane, motion blur),
+  `PerspectiveCamera_GetFluxToRadianceFactor()` in `camera_funcs.cl`.
+  Other camera types: GPU light tracing off, the CPU native threads keep
+  doing it (as today).
+- `Light_Emit()` for all 14 light types in `light_funcs.cl`. Emission maps
+  (map point, map sphere, triangle lights with IES/image map) are sampled
+  uniformly over the sphere: the CPU samples their distributions, which the
+  GPU doesn't have (same expected value, more noise for such lights).
+
+Design of the remaining parts (decided, from the code):
+
+- Light task (`LightPathTask` in `pathoclbase_datatypes.cl`): state
+  (GENERATE, RT_NEXT_VERTEX, RT_EYE_CONNECTION), seed, light ID, time, lens
+  point, flux, depth, volume, `isNearlyS`, `lastBSDFEvent`, stored next
+  vertex ray, pending eye connection (radiance, film x/y, volume), finished
+  path count. One ray in flight per light task, in the eye path rays buffer
+  after the `taskCount` eye rays, so the existing OptiX launch traces both
+  (`raysBuff` / `hitsBuff` sized `taskCount + lightTaskCount`). Idle slots
+  get a ray with mint = maxt = 0.
+- Kernel `AdvanceLightPaths` in a new `pathoclbase_kernels_lighttracing.cl`,
+  mirroring `PathTracer::RenderLightSample()` / `ConnectToEye()`: connect a
+  vertex to the camera only if the connection is caustic
+  (`isNearlyS && depth >= 1 && !IsNearlySpecular(eval event)`, not delta,
+  not camera invisible), trace the connection with `LIGHT_RAY | CAMERA_RAY`,
+  then continue with the stored next vertex ray. Stop the path as soon as
+  `isNearlyS` is false (no caustic vertex can follow). Russian roulette and
+  max depth as the CPU. Random sampler (Tauswothe seed per light task).
+  A path is counted when it ends (also failed emissions).
+- Temporaries (BSDF, HitPoint): kernel locals on CUDA, `tasks[gid].tmp*`
+  on OpenCL, so `lightTaskCount <= taskCount`.
+- Light picking: a GPU copy of the emit light strategy distribution
+  (`GetEmitLightStrategy()`, LOG_POWER by default), compiled next to
+  `lightsDistribution`.
+- Film: the thread film keeps `RADIANCE_PER_SCREEN_NORMALIZED` (today
+  removed in `ThreadFilm::Init()`), one float3 buffer per radiance group,
+  atomic splats with the filter LUTs of `FilmSampleSplatter` (built on the
+  host with `FilterLUTs(filter, max(4, max(xWidth, yWidth) + 1))`, queried
+  at the cell centers, uploaded as data + offset/width/height). Recv/Send
+  and clear like the other channels. Render loop:
+  `SetSampleCount(eye, eye, lightPathCount)`.
+- Light task count: start with taskCount / 2, to tune after it works.
+
+Still to check in the code: GPU equivalents of `BSDF::IsCameraInvisible()`
+(`sceneObjs[meshIndex].cameraInvisible`) and of the CPU pass-through
+shadow transparency override test in `RenderLightSample()`.

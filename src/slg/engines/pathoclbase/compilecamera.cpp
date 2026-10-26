@@ -54,6 +54,7 @@ void CompiledScene::CompileCamera() {
 	camera.base.hither = sceneCamera.clipHither;
 	camera.base.shutterOpen = sceneCamera.shutterOpen;
 	camera.base.shutterClose = sceneCamera.shutterClose;
+	ASSIGN_VECTOR(camera.base.dir, sceneCamera.GetDir());
 	camera.base.volumeIndex = sceneCamera.HasVolume() ?
 		scene.GetMaterials().GetMaterialIndex(sceneCamera.GetVolume()) : NULL_INDEX;
 
@@ -112,6 +113,7 @@ void CompiledScene::CompileCamera() {
 			camera.persp.screenOffsetY = perspCamera.screenOffsetY;
 
 			camera.persp.enableOculusRiftBarrel = perspCamera.enableOculusRiftBarrel;
+			camera.persp.pixelArea = perspCamera.GetPixelArea();
 			if (perspCamera.enableClippingPlane) {
 				camera.persp.projCamera.enableClippingPlane = true;
 				ASSIGN_VECTOR(camera.persp.projCamera.clippingPlaneCenter, perspCamera.clippingPlaneCenter);

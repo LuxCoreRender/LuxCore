@@ -183,12 +183,12 @@ OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularTransmission(__global const
 	*sampledDir = MAKE_FLOAT3(-eta * localFixedDir.x, -eta * localFixedDir.y, cost);
 
 	float ce;
-//	if (!hitPoint.fromLight)
+	if (!HitPoint_IsFromLight(hitPoint))
 		ce = (1.f - FresnelCauchy_Evaluate(ntc, cost)) * eta2;
-//	else {
-//		const float absCosSampledDir = fabsf(CosTheta(*sampledDir));
-//		ce = (1.f - FresnelTexture::CauchyEvaluate(ntc, costheta)) * fabsf(localFixedDir.z / absCosSampledDir);
-//	}
+	else {
+		// BSDF_Sample() applies the |cos(fixedDir) / cos(sampledDir)| factor
+		ce = 1.f - FresnelCauchy_Evaluate(ntc, costheta);
+	}
 
 	return lkt * ce;
 }
