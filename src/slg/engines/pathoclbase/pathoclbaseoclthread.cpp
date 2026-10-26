@@ -288,6 +288,11 @@ void PathOCLBaseOCLRenderThread::EndSceneEdit(const EditActionList &editActions)
 		// Update Scene Textures and Materials
 		InitTextures();
 		InitMaterials();
+
+		// Update the scene part of the task configuration (default volume,
+		// shadow ray any hit)
+		intersectionDevice.AllocBufferRO(&taskConfigBuff, &renderEngine->taskConfig,
+				sizeof(slg::ocl::pathoclbase::GPUTaskConfiguration), "GPUTaskConfiguration");
 	}
 
 	if (cscene->wasSceneObjectsCompiled) {

@@ -54,6 +54,35 @@ void CompiledScene::EnableCode(const std::string &tags) {
 	boost::split(enabledCode, tags, boost::is_any_of(" \t"));
 }
 
+bool CompiledScene::IsShadowRayAnyHitExact() const {
+	if (defaultWorldVolumeIndex != NULL_INDEX)
+		return false;
+
+	// MIX, GLOSSYCOATING, etc. delegate to their component materials, which
+	// are in mats too
+	for (const auto &mat : mats) {
+		switch (mat.type) {
+			case slg::ocl::NULLMAT:
+			case slg::ocl::ARCHGLASS:
+			case slg::ocl::HOMOGENEOUS_VOL:
+			case slg::ocl::CLEAR_VOL:
+			case slg::ocl::HETEROGENEOUS_VOL:
+				return false;
+			default:
+				break;
+		}
+
+		if ((mat.frontTranspTexIndex != NULL_INDEX) || (mat.backTranspTexIndex != NULL_INDEX) ||
+				(mat.interiorVolumeIndex != NULL_INDEX) || (mat.exteriorVolumeIndex != NULL_INDEX) ||
+				(mat.passThroughShadowTransparency.c[0] != 0.f) ||
+				(mat.passThroughShadowTransparency.c[1] != 0.f) ||
+				(mat.passThroughShadowTransparency.c[2] != 0.f))
+			return false;
+	}
+
+	return true;
+}
+
 void CompiledScene::Compile() {
 	EditActionList editActions;
 	editActions.AddAllAction();

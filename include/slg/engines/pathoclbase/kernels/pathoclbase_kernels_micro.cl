@@ -704,6 +704,11 @@ __kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 		// shadow ray
 		directLightVolInfos[gid] = pathInfo->volume;
 
+		// Without transparency and volumes any hit shadows the light: the
+		// closest one is not needed
+		if (scene->shadowRaysAnyHit)
+			rays[gid].flags |= RAY_FLAGS_ANY_HIT;
+
 		// I have to trace the shadow ray
 		taskState->state = MK_RT_DL;
 	} else {
