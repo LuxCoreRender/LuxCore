@@ -162,3 +162,28 @@ Not measured yet (T0.3).
   `-D path.photongi.indirect.enabled 0`: candidate mean +0.001%, RMSE
   0.0083 vs noise floor 0.0835. No bias.
 - For bias checks of PhotonGI scenes, disable the indirect cache.
+
+### 2026-10-26: pyluxcore for Blender 4.5 (Python 3.11)
+
+- Blender 4.5 embeds Python 3.11 (no headers/libs), Blender 5.2 embeds 3.13.
+  The pyluxcore module must be built against the same minor version.
+- No Python 3.11 was installed; the Adobe Substance 3D Designer SDK has a
+  full 3.11.6 (`C:\Program Files\Adobe\Adobe Substance 3D Designer\plugins\pythonsdk`).
+  Build: `cmake out/build "-DPython_EXECUTABLE=<that>\python.exe"
+  -DPython_FIND_REGISTRY=NEVER -U_Python_EXECUTABLE
+  -UPYBIND11_PYTHON_EXECUTABLE_LAST`, then `make.bat pyluxcore`.
+  Note: this changes the cached Python for later `make.bat` runs.
+- Installed over the existing wheel in
+  `%APPDATA%\Blender Foundation\Blender\4.5\extensions\.local\lib\python3.11\site-packages`:
+  `pyluxcore\pyluxcore.pyd` plus plain-named `tbb12`, `tbbmalloc`, `embree4`,
+  `LuxOpenImageDenoise(_core)` DLLs and `LuxOpenImageDenoise_device_cpu.pyd`
+  in `pyluxcore.libs`. Backup of the original wheel files:
+  `D:\REPO\LuxCoreRepo\bench\blender45-pyluxcore-backup`.
+- Pitfall: without delvewheel renaming, Windows does not resolve the plain
+  `tbb12.dll` as a dependency of `embree4.dll` from the `os.add_dll_directory`
+  dir (error 126), although it loads by name. Workaround in the installed
+  `pyluxcore\__init__.py`: preload the five DLLs by full path in dependency
+  order. Proper fix: a repaired wheel (`make.bat wheel-test`, needs
+  `repairwheel`/delvewheel).
+- Check with Blender's Python: import OK, CUDA + OptiX enabled, RTX 5070
+  listed; LuxBall PATHOCL GPU render correct, task count 1048576.
