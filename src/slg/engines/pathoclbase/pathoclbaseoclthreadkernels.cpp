@@ -142,6 +142,11 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			MachineEpsilon::GetMin(), MachineEpsilon::GetMax());
 	if (renderEngine->specializeKernels)
 		GetSceneTypesKernelParameters(kernelsParameters, *renderEngine->compiledScene);
+	if (UseLocalEvalStacks()) {
+		const CompiledScene &cscene = *renderEngine->compiledScene;
+		kernelsParameters.push_back("-D PARAM_MATERIAL_EVAL_STACK_SIZE=" + ToString(Max(cscene.maxMaterialEvalStackSize, 1u)));
+		kernelsParameters.push_back("-D PARAM_TEXTURE_EVAL_STACK_SIZE=" + ToString(Max(cscene.maxTextureEvalStackSize, 1u)));
+	}
 
 	const string kernelSource = GetKernelSources();
 	const string microKernelSource = slg::ocl::KernelSource_pathoclbase_kernels_micro;
