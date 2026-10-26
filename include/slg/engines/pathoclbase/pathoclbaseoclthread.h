@@ -289,6 +289,8 @@ protected:
 	luxrays::HardwareDeviceKernelUPtr initKernel;
 	luxrays::HardwareDeviceKernelUPtr resetPathQueuesKernel;
 	size_t resetPathQueuesWorkGroupSize;
+	luxrays::HardwareDeviceKernelUPtr queueRTPathsKernel;
+	size_t queueRTPathsWorkGroupSize;
 	size_t initWorkGroupSize;
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_RT_NEXT_VERTEX;
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_HIT_NOTHING;
@@ -306,7 +308,7 @@ protected:
 	// Profiling slots: one per micro-kernel (indexed by PathState), then
 	// the ray trace and the queue reset
 	static const u_int KERNEL_PROFILE_TRACE = slg::ocl::pathoclbase::MK_DONE;
-	static const u_int KERNEL_PROFILE_RESET_QUEUES = slg::ocl::pathoclbase::MK_DONE + 1;
+	static const u_int KERNEL_PROFILE_PATH_QUEUES = slg::ocl::pathoclbase::MK_DONE + 1;
 	static const u_int KERNEL_PROFILE_COUNT = slg::ocl::pathoclbase::MK_DONE + 2;
 	double kernelProfileTimes[KERNEL_PROFILE_COUNT] = {};
 

@@ -45,10 +45,10 @@
 __kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	PATH_QUEUE_GET_GID(PATH_QUEUE_RT_NEXT_VERTEX);
 	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
 
-	// This has to be done by the first kernel to run after RT kernel
+	// Count the ray traced for this path (MK_RT_DL counts the shadow rays)
 	sampleResult->rayCount += 1;
 
 	// Read the path state
@@ -462,7 +462,10 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 __kernel void AdvancePaths_MK_RT_DL(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	PATH_QUEUE_GET_GID(PATH_QUEUE_RT_DL);
+
+	// Count the shadow ray traced for this path
+	sampleResultsBuff[gid].rayCount += 1;
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
