@@ -8,9 +8,23 @@ Record: what was done, measured numbers, decisions, dead ends, open questions.
 - GPU: NVIDIA RTX 5070 12 GB (Blackwell, compute capability 12.0).
 - OS: Windows 11 IoT Enterprise LTSC 2024.
 - CUDA toolkit 12.8 at `C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8`.
-- CMake on PATH. Conan not on PATH yet (install with `pip install conan`).
-- No build tree yet (`out/` missing). Driver version and NVRTC version
-  actually linked by LuxCore: unknown, record in T0.1.
+- CUDA driver reported by LuxCore: 13.50. OptiX available (headers 7.1).
+- Bundled NVRTC (used for kernels): 12.9.86, from LuxCoreDeps 2.2.4.
+- CMake 4.4.3, Conan 2.33.0, Python 3.14.8.
+- MSVC: VS 2022 BuildTools (`C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools`),
+  matching the windows-2022 prebuilt deps. VS 18 Community is also installed; not used.
+- Build steps that worked (from `cmd`, `make.bat` must be called by full path
+  because the bare name is not found from this shell):
+
+  ```
+  call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+  cd /d D:\REPO\LuxCoreRepo\LuxCore
+  D:\REPO\LuxCoreRepo\LuxCore\make.bat deps
+  D:\REPO\LuxCoreRepo\LuxCore\make.bat luxcoreconsole
+  ```
+
+- Agent sandbox note: network access (pip, Conan downloads) and GPU access
+  need commands run outside the sandbox.
 
 ## Baseline
 
@@ -40,3 +54,19 @@ Not measured yet (T0.3).
 - Decided: `--use_fast_math` rejected (risk of NaN/fireflies; violates the
   lossless rule).
 - Next: T0.1 build, T0.2 script, T0.3 baseline, then verify T1.1-T1.3.
+
+### 2026-10-26: baseline build and benchmark script
+
+- T0.1: `luxcoreconsole` built from `main` (`ce1d64155`), copied to
+  `D:\REPO\LuxCoreRepo\bench\bin-main`. Log confirms CUDA device
+  "NVIDIA GeForce RTX 5070" with "Optix enabled: 1", accelerator OPTIX.
+  No device-selection overrides needed: with a CUDA device present, LuxCore
+  uses only CUDA devices.
+- T0.2: `tests/gpu_bench/bench.py` written and smoke-tested on LuxBall.
+- Smoke numbers (not a baseline, 1 run of 20 s): LuxBall 11.43 M samples/sec.
+- Two baseline renders of LuxBall at 16 spp were bit-identical (noise floor 0).
+- Found: `--use_fast_math` is already on for CUDA kernels upstream
+  (`pathoclbase.cpp:100`), so the "rejected" decision above is moot.
+- Found: cold PathOCL kernel compile takes 147 s (with `--Ofast-compile=min`).
+- Found: OptiX logs at level 4 (`cudadevice.cpp:174`), e.g. KNOBS/DISKCACHE lines.
+- Found: linear outputs can only be `.exr`/`.hdr`; the script uses `.hdr`.

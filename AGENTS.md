@@ -14,9 +14,11 @@ Windows 11, CUDA toolkit 12.8 installed.
 ## Hard rules
 
 1. **Lossless only.** A change must not alter the image beyond the run-to-run
-   noise floor defined in "Image check" below. No `--use_fast_math`, no lower
-   path depth, no clamping, no denoiser or adaptive-sampling default changes,
-   no approximations in materials, lights or sampling.
+   noise floor defined in "Image check" below. No lower path depth, no
+   clamping, no denoiser or adaptive-sampling default changes, no
+   approximations in materials, lights or sampling. Keep the existing
+   math-mode options as they are (`--use_fast_math` is already the upstream
+   default for CUDA kernels, `src/slg/engines/pathoclbase/pathoclbase.cpp:100`).
 2. **Measure, don't guess.** Every performance change needs before/after
    numbers from the benchmark protocol below, recorded in `PROGRESS.md`.
    A change with no measurable gain is reverted, not merged.
@@ -86,7 +88,11 @@ directory or the old PTX is reused and your change has no effect. (Plan task
 T1.4 fixes this.)
 
 Kernel compile time is not render time: always warm the cache with one run
-before measuring.
+before measuring. A cold PathOCL kernel compile takes about 2.5 minutes.
+
+`tests/gpu_bench/bench.py` gives each build label its own `TEMP` (so its own
+kernel cache) under `<out>/<label>/tmp`, which avoids this problem when
+comparing builds.
 
 ## Benchmark protocol
 
@@ -119,14 +125,27 @@ device-selection overrides in `PROGRESS.md`.
 3 measured runs; report the median. Close other GPU apps (Blender, browsers
 with GPU video) while measuring.
 
-**Image check:** `-D batch.haltspp 256` with the same seed, saving an EXR/PNG
-film output. Render the baseline twice: the RMSE between the two baseline
-images is the noise floor (GPU float atomics make runs non-bit-identical).
-A candidate passes if RMSE(candidate, baseline) <= 1.1 x noise floor and the
-diff image shows no structure (edges, shadows, banding). Record both numbers.
+**Image check:** `-D batch.haltspp 256` with the same seed, saving a linear
+`RGB` film output as `.hdr` (LuxCore writes linear outputs only as `.exr` or
+`.hdr`). Render the baseline twice: the RMSE between the two baseline images
+is the noise floor. A candidate passes if RMSE(candidate, baseline) <= 1.1 x
+noise floor and the diff image shows no structure (edges, shadows, banding).
+Record both numbers. Observed on LuxBall at 16 spp: two baseline runs were
+bit-identical (noise floor 0), so a pass then means an identical image.
 
-Task T0.2 turns this protocol into a script; once it exists, use it and keep
-this section in sync with it.
+**Script:** `tests/gpu_bench/bench.py` implements this protocol (standard
+library only). Results go to `D:\REPO\LuxCoreRepo\bench\<label>\`.
+
+```
+python tests/gpu_bench/bench.py speed   --bin <bin>\luxcoreconsole.exe --label main
+python tests/gpu_bench/bench.py image   --bin <bin>\luxcoreconsole.exe --label main
+python tests/gpu_bench/bench.py image   --bin <bin>\luxcoreconsole.exe --label T1.1 --repeat 1
+python tests/gpu_bench/bench.py compare --baseline main --candidate T1.1
+```
+
+Add `--scenes LuxBall ...` to limit scenes, `-D <prop> <value>` for sweeps.
+Copy each build's `out\install\Release\bin` to `bench\bin-<label>` before
+benchmarking so later builds don't overwrite it.
 
 ## Git workflow
 

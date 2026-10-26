@@ -32,8 +32,8 @@ measured numbers in `PROGRESS.md`.
 
 | ID | Task | Status | Acceptance |
 |---|---|---|---|
-| T0.1 | Release build of `luxcoreconsole` and `pyluxcore` on `main` (baseline). Record toolchain versions (MSVC, CUDA, NVRTC actually used, driver, Conan) and any extra build steps. | todo | Builds; LuxBall renders on CUDA+OptiX; log confirms OptiX accelerator. |
-| T0.2 | Benchmark script (Python) implementing the AGENTS.md protocol: runs the scene set, parses samples/sec, renders fixed-SPP images, computes RMSE vs baseline and noise floor, prints a markdown table. Lives in `tests/gpu_bench/`. | todo | One command produces the table for a given build dir. |
+| T0.1 | Release build of `luxcoreconsole` and `pyluxcore` on `main` (baseline). Record toolchain versions (MSVC, CUDA, NVRTC actually used, driver, Conan) and any extra build steps. | done (luxcoreconsole; pyluxcore not built yet) | Builds; LuxBall renders on CUDA+OptiX; log confirms OptiX accelerator. |
+| T0.2 | Benchmark script (Python) implementing the AGENTS.md protocol: runs the scene set, parses samples/sec, renders fixed-SPP images, computes RMSE vs baseline and noise floor, prints a markdown table. Lives in `tests/gpu_bench/`. | done | One command produces the table for a given build dir. |
 | T0.3 | Baseline numbers for `main` on the RTX 5070, including noise floor per scene. | todo | Table in `PROGRESS.md`. |
 
 ## Phase 1: cheap, low risk
@@ -41,7 +41,7 @@ measured numbers in `PROGRESS.md`.
 | ID | Task | Status | Acceptance |
 |---|---|---|---|
 | T1.1 | OptiX: `OPTIX_BUILD_FLAG_PREFER_FAST_TRACE`; `OPTIX_GEOMETRY_FLAG_DISABLE_ANYHIT`; ray flag `OPTIX_RAY_FLAG_DISABLE_ANYHIT` in `optixTrace`; debug level `NONE`; `usesPrimitiveTypeFlags = TRIANGLE`. Files: `optixaccelhw.cpp`, `optixaccel.cl`. | done (unverified) | Faster trace, image within noise. Check motion-blur scene still works. |
-| T1.2 | Remove `--Ofast-compile=min` from NVRTC options (`cuda.cpp`). Note: comment says it needs NVRTC 12.9+, local toolkit is 12.8; check which NVRTC is linked. | done (unverified) | Speed >= baseline after clearing the kernel cache. |
+| T1.2 | Remove `--Ofast-compile=min` from NVRTC options (`cuda.cpp`). LuxCore bundles NVRTC 12.9.86, so the option was active; removing it may lengthen the cold compile (about 2.5 min with it). | done (unverified) | Speed >= baseline after clearing the kernel cache. |
 | T1.3 | Upload OptiX launch params only when ray/hit buffer pointers change (`OptixKernel::EnqueueTraceRayBuffer`). | done (unverified) | No regression; image identical. |
 | T1.4 | Include NVRTC built-in options (and NVRTC version) in the CUDA kernel cache key so option changes invalidate the cache (`cudaKernelCache` in `cuda.cpp`). | todo | Changing an option triggers a recompile without manual cache deletion. |
 | T1.5 | Block size: sweep `opencl.gpu.workgroup.size` 32/64/128/256 per scene. If a size wins consistently, make CUDA pick it (e.g. `cuOccupancyMaxPotentialBlockSize` in `CUDADevice::GetKernelWorkGroupSize`, and stop forcing 32 for CUDA devices in `oclrenderengine.cpp`; keep 32 for OpenCL). | todo | Measured gain on most scenes, none slower. |
@@ -72,6 +72,8 @@ Phase 1 tasks T1.1-T1.3 are committed together on branch
   defaults, adaptive sampling defaults).
 - `CU_CTX_SCHED_*` flags, OptiX log level: no measurable render-time effect
   expected.
+- `--use_fast_math`: already the upstream default for CUDA kernels
+  (`pathoclbase.cpp:100`), so it is not an available lever.
 - Task count: 12 GB cards already get the 512K maximum (`UpdateTaskCount`).
 
 ## User-side settings (no code)
