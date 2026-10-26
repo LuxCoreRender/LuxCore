@@ -332,6 +332,10 @@ void PathOCLBaseOCLRenderThread::InitImageMaps() {
 	}
 }
 
+void PathOCLBaseOCLRenderThread::UpdateGPUTaskConfiguration() {
+	intersectionDevice.AllocBufferRO(&taskConfigBuff, &renderEngine->taskConfig, sizeof(slg::ocl::pathoclbase::GPUTaskConfiguration), "GPUTaskConfiguration");
+}
+
 void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	const u_int taskCount = renderEngine->taskCount;
 
@@ -339,7 +343,7 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	// Allocate tasksConfigBuff
 	//--------------------------------------------------------------------------
 
-	intersectionDevice.AllocBufferRO(&taskConfigBuff, &renderEngine->taskConfig, sizeof(slg::ocl::pathoclbase::GPUTaskConfiguration), "GPUTaskConfiguration");
+	UpdateGPUTaskConfiguration();
 
 	//--------------------------------------------------------------------------
 	// Allocate tasksBuff
