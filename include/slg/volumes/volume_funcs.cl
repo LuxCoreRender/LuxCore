@@ -40,7 +40,6 @@ OPENCL_FORCE_INLINE void Volume_InitializeTmpHitPoint(__global HitPoint *tmpHitP
 	VSTORE3F(-rayDir, &tmpHitPoint->interpolatedN.x);
 	VSTORE3F(-rayDir, &tmpHitPoint->shadeN.x);
 	tmpHitPoint->passThroughEvent = passThroughEvent;
-	Transform_Init(&tmpHitPoint->localToWorld);
 }
 
 OPENCL_FORCE_INLINE float HomogeneousVolume_SegmentScatter(const float u, 
