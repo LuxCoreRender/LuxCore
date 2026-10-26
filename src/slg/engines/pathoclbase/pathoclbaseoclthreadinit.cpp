@@ -157,10 +157,16 @@ void PathOCLBaseOCLRenderThread::InitMaterials() {
 			sizeof(slg::ocl::MaterialEvalOp) * renderEngine->compiledScene->matEvalOps.size(), "Material evaluation ops");
 
 	const u_int taskCount = renderEngine->taskCount;
-	intersectionDevice.AllocBufferRW(&materialEvalStackBuff, 
-			nullptr, sizeof(float) * renderEngine->compiledScene->maxMaterialEvalStackSize *
-			taskCount, "Material evaluation stacks");
+	intersectionDevice.AllocBufferRW(&materialEvalStackBuff,
+			nullptr, sizeof(float) * (UseLocalEvalStacks() ? 1 :
+				renderEngine->compiledScene->maxMaterialEvalStackSize * taskCount),
+			"Material evaluation stacks");
 
+}
+
+bool PathOCLBaseOCLRenderThread::UseLocalEvalStacks() const {
+	return renderEngine->specializeKernels &&
+			(intersectionDevice.GetDeviceDesc().GetType() & DEVICE_TYPE_CUDA_ALL);
 }
 
 void PathOCLBaseOCLRenderThread::InitSceneObjects() {
@@ -183,9 +189,10 @@ void PathOCLBaseOCLRenderThread::InitTextures() {
 			sizeof(slg::ocl::TextureEvalOp) * renderEngine->compiledScene->texEvalOps.size(), "Texture evaluation ops");
 
 	const u_int taskCount = renderEngine->taskCount;
-	intersectionDevice.AllocBufferRW(&textureEvalStackBuff, 
-			nullptr, sizeof(float) * renderEngine->compiledScene->maxTextureEvalStackSize *
-			taskCount, "Texture evaluation stacks");
+	intersectionDevice.AllocBufferRW(&textureEvalStackBuff,
+			nullptr, sizeof(float) * (UseLocalEvalStacks() ? 1 :
+				renderEngine->compiledScene->maxTextureEvalStackSize * taskCount),
+			"Texture evaluation stacks");
 }
 
 void PathOCLBaseOCLRenderThread::InitLights() {

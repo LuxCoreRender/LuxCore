@@ -20,11 +20,23 @@
 
 // Macros used mostly for Texture and Material evluations
 
+#if defined(LUXRAYS_CUDA_DEVICE) && defined(PARAM_MATERIAL_EVAL_STACK_SIZE) && defined(PARAM_TEXTURE_EVAL_STACK_SIZE)
+// With the stack sizes of the scene known at compile time, each evaluation
+// uses a stack in CUDA local memory: interleaved per thread by the hardware
+// (coalesced) and cached in L1. A global stack is written and read back
+// within one evaluation, and the reads go to L2 because stores evict L1.
+#define EVAL_STACK_STRIDE 1
+#define MATERIAL_EVAL_STACK_DECL float evalStackLocal[PARAM_MATERIAL_EVAL_STACK_SIZE]; __global float *evalStack = evalStackLocal
+#define TEXTURE_EVAL_STACK_DECL float evalStackLocal[PARAM_TEXTURE_EVAL_STACK_SIZE]; __global float *evalStack = evalStackLocal
+#else
 // The stacks of all threads are interleaved: element i of the stack of
 // thread gid is at evalStack[i * EVAL_STACK_STRIDE] with
 // evalStack = &stacks[gid], so the threads of a warp access consecutive
 // addresses (coalesced) instead of one cache line each
 #define EVAL_STACK_STRIDE get_global_size(0)
+#define MATERIAL_EVAL_STACK_DECL __global float *evalStack = &matEvalStacks[get_global_id(0)]
+#define TEXTURE_EVAL_STACK_DECL __global float *evalStack = &texEvalStacks[get_global_id(0)]
+#endif
 #define EVAL_STACK_ELEM(i) evalStack[(i) * EVAL_STACK_STRIDE]
 
 #define EvalStack_PushInt(a) { ((__global int *)evalStack)[(*evalStackOffset) * EVAL_STACK_STRIDE] = a; *evalStackOffset = *evalStackOffset + 1; }

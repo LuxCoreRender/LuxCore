@@ -165,6 +165,10 @@ protected:
 	void InitImageMaps();
 	void InitTextures();
 	void InitMaterials();
+	// True when the kernels keep the material and texture evaluation stacks
+	// in CUDA local memory (see evalstack_funcs.cl), sized at compile time
+	// for the scene: the global stack buffers are then not used.
+	bool UseLocalEvalStacks() const;
 	void InitSceneObjects();
 	void InitLights();
 	void InitPhotonGI();
