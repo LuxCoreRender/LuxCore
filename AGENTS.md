@@ -132,6 +132,9 @@ is the noise floor. A candidate passes if RMSE(candidate, baseline) <= 1.1 x
 noise floor and the diff image shows no structure (edges, shadows, banding).
 Record both numbers. Observed on LuxBall at 16 spp: two baseline runs were
 bit-identical (noise floor 0), so a pass then means an identical image.
+LuxCore2.1Benchmark and DanishMood use a PhotonGI cache built on the CPU,
+which varies per run and shifts the image mean by up to about 5%: to check
+a mean difference there, compare with `-D path.photongi.indirect.enabled 0`.
 
 **Script:** `tests/gpu_bench/bench.py` implements this protocol (standard
 library only). Results go to `D:\REPO\LuxCoreRepo\bench\<label>\`.

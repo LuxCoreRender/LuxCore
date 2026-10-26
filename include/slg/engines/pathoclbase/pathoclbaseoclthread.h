@@ -194,6 +194,10 @@ protected:
 	);
 
 	void EnqueueInitKernel();
+	void EnqueueQueuePathsKernels(const slg::ocl::pathoclbase::PathState state,
+			const bool sortByMaterial);
+	bool IsMaterialSortState(const slg::ocl::pathoclbase::PathState state) const;
+	void UpdateMaterialSortCalibration();
 	void EnqueueAdvancePathsKernel();
 	// With opencl.kernel.profile.enable, waits for the queue and returns the
 	// time; EndKernelProfile() waits again and adds the elapsed time to
@@ -272,6 +276,11 @@ protected:
 	luxrays::HardwareDeviceBuffer *pathStatesBuff;
 	luxrays::HardwareDeviceBuffer *pathQueuesBuff;
 	luxrays::HardwareDeviceBuffer *pathQueueCountsBuff;
+	// Material sorted queues: materialsCount + 1 counters each, and the
+	// material of each path (taskCount entries)
+	luxrays::HardwareDeviceBuffer *materialQueueCountsBuff;
+	luxrays::HardwareDeviceBuffer *materialQueueCursorsBuff;
+	luxrays::HardwareDeviceBuffer *pathMaterialKeysBuff;
 	luxrays::HardwareDeviceBuffer *samplerSharedDataBuff;
 	luxrays::HardwareDeviceBuffer *samplesBuff;
 	luxrays::HardwareDeviceBuffer *sampleDataBuff;
@@ -295,11 +304,29 @@ protected:
 	size_t resetPathQueuesWorkGroupSize;
 	luxrays::HardwareDeviceKernelUPtr queuePathsKernel;
 	size_t queuePathsWorkGroupSize;
+	luxrays::HardwareDeviceKernelUPtr countPathsByMaterialKernel;
+	size_t countPathsByMaterialWorkGroupSize;
+	luxrays::HardwareDeviceKernelUPtr scanPathsByMaterialKernel;
+	size_t scanPathsByMaterialWorkGroupSize;
+	luxrays::HardwareDeviceKernelUPtr queuePathsByMaterialKernel;
+	size_t queuePathsByMaterialWorkGroupSize;
 	// Only Init can leave paths in MK_GENERATE_CAMERA_RAY (the samples
 	// Sampler_Init() rejects) and nothing sets MK_NEXT_SAMPLE: MK_SPLAT_SAMPLE
 	// does their work. So their queues and kernels run only in the first
 	// iteration after Init.
 	bool initPathsPending;
+	// Queueing the paths of the BSDF micro-kernels grouped by material
+	// (IsMaterialSortState()) wins when the materials diverge (LynxSpider) and
+	// loses when path order memory locality matters more (LuxBall). Both
+	// orders give the same image, so after MATERIAL_SORT_WARMUP iterations
+	// the next MATERIAL_SORT_CALIBRATION iterations alternate them, time
+	// queue + micro-kernel of each state and keep the faster order.
+	static const u_int MATERIAL_SORT_WARMUP = 16;
+	static const u_int MATERIAL_SORT_CALIBRATION = 32;
+	u_int materialSortIteration;
+	// Seconds, indexed by PathState and by sorted (1) or path order (0)
+	double materialSortTimes[slg::ocl::pathoclbase::MK_DONE][2];
+	bool materialSortEnabled[slg::ocl::pathoclbase::MK_DONE];
 	size_t initWorkGroupSize;
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_RT_NEXT_VERTEX;
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_HIT_NOTHING;

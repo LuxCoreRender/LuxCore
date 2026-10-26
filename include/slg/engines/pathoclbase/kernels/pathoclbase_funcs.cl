@@ -83,24 +83,9 @@ OPENCL_FORCE_INLINE uint PathQueue_Reserve(__global uint *pathQueueCounts, const
 #endif
 }
 
-// Sets the state of path gid. MK_GENERATE_NEXT_VERTEX_RAY is queued here, in
-// the order the micro-kernels of the iteration finish their warps: warps
-// that finish together have paths of similar cost (often the same
-// materials), a weak sort that a path order scan loses (LynxSpider
-// MK_GENERATE_NEXT_VERTEX_RAY 17.3 -> 29.3 ms per M samples). The other
-// states are queued by QueuePaths.
-OPENCL_FORCE_INLINE void PathState_Set(const size_t gid, const PathState state,
-		__global PathState *pathStates,
-		__global uint *pathQueues, __global uint *pathQueueCounts) {
-	pathStates[gid] = state;
-
-	if (state == MK_GENERATE_NEXT_VERTEX_RAY) {
-		const uint pos = PathQueue_Reserve(pathQueueCounts, PATH_QUEUE_GENERATE_NEXT_VERTEX_RAY);
-		pathQueues[PATH_QUEUE_GENERATE_NEXT_VERTEX_RAY * get_global_size(0) + pos] = gid;
-	}
-}
-
-#define PATH_STATE_SET(state) PathState_Set(gid, (state), pathStates, pathQueues, pathQueueCounts)
+// Sets the state of path gid: QueuePaths or the material sort
+// (QueuePathsByMaterial) queues it for the micro-kernel of that state
+#define PATH_STATE_SET(state) pathStates[gid] = (state)
 
 // Used by the micro-kernels with a queue: one thread for each queued path.
 // Kernels are launched with taskCount threads, the threads past the number of
@@ -131,6 +116,64 @@ __kernel void QueuePaths(__global PathState *pathStates,
 		const int queueIndex = PathState_QueueIndex((PathState)state);
 		const uint pos = PathQueue_Reserve(pathQueueCounts, queueIndex);
 		pathQueues[queueIndex * get_global_size(0) + pos] = gid;
+	}
+}
+
+//------------------------------------------------------------------------------
+// Material sorted queues
+//
+// For the micro-kernels evaluating the BSDF, the paths can be queued grouped
+// by the material of their BSDF (a counting sort): the warps mostly run the
+// code of one material, with less divergence. The paths in a state are the
+// same as with QueuePaths, only their order changes.
+// materialCounts and materialCursors have materialCount + 1 entries (the
+// last one for an out of range index). Launch order: CountPathsByMaterial,
+// ScanPathsByMaterial, QueuePathsByMaterial.
+//------------------------------------------------------------------------------
+
+// Also stores the material of each path in the state in materialKeys, so
+// QueuePathsByMaterial reads a path order array instead of the BSDF again
+__kernel void CountPathsByMaterial(__global PathState *pathStates,
+		__global const GPUTaskState *tasksState, __global uint *materialKeys,
+		__global uint *materialCounts,
+		const uint state, const uint materialCount) {
+	const size_t gid = get_global_id(0);
+
+	if (pathStates[gid] == state) {
+		const uint key = min(tasksState[gid].bsdf.materialIndex, materialCount);
+		materialKeys[gid] = key;
+		PathQueue_Reserve(materialCounts, key);
+	}
+}
+
+// Run by a single work-item: turns the counts into the position of the first
+// path of each material in the queue, clears the counts for the next sort and
+// sets the size of the queue
+__kernel void ScanPathsByMaterial(__global uint *materialCounts,
+		__global uint *materialCursors, __global uint *pathQueueCounts,
+		const uint state, const uint materialCount) {
+	if (get_global_id(0) != 0)
+		return;
+
+	uint sum = 0;
+	for (uint i = 0; i <= materialCount; ++i) {
+		const uint count = materialCounts[i];
+		materialCursors[i] = sum;
+		materialCounts[i] = 0;
+		sum += count;
+	}
+	pathQueueCounts[PathState_QueueIndex((PathState)state)] = sum;
+}
+
+__kernel void QueuePathsByMaterial(__global PathState *pathStates,
+		__global const uint *materialKeys, __global uint *pathQueues,
+		__global uint *materialCursors,
+		const uint state) {
+	const size_t gid = get_global_id(0);
+
+	if (pathStates[gid] == state) {
+		const uint pos = PathQueue_Reserve(materialCursors, materialKeys[gid]);
+		pathQueues[PathState_QueueIndex((PathState)state) * get_global_size(0) + pos] = gid;
 	}
 }
 

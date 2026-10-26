@@ -363,3 +363,75 @@ kernel). A/B = 3 runs of 20 s per scene, median M samples/sec.
 - Next: branch `gpu-opt/ridiculous` from `gpu-opt/combined`. Lossless work
   first (T5.5, T5.4, T5.6, T5.7); lossy options later, only behind config
   properties that default to off (user decision 2026-10-26).
+
+### 2026-10-26: T5.4, T5.10, T5.7 (on `gpu-opt/ridiculous`)
+
+Kernel profile = `kprof.py` as above (ms of kernel time per M samples, one
+30 s run per build after a warm-up run). `gpu-opt/ridiculous` =
+`gpu-opt/combined` + these three tasks.
+
+- T5.4 (`gpu-opt/T5.4-hitpoint-no-transform`): `HitPoint` no longer stores
+  `localToWorld` (128 B per path). The local 3D texture mappings and the
+  wireframe texture recompute it with `ExtMesh_GetLocal2World()` from
+  `meshIndex`, `triangleIndex` and the new `HitPoint.time`. LuxBall kernel
+  65.6 -> 61.4, `MK_RT_NEXT_VERTEX` 10.7 -> 8.3. Image check passes on all
+  5 scenes. A/B vs T5.9b (M samples/sec):
+
+  | Scene | T5.9b | T5.4 | change |
+  |---|---|---|---|
+  | LuxBall | 15.63 | 16.71 | +6.9% |
+  | DLSC | 18.99 | 19.98 | +5.2% |
+  | LuxCore2.1Benchmark | 10.96 | 11.68 | +6.6% |
+  | DanishMood | 6.29 | 7.80 | +24.0% (noisy) |
+  | LynxSpider | 10.31 | 10.49 | +1.7% |
+
+- T5.10 (`gpu-opt/T5.10-fuse-path-tail`): `MK_SPLAT_SAMPLE` also does the
+  `MK_NEXT_SAMPLE` and `MK_GENERATE_CAMERA_RAY` steps. LuxBall splat + next
+  sample + camera ray + queues 14.7 -> 11.8. Image check passes on all 5
+  scenes. The A/B vs T5.4 is missing: the first one overlapped a kernel
+  profile run (numbers unusable), the user cancelled the rerun.
+- T5.7 (`gpu-opt/T5.7-material-sort`): the queues of `MK_HIT_OBJECT`,
+  `MK_DL_SAMPLE_BSDF` and `MK_GENERATE_NEXT_VERTEX_RAY` can be built by a
+  counting sort on `bsdf.materialIndex` (`CountPathsByMaterial`,
+  `ScanPathsByMaterial`, `QueuePathsByMaterial`; the count pass stores the
+  key, so the queue pass reads a path order array). `MK_GENERATE_NEXT_VERTEX_RAY`
+  is no longer pushed in `PATH_STATE_SET()`.
+- Always sorting: LynxSpider 89.2 -> 69.1 (`DL_SAMPLE_BSDF` 16.9 -> 3.6,
+  `GENERATE_NEXT_VERTEX_RAY` 17.2 -> 10.6), but LuxBall 58.5 -> 70.4
+  (`DL_ILLUMINATE` 5.5 -> 10.0, `DL_SAMPLE_BSDF` 6.1 -> 9.0). A warp then
+  takes its paths from a much wider range of path indices: the locality the
+  T5.9 scans gave is lost. Material count does not predict the winner
+  (LuxBall 9, LynxSpider 23 materials).
+- So the order is calibrated per state at run time: iterations 16-47 after
+  each render thread start alternate sorted and path order, time queue +
+  micro-kernel with `FinishQueue()` and `std::chrono::steady_clock`, and keep
+  the faster one (logged as `Material sort <state>: ...`). `WallClockTime()`
+  is `GetTickCount()` on Windows (15.6 ms steps): fine for the kernel profile
+  totals, useless for timing one launch. `MK_DL_ILLUMINATE` (only
+  `BSDF_IsDelta()` + light sampling) lost with the sort on all 5 scenes and
+  is never sorted.
+- Calibration choices (sorted / path order) and kernel totals, T5.10 vs T5.7:
+
+  | Scene | HIT_OBJECT | DL_SAMPLE_BSDF | GENERATE_NEXT_VERTEX_RAY | T5.10 | T5.7 | change |
+  |---|---|---|---|---|---|---|
+  | LuxBall | path | path | path | 57.9 | 56.2 | -2.9% (noise) |
+  | DLSC | path | sorted | path | 49.1 | 48.2 | -1.9% (noise) |
+  | LuxCore2.1Benchmark | sorted | sorted | sorted | 46.8 | 46.2 | -1.4% (noise) |
+  | DanishMood | sorted | sorted | sorted | 45.7 | 46.4 | +1.6% (noise) |
+  | LynxSpider | sorted | sorted | sorted | 88.8 | 69.4 | -21.9% |
+
+  No A/B in M samples/sec (the user skipped it). Image check passes on all
+  5 scenes (RMSE 0.004-0.043 vs noise floors 0.021-0.19).
+
+- Image check caveat found on the way: LuxCore2.1Benchmark and DanishMood
+  use the PhotonGI indirect cache, built on the CPU before the GPU render.
+  Its result varies per run, and the whole image moves with it: the mean
+  differs from `main` by -1.7% to +5.3% between builds and up to 1.2%
+  between two runs of the same build and seed. With
+  `-D path.photongi.indirect.enabled 0`, T5.7 vs `main` is -0.000%
+  (LuxCore2.1Benchmark) and -0.096% (DanishMood), seed spread about 0.02%:
+  the GPU code is unbiased. Variance clamping is not the cause: DLSC and
+  LynxSpider clamp too and stay within 0.25%. Use that override when a
+  mean difference on those two scenes needs explaining.
+- Next: T5.5 (registers), T5.6 (fuse the BSDF kernels; with T5.7 the three
+  kernels may use different orders, so fusing now needs one order for all).
