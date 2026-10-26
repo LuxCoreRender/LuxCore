@@ -20,6 +20,8 @@
 
 #define RAY_FLAGS_NONE   0x00000000
 #define RAY_FLAGS_MASKED 0x00000001
+// Any hit is enough, the closest one is not needed (accelerators can ignore it)
+#define RAY_FLAGS_ANY_HIT 0x00000002
 
 typedef struct {
 	Point o;

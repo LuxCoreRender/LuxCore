@@ -68,6 +68,7 @@ protected:
 	}
 
 	virtual void InitGPUTaskConfiguration();
+	void InitGPUTaskSceneConfiguration();
 	void InitPixelFilterDistribution();
 
 	virtual void InitFilm();

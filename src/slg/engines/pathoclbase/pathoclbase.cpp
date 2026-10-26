@@ -181,9 +181,14 @@ PathOCLBaseRenderEngine::~PathOCLBaseRenderEngine() {
 	delete oclPixelFilter;
 }
 
+void PathOCLBaseRenderEngine::InitGPUTaskSceneConfiguration() {
+	taskConfig.scene.defaultVolumeIndex = compiledScene->defaultWorldVolumeIndex;
+	taskConfig.scene.shadowRaysAnyHit = compiledScene->IsShadowRayAnyHitExact();
+}
+
 void PathOCLBaseRenderEngine::InitGPUTaskConfiguration() {
 	// Scene configuration
-	taskConfig.scene.defaultVolumeIndex = compiledScene->defaultWorldVolumeIndex;
+	InitGPUTaskSceneConfiguration();
 
 	// Sampler configuration
 	taskConfig.sampler = *oclSampler;
@@ -466,6 +471,9 @@ void PathOCLBaseRenderEngine::EndSceneEditLockLess(const EditActionList &editAct
 	if (lightSamplerSharedData)
 		lightSamplerSharedData->Reset();
 	compiledScene->Recompile(editActions);
+	// Materials and volumes can have changed (uploaded by the threads'
+	// EndSceneEdit())
+	InitGPUTaskSceneConfiguration();
 
 	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
 		renderOCLThreads[i]->intersectionDevice.PushThreadCurrentDevice();

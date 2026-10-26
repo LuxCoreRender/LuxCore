@@ -47,6 +47,11 @@ public:
 	void Recompile(const EditActionList &editActions);
 	void RecompilePhotonGI() { CompilePhotonGI(); }
 
+	// True if a shadow ray is blocked by any surface it hits: no material can
+	// let it pass (transparency, shadow transparency, NULL or ARCHGLASS
+	// materials) and there are no volumes
+	bool IsShadowRayAnyHitExact() const;
+
 	static void CompileFilm(const Film &film, slg::ocl::Film &oclFilm);
 
 	static std::tuple<std::vector<float>, size_t>
