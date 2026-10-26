@@ -84,6 +84,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 	const u_int taskCount = engine->taskCount;
+	const u_int lightTaskCount = engine->lightTaskCount;
 
 	intersectionDevice.PushThreadCurrentDevice();
 
@@ -92,10 +93,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	//----------------------------------------------------------------------
 
 	// Clear the frame buffer
-	const u_int filmPixelCount = threadFilms[0]->GetFilm().GetWidth() * threadFilms[0]->GetFilm().GetHeight();
-	intersectionDevice.EnqueueKernel(filmClearKernel,
-		HardwareDeviceRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
-		HardwareDeviceRange(filmClearWorkGroupSize));
+	threadFilms[0]->ClearFilm(intersectionDevice, filmClearKernel, filmClearWorkGroupSize);
 
 	// Initialize random number generator seeds
 	intersectionDevice.EnqueueKernel(initSeedKernel,
@@ -103,6 +101,8 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 
 	// Initialize the tasks buffer
 	EnqueueInitKernel();
+	if (lightTaskCount > 0)
+		EnqueueInitLightPathsKernel();
 
 	// Check if I have to load the start film
 	if (engine->hasStartFilm && (threadIndex == 0))
@@ -122,6 +122,39 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	double totalKernelTime = 0.0;
 
 	const std::function<void()> pgicUpdateCallBack = std::bind(PGICUpdateCallBack, engine->compiledScene);
+
+	// Reads the film and updates its sample counts (the GPU light paths are
+	// the RADIANCE_PER_SCREEN_NORMALIZED samples)
+	auto RecvFilm = [&]() {
+		// Async. transfer of the Film buffers
+		threadFilms[0]->RecvFilm(intersectionDevice);
+
+		// Async. transfer of GPU task statistics
+		intersectionDevice.EnqueueReadBuffer(
+			taskStatsBuff,
+			CL_FALSE,
+			sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
+			gpuTaskStats.get());
+		if (lightTaskCount > 0) {
+			intersectionDevice.EnqueueReadBuffer(
+				lightPathCountsBuff,
+				CL_FALSE,
+				sizeof(u_int) * lightTaskCount,
+				lightPathCounts.get());
+		}
+
+		intersectionDevice.FinishQueue();
+
+		// I need to update the film samples count
+
+		double totalCount = 0.0;
+		for (size_t i = 0; i < taskCount; ++i)
+			totalCount += gpuTaskStats[i].sampleCount;
+		double lightPathCount = 0.0;
+		for (size_t i = 0; i < lightTaskCount; ++i)
+			lightPathCount += lightPathCounts[i];
+		threadFilms[0]->GetFilm().SetSampleCount(totalCount, totalCount, lightPathCount);
+	};
 
 	while (!stop_token.stop_requested()) {
 		//if (threadIndex == 0)
@@ -146,24 +179,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 		// resolution images (for instance at 4961x3508)
 
 		if (totalTransferTime < totalKernelTime * (1.0 / 100.0)) {
-			// Async. transfer of the Film buffers
-			threadFilms[0]->RecvFilm(intersectionDevice);
-
-			// Async. transfer of GPU task statistics
-			intersectionDevice.EnqueueReadBuffer(
-				taskStatsBuff,
-				CL_FALSE,
-				sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
-				gpuTaskStats.get());
-
-			intersectionDevice.FinishQueue();
-
-			// I need to update the film samples count
-
-			double totalCount = 0.0;
-			for (size_t i = 0; i < taskCount; ++i)
-				totalCount += gpuTaskStats[i].sampleCount;
-			threadFilms[0]->GetFilm().SetSampleCount(totalCount, totalCount, 0.0);
+			RecvFilm();
 
 			//SLG_LOG("[DEBUG] film transferred");
 		}
@@ -183,11 +199,13 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 		for (u_int i = 0; i < iterations; ++i) {
 			// Trace rays
 			const double profileStart = BeginKernelProfile();
-			intersectionDevice.EnqueueTraceRayBuffer(raysBuff, hitsBuff, taskCount);
+			intersectionDevice.EnqueueTraceRayBuffer(raysBuff, hitsBuff, taskCount + lightTaskCount);
 			EndKernelProfile(KERNEL_PROFILE_TRACE, profileStart);
 
 			// Advance to next path state
 			EnqueueAdvancePathsKernel();
+			if (lightTaskCount > 0)
+				EnqueueAdvanceLightPathsKernel();
 		}
 		totalIterations += iterations;
 
@@ -222,8 +240,8 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
         if (stop_token.stop_requested())
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 
-	threadFilms[0]->RecvFilm(intersectionDevice);
-	intersectionDevice.FinishQueue();
+	// The sample counts must match the final film
+	RecvFilm();
 	LogKernelProfile();
 	
 	threadDone = true;

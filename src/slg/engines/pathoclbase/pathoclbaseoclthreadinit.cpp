@@ -282,6 +282,12 @@ void PathOCLBaseOCLRenderThread::InitLights() {
 		intersectionDevice.FreeBuffer(&elvcTileDistributionOffsetsBuff);
 		intersectionDevice.FreeBuffer(&elvcBVHNodesBuff);
 	}
+
+	if ((renderEngine->lightTaskCount > 0) && (cscene->emitLightsDistributionSize > 0)) {
+		intersectionDevice.AllocBufferRO(&emitLightsDistributionBuff, cscene->emitLightsDistribution.data(),
+			cscene->emitLightsDistributionSize, "EmitLightsDistribution");
+	} else
+		intersectionDevice.FreeBuffer(&emitLightsDistributionBuff);
 }
 
 void PathOCLBaseOCLRenderThread::InitPhotonGI() {
@@ -312,6 +318,31 @@ void PathOCLBaseOCLRenderThread::InitPhotonGI() {
 	} else {
 		intersectionDevice.FreeBuffer(&pgicCausticPhotonsBuff);
 		intersectionDevice.FreeBuffer(&pgicCausticPhotonsBVHNodesBuff);
+	}
+}
+
+void PathOCLBaseOCLRenderThread::InitLightTracing() {
+	const u_int lightTaskCount = renderEngine->lightTaskCount;
+
+	if (lightTaskCount > 0) {
+		if (lightTaskCount > renderEngine->taskCount)
+			throw runtime_error("The light tasks use the GPUTask temporaries: lightTaskCount must be <= taskCount");
+
+		intersectionDevice.AllocBufferRW(&lightTasksBuff, nullptr,
+				sizeof(slg::ocl::pathoclbase::LightPathTask) * lightTaskCount, "LightPathTask");
+		intersectionDevice.AllocBufferRW(&lightPathCountsBuff, nullptr,
+				sizeof(u_int) * lightTaskCount, "LightPathCounts");
+		intersectionDevice.AllocBufferRO(&lightFilterLUTsBuff, renderEngine->lightFilterLUTs.data(),
+				sizeof(float) * renderEngine->lightFilterLUTs.size(), "LightFilterLUTs");
+
+		lightPathCounts = std::make_unique<u_int[]>(lightTaskCount);
+		for (u_int i = 0; i < lightTaskCount; ++i)
+			lightPathCounts[i] = 0;
+	} else {
+		intersectionDevice.FreeBuffer(&lightTasksBuff);
+		intersectionDevice.FreeBuffer(&lightPathCountsBuff);
+		intersectionDevice.FreeBuffer(&lightFilterLUTsBuff);
+		lightPathCounts.reset();
 	}
 }
 
@@ -632,8 +663,16 @@ void PathOCLBaseOCLRenderThread::InitRender() {
 	// Allocate Ray/RayHit buffers
 	//--------------------------------------------------------------------------
 
-	intersectionDevice.AllocBufferRW(&raysBuff, nullptr, sizeof(Ray) * taskCount, "Ray");
-	intersectionDevice.AllocBufferRW(&hitsBuff, nullptr, sizeof(RayHit) * taskCount, "RayHit");
+	// The light task rays are after the eye path rays
+	const u_int rayCount = taskCount + renderEngine->lightTaskCount;
+	intersectionDevice.AllocBufferRW(&raysBuff, nullptr, sizeof(Ray) * rayCount, "Ray");
+	intersectionDevice.AllocBufferRW(&hitsBuff, nullptr, sizeof(RayHit) * rayCount, "RayHit");
+
+	//--------------------------------------------------------------------------
+	// GPU light tracing buffers
+	//--------------------------------------------------------------------------
+
+	InitLightTracing();
 
 	//--------------------------------------------------------------------------
 	// Allocate GPU task buffers

@@ -65,6 +65,7 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(RenderConfigRef rcfg,
 		const bool supportsNativeThreads) :	OCLRenderEngine(rcfg, supportsNativeThreads),
 		compiledScene(nullptr), oclSampler(nullptr),
 		oclPixelFilter(nullptr), photonGICache(nullptr), lightSamplerSharedData(nullptr) {
+	lightTaskCount = 0;
 	writeKernelsToFile = false;
 	specializeKernels = true;
 	profileKernels = false;

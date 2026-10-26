@@ -18,9 +18,14 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+// HitPoint.flags
+#define HITPOINT_THROUGH_SHADOW_TRANSPARENCY 1
+// Set only by the light tracing kernels (see HitPoint_IsFromLight())
+#define HITPOINT_FROM_LIGHT 2
+
 typedef struct {
-	// The incoming direction. It is the eyeDir when fromLight = false and
-	// lightDir when fromLight = true
+	// The incoming direction. It is the eyeDir, or the lightDir with
+	// HITPOINT_FROM_LIGHT
 	Vector fixedDir;
 	Point p;
 	Normal geometryN;
@@ -57,9 +62,10 @@ typedef struct {
 
 	unsigned int objectID;
 
-	int intoObject, throughShadowTransparency;
-
-	// Set only by the light tracing kernels (see HitPoint_IsFromLight())
-	int fromLight;
+	int intoObject;
+	// HITPOINT_THROUGH_SHADOW_TRANSPARENCY | HITPOINT_FROM_LIGHT. One field for
+	// both: a larger HitPoint slows down the eye path kernels (DLSC -2% to -3%
+	// with a separate field)
+	int flags;
 } HitPoint;
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

@@ -82,6 +82,12 @@ public:
 		void ClearFilm(luxrays::HardwareIntersectionDeviceRef intersectionDevice,
 			luxrays::HardwareDeviceKernelRPtr filmClearKernel,
 			const size_t filmClearWorkGroupSize);
+		// Sets the film RADIANCE_PER_SCREEN_NORMALIZED kernel arguments of the
+		// light tracing (see KERNEL_ARGS_LIGHT_TRACING)
+		u_int SetLightTracingFilmKernelArgs(
+			luxrays::HardwareIntersectionDeviceRef intersectionDevice,
+			luxrays::HardwareDeviceKernelRPtr kernel,
+			u_int argIndex) const;
 		void RecvFilm(luxrays::HardwareIntersectionDeviceRef intersectionDevice);
 		void SendFilm(luxrays::HardwareIntersectionDeviceRef intersectionDevice);
 
@@ -90,6 +96,8 @@ public:
 
 		// Film buffers
 		std::vector<luxrays::HardwareDeviceBuffer *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff;
+		// Only with the GPU light tracing
+		std::vector<luxrays::HardwareDeviceBuffer *> channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff;
 		luxrays::HardwareDeviceBuffer *channel_ALPHA_Buff;
 		luxrays::HardwareDeviceBuffer *channel_DEPTH_Buff;
 		luxrays::HardwareDeviceBuffer *channel_POSITION_Buff;
@@ -172,6 +180,7 @@ protected:
 	void InitSceneObjects();
 	void InitLights();
 	void InitPhotonGI();
+	void InitLightTracing();
 	void InitKernels();
 	void InitGPUTaskBuffer();
 	// Uploads renderEngine->taskConfig
@@ -182,8 +191,10 @@ protected:
 	void InitSampleResultsBuffer();
 
 	void SetInitKernelArgs(const u_int filmIndex);
-	void SetAdvancePathsKernelArgs(luxrays::HardwareDeviceKernelRPtr advancePathsKernel, const u_int filmIndex);
+	// Returns the index of the next argument
+	u_int SetAdvancePathsKernelArgs(luxrays::HardwareDeviceKernelRPtr advancePathsKernel, const u_int filmIndex);
 	void SetAllAdvancePathsKernelArgs(const u_int filmIndex);
+	void SetLightTracingKernelArgs(const u_int filmIndex);
 	void SetKernelArgs();
 
 
@@ -199,6 +210,9 @@ protected:
 	bool IsMaterialSortState(const slg::ocl::pathoclbase::PathState state) const;
 	void UpdateMaterialSortCalibration();
 	void EnqueueAdvancePathsKernel();
+	// GPU light tracing (renderEngine->lightTaskCount > 0)
+	void EnqueueInitLightPathsKernel();
+	void EnqueueAdvanceLightPathsKernel();
 	// With opencl.kernel.profile.enable, waits for the queue and returns the
 	// time; EndKernelProfile() waits again and adds the elapsed time to
 	// kernelProfileTimes[index]. Both do nothing when profiling is off.
@@ -289,6 +303,12 @@ protected:
 	luxrays::HardwareDeviceBuffer *eyePathInfosBuff;
 	luxrays::HardwareDeviceBuffer *directLightVolInfosBuff;
 	luxrays::HardwareDeviceBuffer *pixelFilterBuff;
+	// GPU light tracing buffers
+	luxrays::HardwareDeviceBuffer *lightTasksBuff;
+	luxrays::HardwareDeviceBuffer *lightPathCountsBuff;
+	luxrays::HardwareDeviceBuffer *emitLightsDistributionBuff;
+	luxrays::HardwareDeviceBuffer *lightFilterLUTsBuff;
+	std::unique_ptr<u_int[]> lightPathCounts;
 
 	u_int initKernelArgsCount;
 	std::string kernelsParameters;
@@ -338,6 +358,13 @@ protected:
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_SPLAT_SAMPLE;
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_NEXT_SAMPLE;
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_GENERATE_CAMERA_RAY;
+	// GPU light tracing kernels
+	luxrays::HardwareDeviceKernelUPtr initLightPathsKernel;
+	size_t initLightPathsWorkGroupSize;
+	luxrays::HardwareDeviceKernelUPtr lightTracingClearFilmKernel;
+	size_t lightTracingClearFilmWorkGroupSize;
+	luxrays::HardwareDeviceKernelUPtr advanceLightPathsKernel;
+	size_t advanceLightPathsWorkGroupSize;
 	// Indexed by the PathState of the micro-kernel
 	size_t advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_DONE];
 
@@ -345,7 +372,8 @@ protected:
 	// the ray trace and the queue reset
 	static const u_int KERNEL_PROFILE_TRACE = slg::ocl::pathoclbase::MK_DONE;
 	static const u_int KERNEL_PROFILE_PATH_QUEUES = slg::ocl::pathoclbase::MK_DONE + 1;
-	static const u_int KERNEL_PROFILE_COUNT = slg::ocl::pathoclbase::MK_DONE + 2;
+	static const u_int KERNEL_PROFILE_LIGHT_TRACING = slg::ocl::pathoclbase::MK_DONE + 2;
+	static const u_int KERNEL_PROFILE_COUNT = slg::ocl::pathoclbase::MK_DONE + 3;
 	double kernelProfileTimes[KERNEL_PROFILE_COUNT] = {};
 
 	std::unique_ptr<slg::ocl::pathoclbase::GPUTaskStats[]> gpuTaskStats;

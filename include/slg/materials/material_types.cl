@@ -351,6 +351,8 @@ typedef struct {
 	float glossiness, avgPassThroughTransparency;
 	int isShadowCatcher, isShadowCatcherOnlyInfiniteLights, isPhotonGIEnabled,
 			isHoldout;
+	// Material::GetPassThroughShadowTransparencyOverride()
+	int passThroughShadowTransparencyOverride;
 
 	// The result of calling Material::GetEventTypes()
 	BSDFEvent eventTypes;

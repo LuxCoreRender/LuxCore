@@ -192,6 +192,25 @@ void CompiledScene::CompileLightStrategy() {
 			throw runtime_error("Unsupported infinite light strategy in CompiledScene::CompileLights()");
 		}
 	}
+
+	//--------------------------------------------------------------------------
+	// Compile emitLightsDistribution
+	//--------------------------------------------------------------------------
+
+	auto& emitLightStrategy = scene.GetLightSources().GetEmitLightStrategy();
+
+	emitLightsDistribution.clear();
+	emitLightsDistributionSize = 0;
+	const Distribution1D *emitDistribution = nullptr;
+	if (auto distributionEmitLightStrategy = dynamic_cast<const DistributionLightStrategy *>(&emitLightStrategy))
+		emitDistribution = distributionEmitLightStrategy->GetLightsDistribution().get();
+	else if (auto dlscEmitLightStrategy = dynamic_cast<const LightStrategyDLSCache *>(&emitLightStrategy))
+		emitDistribution = dlscEmitLightStrategy->GetLightsDistribution().get();
+	else
+		throw runtime_error("Unsupported emit light strategy in CompiledScene::CompileLights()");
+
+	if (emitDistribution)
+		std::tie(emitLightsDistribution, emitLightsDistributionSize) = CompileDistribution1D(*emitDistribution);
 }
 
 void CompiledScene::CompileELVC(EnvLightVisibilityCacheRPtr visibilityMapCache) {

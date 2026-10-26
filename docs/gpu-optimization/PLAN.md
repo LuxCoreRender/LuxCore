@@ -144,7 +144,7 @@ otherwise.
 | Stage | Today | GPU-first target | Task |
 |---|---|---|---|
 | Eye paths (path tracing) | GPU wavefront, CUDA + OptiX | Fuller GPU: registers, fusion | T5.5, T5.6 |
-| Caustics with "Add Light Tracing" (`path.hybridbackforward.enable`) | CPU only: the GPU skips caustic paths (`pathoclbase_kernels_micro.cl:166`), CPU native threads trace light paths (`pathoclnativethread.cpp:131`) | GPU light tracing | T6.1 |
+| Caustics with "Add Light Tracing" (`path.hybridbackforward.enable`) | Before T6.1 CPU only: the GPU skips caustic paths (`pathoclbase_kernels_micro.cl:166`), CPU native threads trace light paths (`pathoclnativethread.cpp:131`). Since T6.1 the GPU traces light paths too (`AdvanceLightPaths`), perspective camera only | GPU light tracing | T6.1 |
 | Film | Thread film read back (`RecvFilm`), merged on the host (`Film::AddFilm`, `pathocl.cpp:184`), image pipeline on the GPU through OpenCL (`MergeSampleBuffersOCL`), read back again | Film resident on the CUDA device, merge and pipeline there, read back only the output | T7.1, T7.3 |
 | Adaptive sampling | Convergence test and noise estimation on the host over the whole film (`film.cpp:1426`) | GPU kernels | T7.2 |
 | Denoiser | OIDN CPU device only (`LuxOpenImageDenoise_device_cpu.dll`); OptiX denoiser plugin exists | OIDN CUDA device | T7.4 |
@@ -159,8 +159,8 @@ otherwise.
 
 | ID | Task | Status | Acceptance |
 |---|---|---|---|
-| T6.1 | GPU light tracing for caustics: when `path.hybridbackforward.enable` is on, GPU threads trace light paths too (design below). | in progress: device code for adjoint BSDF, camera projection and `Light_Emit` written (not built); light path kernel, host side and verification next (see PROGRESS 2026-10-26 T6.1) | Same expected image as CPU hybrid (mean within seed spread vs a 16K spp reference); caustic RMSE at equal time far below CPU light tracing; eye-only renders unchanged. |
-| T6.2 | Light path efficiency: most light paths miss the specular objects and end at once. Unbiased options: guided emission toward specular geometry (MIS with plain emission), light path pool sizing, separate CUDA stream so light and eye kernels overlap. | todo | Caustic RMSE at equal time down on the caustic scenes. |
+| T6.1 | GPU light tracing for caustics: when `path.hybridbackforward.enable` is on, GPU threads trace light paths too (design below). | done (branch `gpu-opt/T6.1-gpu-light-tracing`, see PROGRESS 2026-10-26 "T6.1 GPU light tracing, done"): light part equal to CPU light tracing (2-glasses 1.014 / 0.987, CPU seed spread 2.3%); caustic noise at equal time 28% below CPU light tracing on 12 threads, with the CPU idle (acceptance "far below" only partly met, see T6.2); eye-only renders unchanged. Perspective camera only. | Same expected image as CPU hybrid (mean within seed spread vs a 16K spp reference); caustic RMSE at equal time far below CPU light tracing; eye-only renders unchanged. |
+| T6.2 | Light path efficiency: most light paths miss the specular objects and end at once. On 2-glasses only 0.06% of the GPU light paths make a caustic connection (T6.1). Unbiased options: guided emission toward specular geometry (MIS with plain emission), light path pool sizing (T6.1 uses taskCount, the max while light tasks share the `GPUTask` temporaries on OpenCL), separate CUDA stream so light and eye kernels overlap. | todo | Caustic RMSE at equal time down on the caustic scenes. |
 | T6.3 | Path guiding on the GPU (= T4.1): training records on the GPU, tree build on the host first, later on the GPU. | todo | See T4.1. |
 | T6.4 | Unbiased heterogeneous volumes: delta / ratio tracking (null scattering) with a majorant per volume, replacing fixed-step marching. Changes the converged image (removes the marching bias), so it is a new property, off by default. | todo | Converges to a high step count marching reference; faster at equal error on DanishMood / LynxSpider. |
 

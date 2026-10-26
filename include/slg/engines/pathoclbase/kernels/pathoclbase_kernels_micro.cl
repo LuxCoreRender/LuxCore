@@ -1210,4 +1210,306 @@ __kernel void AdvancePaths_MK_GENERATE_CAMERA_RAY(
 #endif
 }
 
+//------------------------------------------------------------------------------
+// Light tracing: advances each light path by one ray (see LightPathTask),
+// after the rays of the light tasks have been traced. Mirrors
+// PathTracer::RenderLightSample() and PathTracer::ConnectToEye() with the
+// hybrid back/forward path tracing: only the caustic connections are traced
+// and splatted, a light path is done as soon as no caustic connection can
+// follow.
+//
+// Note: the code is inside the kernel body because the OpenCL source split
+// (SplitMicroKernelSources()) cuts the source at each kernel.
+//------------------------------------------------------------------------------
+
+__kernel void AdvanceLightPaths(
+		KERNEL_ARGS
+		KERNEL_ARGS_LIGHT_TRACING
+		) {
+#if defined(PARAM_LIGHT_TRACING)
+	const size_t gid = get_global_id(0);
+	if (gid >= lightTaskCount)
+		return;
+
+	//--------------------------------------------------------------------------
+	// Start of variables setup
+	//--------------------------------------------------------------------------
+
+	__global LightPathTask *task = &lightTasks[gid];
+	__global Ray *ray = &rays[eyeTaskCount + gid];
+	__global RayHit *rayHit = &rayHits[eyeTaskCount + gid];
+	__constant const Scene* restrict scene = &taskConfig->scene;
+
+	// Initialize image maps page pointer table
+	INIT_IMAGEMAPS_PAGES
+
+	__global float *filmScreenRadianceGroup[FILM_MAX_RADIANCE_GROUP_COUNT];
+	filmScreenRadianceGroup[0] = filmScreenRadianceGroup0;
+	filmScreenRadianceGroup[1] = filmScreenRadianceGroup1;
+	filmScreenRadianceGroup[2] = filmScreenRadianceGroup2;
+	filmScreenRadianceGroup[3] = filmScreenRadianceGroup3;
+	filmScreenRadianceGroup[4] = filmScreenRadianceGroup4;
+	filmScreenRadianceGroup[5] = filmScreenRadianceGroup5;
+	filmScreenRadianceGroup[6] = filmScreenRadianceGroup6;
+	filmScreenRadianceGroup[7] = filmScreenRadianceGroup7;
+
+	// lightTaskCount <= taskCount, so the OpenCL GPUTask temporaries exist
+	GPUTASK_TMP(BSDF, tmpBsdf);
+	GPUTASK_TMP(HitPoint, tmpHitPoint);
+
+	const float glossinessThreshold = taskConfig->pathTracer.hybridBackForward.glossinessThreshold;
+
+	//--------------------------------------------------------------------------
+	// End of variables setup
+	//--------------------------------------------------------------------------
+
+	Seed seedValue = task->seed;
+	LightPathState state = task->state;
+	bool pathDone = false;
+
+	if (state == LT_RT_EYE_CONNECTION) {
+		//----------------------------------------------------------------------
+		// The connection of a light path vertex to the camera
+		//----------------------------------------------------------------------
+
+		float3 connectionThroughput;
+		int throughShadowTransparency = false;
+		const bool continueToTrace = Scene_Intersect(taskConfig,
+				LIGHT_RAY | CAMERA_RAY,
+				&throughShadowTransparency,
+				&task->connectionVolume,
+				tmpHitPoint,
+				Rnd_FloatValue(&seedValue),
+				ray, rayHit, tmpBsdf,
+				&connectionThroughput, WHITE,
+				NULL,
+				false
+				MATERIALS_PARAM);
+		const float3 radiance = VLOAD3F(task->connectionRadiance.c) * connectionThroughput;
+
+		if (continueToTrace)
+			VSTORE3F(radiance, task->connectionRadiance.c);
+		else {
+			if (rayHit->meshIndex == NULL_INDEX) {
+				// Nothing was hit, the light path vertex is visible
+				__global float *filmChannel = (task->lightID < FILM_MAX_RADIANCE_GROUP_COUNT) ?
+					filmScreenRadianceGroup[task->lightID] : NULL;
+				if (filmChannel)
+					LightTracing_SplatSample(lightFilterLUTs, filmChannel,
+							filmWidth,
+							filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
+							task->connectionFilmX, task->connectionFilmY, radiance);
+			}
+
+			if (task->hasNextVertexRay) {
+				Ray_Init2(ray, VLOAD3F(&task->nextVertexRayOrig.x), VLOAD3F(&task->nextVertexRayDir.x), task->time);
+				state = LT_RT_NEXT_VERTEX;
+			} else
+				pathDone = true;
+		}
+	} else if (state == LT_RT_NEXT_VERTEX) {
+		//----------------------------------------------------------------------
+		// The next light path vertex
+		//----------------------------------------------------------------------
+
+		float3 flux = VLOAD3F(task->flux.c);
+
+		float3 connectionThroughput;
+		int throughShadowTransparency = false;
+		const bool continueToTrace = Scene_Intersect(taskConfig,
+				LIGHT_RAY | INDIRECT_RAY,
+				&throughShadowTransparency,
+				&task->volume,
+				tmpHitPoint,
+				Rnd_FloatValue(&seedValue),
+				ray, rayHit, tmpBsdf,
+				&connectionThroughput, flux,
+				NULL,
+				false
+				MATERIALS_PARAM);
+		flux *= connectionThroughput;
+
+		if (continueToTrace)
+			VSTORE3F(flux, task->flux.c);
+		else if (rayHit->meshIndex == NULL_INDEX) {
+			// Ray lost in space...
+			pathDone = true;
+		} else if (!Spectrum_IsBlack(BSDF_GetPassThroughShadowTransparency(tmpBsdf MATERIALS_PARAM)) &&
+				!mats[tmpBsdf->materialIndex].passThroughShadowTransparencyOverride) {
+			// Something with a not black shadow transparency: direct light
+			// sampling takes care of this kind of paths
+			pathDone = true;
+		} else {
+			// Something was hit
+			tmpBsdf->hitPoint.flags |= HITPOINT_FROM_LIGHT;
+
+			//------------------------------------------------------------------
+			// Try to connect the light path vertex with the eye. Only caustic
+			// connections (LightPathInfo::IsCausticPath()): the eye paths
+			// render the others.
+			//------------------------------------------------------------------
+
+			// The camera type is checked at the engine start only, a scene edit
+			// can change it
+			bool hasConnection = false;
+			if ((camera->type == PERSPECTIVE) &&
+					task->isNearlyS && (task->depth.depth > 0) &&
+					!((tmpBsdf->sceneObjectIndex != NULL_INDEX) && sceneObjs[tmpBsdf->sceneObjectIndex].cameraInvisible) &&
+					!BSDF_IsDelta(tmpBsdf MATERIALS_PARAM)) {
+				const float3 lensPoint = VLOAD3F(&task->lensPoint.x);
+				float3 eyeDir = VLOAD3F(&tmpBsdf->hitPoint.p.x) - lensPoint;
+				const float eyeDistance = length(eyeDir);
+				eyeDir /= eyeDistance;
+
+				// The eye ray, in the light task ray (it is overwritten below)
+				VSTORE3F(lensPoint, &ray->o.x);
+				VSTORE3F(eyeDir, &ray->d.x);
+				ray->mint = 0.f;
+				ray->maxt = eyeDistance;
+				ray->time = task->time;
+
+				float filmX, filmY;
+				if (PerspectiveCamera_GetSamplePosition(camera, ray, filmHeight,
+						filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
+						&filmX, &filmY)) {
+					BSDFEvent event;
+					float bsdfPdfW;
+					const float3 bsdfEval = BSDF_Evaluate(tmpBsdf, -eyeDir, &event, &bsdfPdfW
+							MATERIALS_PARAM);
+					const float fluxToRadianceFactor = PerspectiveCamera_GetFluxToRadianceFactor(camera,
+							eyeDir, eyeDistance, task->time);
+
+					if (!Spectrum_IsBlack(bsdfEval) && (fluxToRadianceFactor > 0.f) &&
+							!LightTracing_IsNearlySpecular(event,
+								BSDF_GetGlossiness(tmpBsdf MATERIALS_PARAM), glossinessThreshold)) {
+						VSTORE3F(flux * fluxToRadianceFactor * bsdfEval, task->connectionRadiance.c);
+						task->connectionFilmX = filmX;
+						task->connectionFilmY = filmY;
+						// The connection starts with the volume information of
+						// the light path
+						task->connectionVolume = task->volume;
+
+						// The ray goes from the vertex to the lens point, so
+						// PathVolumeInfo is right
+						const float eyeRayMint = ray->mint;
+						const float eyeRayMaxt = ray->maxt;
+						Ray_Init4(ray, BSDF_GetRayOrigin(tmpBsdf, -eyeDir), -eyeDir,
+								eyeDistance - eyeRayMaxt, eyeDistance - eyeRayMint,
+								task->time);
+
+						hasConnection = true;
+					}
+				}
+			}
+
+			//------------------------------------------------------------------
+			// Build the next vertex path ray
+			//------------------------------------------------------------------
+
+			// A caustic connection can follow only if this vertex is nearly
+			// specular too
+			bool continuePath = (task->depth.depth + 1 < taskConfig->pathTracer.maxPathDepth.depth) &&
+					((task->depth.depth == 0) || task->isNearlyS);
+			if (continuePath) {
+				const BSDFEvent eventTypes = BSDF_GetEventTypes(tmpBsdf MATERIALS_PARAM);
+				continuePath = LightTracing_IsNearlySpecular(eventTypes,
+						BSDF_GetGlossiness(tmpBsdf MATERIALS_PARAM), glossinessThreshold);
+			}
+
+			if (continuePath) {
+				const float u0 = Rnd_FloatValue(&seedValue);
+				const float u1 = Rnd_FloatValue(&seedValue);
+				float3 sampledDir;
+				float bsdfPdfW, cosSampledDir;
+				BSDFEvent event;
+				float3 bsdfSample = BSDF_Sample(tmpBsdf, u0, u1,
+						&sampledDir, &bsdfPdfW, &cosSampledDir, &event
+						MATERIALS_PARAM);
+
+				if (Spectrum_IsBlack(bsdfSample))
+					continuePath = false;
+				else {
+					// LightPathInfo::AddVertex()
+					PathDepthInfo_IncDepths(&task->depth, event);
+					PathVolumeInfo_Update(&task->volume, event, tmpBsdf MATERIALS_PARAM);
+					const bool isNewVertexNearlySpecular = LightTracing_IsNearlySpecular(event,
+							BSDF_GetGlossiness(tmpBsdf MATERIALS_PARAM), glossinessThreshold);
+					task->isNearlyS = ((task->depth.depth == 1) || task->isNearlyS) && isNewVertexNearlySpecular;
+					task->lastBSDFEvent = event;
+
+					// If it isn't anymore a (nearly) specular path, I can stop
+					continuePath = task->isNearlyS;
+				}
+
+				// Russian Roulette
+				if (continuePath && !(task->lastBSDFEvent & SPECULAR) &&
+						(PathDepthInfo_GetRRDepth(&task->depth) >= taskConfig->pathTracer.rrDepth)) {
+					const float rrProb = RussianRouletteProb(taskConfig->pathTracer.rrImportanceCap, bsdfSample);
+					if (rrProb < Rnd_FloatValue(&seedValue))
+						continuePath = false;
+					else
+						bsdfSample /= rrProb;
+				}
+
+				if (continuePath) {
+					flux *= bsdfSample;
+
+					VSTORE3F(BSDF_GetRayOrigin(tmpBsdf, sampledDir), &task->nextVertexRayOrig.x);
+					VSTORE3F(sampledDir, &task->nextVertexRayDir.x);
+				}
+			}
+
+			VSTORE3F(flux, task->flux.c);
+			task->hasNextVertexRay = continuePath;
+
+			if (hasConnection)
+				state = LT_RT_EYE_CONNECTION;
+			else if (continuePath) {
+				Ray_Init2(ray, VLOAD3F(&task->nextVertexRayOrig.x), VLOAD3F(&task->nextVertexRayDir.x), task->time);
+				state = LT_RT_NEXT_VERTEX;
+			} else
+				pathDone = true;
+		}
+	} else
+		pathDone = true;
+
+	if (pathDone) {
+		//----------------------------------------------------------------------
+		// Start a new light path. A light path is counted when it is done,
+		// failed emissions too.
+		//----------------------------------------------------------------------
+
+		uint pathCount = lightPathCounts[gid];
+		if (state != LT_GENERATE)
+			++pathCount;
+
+		state = LT_GENERATE;
+		// A few attempts, so a light task rarely stays idle for an iteration
+		for (uint i = 0; i < 4; ++i) {
+			if (LightTracing_GenerateLightPath(taskConfig, task, &seedValue,
+					ray, tmpHitPoint,
+					camera, cameraBokehDistribution,
+					emitLightsDistribution,
+					worldCenterX, worldCenterY, worldCenterZ, worldRadius
+					LIGHTS_PARAM)) {
+				state = LT_RT_NEXT_VERTEX;
+				break;
+			}
+
+			++pathCount;
+		}
+
+		if (state == LT_GENERATE) {
+			// Mark the ray like like one to NOT trace
+			ray->flags = RAY_FLAGS_MASKED;
+		}
+
+		lightPathCounts[gid] = pathCount;
+	}
+
+	task->seed = seedValue;
+	task->state = state;
+#endif
+}
+
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

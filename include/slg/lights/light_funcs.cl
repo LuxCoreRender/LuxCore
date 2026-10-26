@@ -1266,7 +1266,7 @@ OPENCL_FORCE_INLINE float3 TriangleLight_Emit(__global const LightSource *triLig
 		passThroughEvent,
 		&localToWorld, time
 		MATERIALS_PARAM);
-	tmpHitPoint->fromLight = true;
+	tmpHitPoint->flags |= HITPOINT_FROM_LIGHT;
 
 	Frame frame;
 	HitPoint_GetFrame(tmpHitPoint, &frame);

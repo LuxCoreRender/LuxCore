@@ -102,10 +102,7 @@ OPENCL_FORCE_INLINE void BSDF_InitVolume(
 		__global const Material* restrict mats,
 		__global Ray *ray,
 		const uint volumeIndex, const float t, const float passThroughEvent) {
-	bsdf->hitPoint.throughShadowTransparency = throughShadowTransparency;
-#if defined(PARAM_LIGHT_TRACING)
-	bsdf->hitPoint.fromLight = false;
-#endif
+	bsdf->hitPoint.flags = throughShadowTransparency ? HITPOINT_THROUGH_SHADOW_TRANSPARENCY : 0;
 	bsdf->hitPoint.passThroughEvent = passThroughEvent;
 
 	const float3 rayOrig = VLOAD3F(&ray->o.x);
@@ -195,7 +192,7 @@ OPENCL_FORCE_INLINE float3 BSDF_Evaluate(__global const BSDF *bsdf,
 #if defined(PARAM_LIGHT_TRACING)
 	// Note: with fromLight, *directPdfW is still the pdf of sampling lightDir
 	// from eyeDir (the light tracing doesn't use it)
-	const bool fromLight = bsdf->hitPoint.fromLight;
+	const bool fromLight = HitPoint_IsFromLight(&bsdf->hitPoint);
 	const float3 fixedDir = VLOAD3F(&bsdf->hitPoint.fixedDir.x);
 	const float3 eyeDir = fromLight ? generatedDir : fixedDir;
 	const float3 lightDir = fromLight ? fixedDir : generatedDir;
@@ -285,7 +282,7 @@ OPENCL_FORCE_INLINE float3 BSDF_Sample(__global const BSDF *bsdf, const float u0
 		const float3 shadeN = VLOAD3F(&bsdf->hitPoint.shadeN.x);
 		const float3 interpolatedN = VLOAD3F(&bsdf->hitPoint.interpolatedN.x);
 #if defined(PARAM_LIGHT_TRACING)
-		const float3 lightDir = bsdf->hitPoint.fromLight ? fixedDir : *sampledDir;
+		const float3 lightDir = HitPoint_IsFromLight(&bsdf->hitPoint) ? fixedDir : *sampledDir;
 #else
 		const float3 lightDir = *sampledDir;
 #endif
@@ -301,7 +298,7 @@ OPENCL_FORCE_INLINE float3 BSDF_Sample(__global const BSDF *bsdf, const float u0
 		// light path value is f * |cos(fixedDir)| / pdf; the refractive
 		// materials apply their non-reciprocal part themselves (see
 		// HitPoint_IsFromLight()).
-		if (bsdf->hitPoint.fromLight) {
+		if (HitPoint_IsFromLight(&bsdf->hitPoint)) {
 			const float3 geometryN = VLOAD3F(&bsdf->hitPoint.geometryN.x);
 			result *= fabs(CosTheta(localFixedDir) / CosTheta(localSampledDir)) *
 					(fabs(dot(*sampledDir, geometryN)) / fabs(dot(fixedDir, geometryN)));

@@ -46,6 +46,7 @@
 #include "slg/film/filters/mitchell.h"
 #include "slg/film/filters/mitchellss.h"
 #include "slg/film/filters/blackmanharris.h"
+#include "slg/film/filters/filterdistribution.h"
 #include "slg/scene/scene.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
 #include "slg/samplers/sobol.h"
@@ -53,6 +54,39 @@
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+
+//------------------------------------------------------------------------------
+// The FilterLUTs of FilmSampleSplatter in the layout read by
+// LightTracing_SplatSample()
+//------------------------------------------------------------------------------
+
+static vector<float> CompileLightFilterLUTs(const Filter *filter) {
+	vector<float> data;
+	if (!filter || (filter->GetType() == FILTER_NONE)) {
+		data.push_back(0.f);
+		return data;
+	}
+
+	// The same LUTs as FilmSampleSplatter
+	const u_int size = Max<u_int>(4, Max(filter->xWidth, filter->yWidth) + 1);
+	const FilterLUTs filterLUTs(*filter, size);
+	const u_int lutsSize = filterLUTs.GetSize();
+	const u_int lutCount = lutsSize * lutsSize;
+
+	data.resize(3 + 3 * lutCount);
+	data[0] = lutsSize;
+	data[1] = filter->xWidth;
+	data[2] = filter->yWidth;
+	for (u_int i = 0; i < lutCount; ++i) {
+		const FilterLUT &lut = filterLUTs.GetLUTByIndex(i);
+		data[3 + 3 * i] = lut.GetWidth();
+		data[3 + 3 * i + 1] = lut.GetHeight();
+		data[3 + 3 * i + 2] = data.size();
+		data.insert(data.end(), lut.GetLUT().begin(), lut.GetLUT().end());
+	}
+
+	return data;
+}
 
 //------------------------------------------------------------------------------
 // PathOCLRenderEngine
@@ -105,6 +139,29 @@ void PathOCLRenderEngine::StartLockLess() {
 
 	auto defaultProps = PathOCLRenderEngine::GetDefaultProps();
 	pathTracer.ParseOptions(cfg, *defaultProps);
+
+	//--------------------------------------------------------------------------
+	// GPU light tracing
+	//--------------------------------------------------------------------------
+
+	// With the hybrid back/forward path tracing, the GPU threads trace light
+	// paths for the caustics too. Only with the perspective camera: with the
+	// other cameras only the native threads trace light paths.
+	lightTaskCount = 0;
+	lightFilterLUTs.clear();
+	if (pathTracer.hybridBackForwardEnable &&
+			cfg.Get(Property("path.hybridbackforward.gpulighttracing.enable")(true)).Get<bool>()) {
+		if (renderConfig.GetScene().GetCamera().GetType() == Camera::PERSPECTIVE) {
+			// As many light paths as eye paths in flight (2-glasses: caustic
+			// noise -26% vs taskCount / 2 at equal time, eye samples -12%).
+			// More are not possible: on OpenCL the light paths use the
+			// temporaries of the GPUTask with the same index.
+			lightTaskCount = taskCount;
+			lightFilterLUTs = CompileLightFilterLUTs(GetPixelFilter().get());
+			SLG_LOG("[PathOCLRenderEngine] GPU light tracing task count: " << lightTaskCount);
+		} else
+			SLG_LOG("[PathOCLRenderEngine] GPU light tracing supports only the perspective camera");
+	}
 
 	//--------------------------------------------------------------------------
 	// Restore render state if there is one
@@ -304,6 +361,7 @@ PropertiesUPtr PathOCLRenderEngine::GetDefaultProps() {
 			Property("renderengine.type")(GetObjectTag()) <<
 			PathTracer::GetDefaultProps() <<
 			Property("pathocl.pixelatomics.enable")(true) <<
+			Property("path.hybridbackforward.gpulighttracing.enable")(true) <<
 			Property("opencl.task.count")("AUTO") <<
 			PhotonGICache::GetDefaultProps();
 

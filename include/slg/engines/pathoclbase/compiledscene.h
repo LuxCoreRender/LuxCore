@@ -97,6 +97,9 @@ public:
 	u_int lightsDistributionSize;
 	std::vector<float> infiniteLightSourcesDistribution;
 	u_int infiniteLightSourcesDistributionSize;
+	// The emit light strategy, used by the light tracing
+	std::vector<float> emitLightsDistribution;
+	u_int emitLightsDistributionSize;
 	// DLSC related data
 	std::vector<slg::ocl::DLSCacheEntry> dlscAllEntries;
 	std::vector<float> dlscDistributions; 

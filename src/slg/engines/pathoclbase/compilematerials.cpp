@@ -601,6 +601,7 @@ void CompiledScene::CompileMaterials() {
 			mat->backTranspTexIndex = NULL_INDEX;
 
 		ASSIGN_SPECTRUM(mat->passThroughShadowTransparency, m.GetPassThroughShadowTransparency());
+		mat->passThroughShadowTransparencyOverride = m.GetPassThroughShadowTransparencyOverride();
 
 		// Material emission
 		auto emitTex = m.GetEmitTexture();

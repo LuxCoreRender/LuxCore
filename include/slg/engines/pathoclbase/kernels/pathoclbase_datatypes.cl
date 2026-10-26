@@ -152,4 +152,50 @@ typedef struct {
 typedef struct {
 	unsigned int sampleCount;
 } GPUTaskStats;
+
+//------------------------------------------------------------------------------
+// Light tracing data types
+//
+// With the hybrid back/forward path tracing, the eye paths skip the caustic
+// paths and the light paths add them: the light path vertices reached
+// through nearly specular vertices are connected to the camera (as
+// PathTracer::RenderLightSample()). Each light task has one ray in flight,
+// stored in the ray buffer after the eye path rays.
+//------------------------------------------------------------------------------
+
+typedef enum {
+	// Start a new light path (no ray in flight)
+	LT_GENERATE = 0,
+	// The ray to the next light path vertex
+	LT_RT_NEXT_VERTEX = 1,
+	// The ray connecting a light path vertex to the camera
+	LT_RT_EYE_CONNECTION = 2
+} LightPathState;
+
+typedef struct {
+	Seed seed;
+	LightPathState state;
+
+	unsigned int lightID;
+	float time;
+	// The lens point the vertices are connected to
+	Point lensPoint;
+	Spectrum flux;
+
+	PathDepthInfo depth;
+	PathVolumeInfo volume;
+	BSDFEvent lastBSDFEvent;
+	// LightPathInfo::IsSpecularPath()
+	int isNearlyS;
+
+	// The ray to trace after the eye connection (as Ray::Update())
+	Point nextVertexRayOrig;
+	Vector nextVertexRayDir;
+	int hasNextVertexRay;
+
+	// The eye connection being traced
+	Spectrum connectionRadiance;
+	float connectionFilmX, connectionFilmY;
+	PathVolumeInfo connectionVolume;
+} LightPathTask;
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

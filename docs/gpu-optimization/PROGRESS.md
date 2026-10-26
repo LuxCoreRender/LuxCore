@@ -531,3 +531,135 @@ Design of the remaining parts (decided, from the code):
 Still to check in the code: GPU equivalents of `BSDF::IsCameraInvisible()`
 (`sceneObjs[meshIndex].cameraInvisible`) and of the CPU pass-through
 shadow transparency override test in `RenderLightSample()`.
+
+### 2026-10-26: T6.1 GPU light tracing, done (branch `gpu-opt/T6.1-gpu-light-tracing`)
+
+With `path.hybridbackforward.enable` on, PATHOCL GPU threads now trace light
+paths for the caustics (before: only the CPU native threads did, with
+Metropolis). New property `path.hybridbackforward.gpulighttracing.enable`
+(default true; acts only with hybrid on and a perspective camera, otherwise
+the engine logs it and only the native threads trace light paths, as
+before). Without hybrid nothing changes: the light tracing code is under
+`PARAM_LIGHT_TRACING`, set only when the light task count is not 0.
+
+What was built (on top of the device code of the WIP entry above):
+
+- `AdvanceLightPaths` (end of `pathoclbase_kernels_micro.cl`, body under
+  `#if defined(PARAM_LIGHT_TRACING)` because the OpenCL split compile cuts
+  the source at each `__kernel`), `InitLightPaths` and
+  `LightTracing_ClearFilm` plus helpers (`LightTracing_GenerateLightPath`,
+  `LightTracing_SplatSample`, `LightTracing_IsNearlySpecular`) at the end of
+  `pathoclbase_funcs.cl`. Same decisions as `PathTracer::RenderLightSample()`
+  / `ConnectToEye()`: stop on a miss and on a not black shadow transparency
+  without override (`pathtracer.cpp:875`); caustic connection only
+  (`isNearlyS && depth > 0`, not camera invisible, not delta, eval event not
+  nearly specular); the path stops at once when the vertex can't be nearly
+  specular (the CPU traces one more vertex there only to "stabilize"
+  Metropolis, those samples are dropped by `addonlycaustics`).
+- Light tasks: `LightPathTask` (203 bytes), state machine GENERATE /
+  RT_NEXT_VERTEX / RT_EYE_CONNECTION, one ray each after the eye rays in
+  `raysBuff` / `hitsBuff`, so the one OptiX launch traces both. Idle slots
+  are masked rays. A path is counted when it ends (failed emissions too);
+  counts per task in `lightPathCountsBuff`, summed on the host into
+  `Film::SetSampleCount(eye, eye, lightPathCount)`.
+- Light picking: GPU copy of the emit light strategy distribution
+  (`emitLightsDistribution`, from `DistributionLightStrategy` or
+  `LightStrategyDLSCache`).
+- Film: the GPU thread film keeps `RADIANCE_PER_SCREEN_NORMALIZED` (one
+  float3 buffer per radiance group); atomic splats with the
+  `FilmSampleSplatter` filter LUTs (built on the host by
+  `CompileLightFilterLUTs()` in `pathocl.cpp`). Note: the CPU splatter
+  misaligns its LUT at the right edge of the film sub-region, the GPU
+  indexes it as intended.
+- `Material.passThroughShadowTransparencyOverride` added to the GPU
+  material struct. `HitPoint.fromLight` of the WIP entry is now a bit of
+  `HitPoint.flags` (see the speed section below).
+- Light task count = task count (1M on the RTX 5070). Memory: +208 MB
+  `LightPathTask`, +68 MB rays/hits.
+
+Bug found on the way: `CompileCamera()` copied only `.m` of the perspective
+camera transforms, `mInv` stayed zero, so `PerspectiveCamera_GetSamplePosition()`
+returned NaN film positions (splats in the top-left corner, values up to
+1e12). Now `mInv` of `rasterToCamera` / `cameraToWorld` is copied too. The
+eye paths don't use `mInv`, so no image change.
+
+Verification (`run.sh`-style runs: PATHOCL, SOBOL, seed 1, CUDA only,
+images in `D:\REPO\LuxCoreRepo\bench\T6.1`; "light part" = image mean minus
+the hybrid run without any light tracing):
+
+- Eye-only renders unchanged (no hybrid): LuxBall / DLSC RMSE vs T5.7c
+  0.0037 / 0.024, noise floors 0.0168 / 0.132. DLSC mean over 5 seeds
+  +0.031% +- 0.037% (1 sigma): the kernel change acts like a new Sobol
+  realization (pixel assignment depends on kernel order since T5.7), not a
+  bias.
+- 2-glasses (point light, glasses, 60 s): GPU light part / CPU light part
+  1.014 (seed 1), 0.987 (seed 2). Seed spread of the light part: CPU
+  Metropolis 2.3%, GPU 0.4%. GPU light tracing plus 12 CPU native threads
+  (Blender "use native CPU": both write the light channel, counts add up):
+  0.996 of GPU only. Task count change (taskCount / 2 to taskCount): 0.998.
+- 2-glasses noise, caustic tiles (50x50 tiles where the 600 s reference
+  has > 10% of the max light part), two seeds, 60 s:
+  eye paths only 6.7e-5; CPU light tracing (12 native threads, Metropolis,
+  plus the GPU eye paths) 3.51e-4; GPU light tracing, GPU only:
+  3.40e-4 with taskCount / 2, 2.53e-4 with taskCount (-28% vs CPU, with
+  the CPU idle). Eye spp at 60 s: 454 / 514 without light tracing, 461 /
+  471 with it (taskCount).
+- Profile (2-glasses, taskCount / 2, `opencl.kernel.profile.enable`):
+  `LIGHT_TRACING` 8% of kernel time. With temporary counters: 2.1e8 light
+  paths in 15 s, 1.3e5 caustic connections (0.06%): most light paths hit
+  the table first and end. This is the T6.2 lever.
+- OrangeJuice: no light traced caustics at all, on CPU or GPU: every glass
+  material has a not black `transparency.shadow`, so light paths stop there
+  (`pathtracer.cpp:875`). GPU light part -0.0002, CPU light only
+  (`path.hybridbackforward.partition 0`) -0.0011, image mean 1.649: noise.
+  Careful: with the default partition 0.8 (eye:light sample ratio) the
+  native threads also trace eye paths, and in OrangeJuice CPU eye paths are
+  brighter than GPU eye paths on the jug rim, handle and table, without
+  hybrid too (+0.020 image mean with 12 native threads, centre 125x125 tile
+  +0.62). Pre-existing CPU/GPU eye path difference, not T6.1: open.
+- Prism: unusable for this check, the GPU eye paths already miss the direct
+  volumetric beam (pre-existing).
+
+Known differences from the CPU light tracing:
+
+- Random sampler (Tausworthe per light task), not Metropolis: unbiased, no
+  adaptivity; its mean has a smaller seed spread at 60 s (see above).
+- Light samples are not added to the BCD denoiser statistics.
+- No volume adjoint factors (see the WIP entry).
+- Emission maps sampled uniformly over the sphere (see the WIP entry).
+- Camera type checked at engine start; after a scene edit to a non
+  perspective camera the kernel stops connecting (no caustics until
+  restart).
+- OpenCL (non-CUDA) path not tested: light tasks use the `GPUTask`
+  temporaries with the same index (hence lightTaskCount <= taskCount).
+- RTPATHOCL / TILEPATHOCL (Blender viewport) don't use it.
+
+Default (no hybrid) speed, `bench.py speed` (median of 3, M samples/sec):
+
+| Build | LuxBall | DLSC |
+|---|---|---|
+| T5.7c (base) | 17.39 / 18.17 (two sessions) | 21.18 / 20.99 (two sessions) |
+| T6.1 with a separate `HitPoint.fromLight` int | 17.54 | 20.57 / 20.58 (two sessions) |
+| T6.1 with `fromLight` removed (experiment) | | 21.05 |
+| T6.1 final (`HitPoint.flags`) | 18.15 | 21.10 |
+
+The separate `fromLight` field grew `HitPoint` by 4 bytes (GPUTaskState
+264 to 268 bytes per task) and slowed every eye path kernel by about 1.5%
+(material sort calibration timings) even with no light tracing code
+compiled in. Fix: `throughShadowTransparency` and `fromLight` share one
+`HitPoint.flags` int (`HITPOINT_THROUGH_SHADOW_TRANSPARENCY`,
+`HITPOINT_FROM_LIGHT`, read through `HitPoint_IsThroughShadowTransparency()`
+/ `HitPoint_IsFromLight()`), so the HitPoint layout equals the base one.
+The other struct additions (`Material` +4 bytes, `CameraBase.dir`,
+`PerspectiveCamera.pixelArea`, `ProjectionLightParam`) cost nothing
+measurable. The first LuxBall base number (17.39) was GPU clock drift: the
+same base binary gave 18.17 later.
+
+Image check after the fix (`bench.py image`, 256 spp, vs `T6.1-base-img`):
+LuxBall RMSE 0.0030 (noise floor 0.0168), DLSC 0.0125 (0.132), mean
++0.000% / +0.031% (seed spread -0.005% / +0.029%): pass. 2-glasses light
+part after the fix: 0.9987 of the run before it.
+
+Next: T6.2 (light path efficiency). Open from this task: the OrangeJuice
+CPU/GPU eye path difference above; a pyluxcore build for Blender with this
+branch.

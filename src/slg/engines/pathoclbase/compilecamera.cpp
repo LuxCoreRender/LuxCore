@@ -105,6 +105,10 @@ void CompiledScene::CompileCamera() {
 
 			memcpy(camera.base.rasterToCamera.m.m, perspCamera.GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
 			memcpy(camera.base.cameraToWorld.m.m, perspCamera.GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
+			// The inverse transformations are used by the light tracing
+			// (PerspectiveCamera_GetSamplePosition())
+			memcpy(camera.base.rasterToCamera.mInv.m, perspCamera.GetRasterToCamera().mInv.m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.cameraToWorld.mInv.m, perspCamera.GetCameraToWorld().mInv.m, 4 * 4 * sizeof(float));
 
 			camera.persp.projCamera.lensRadius = perspCamera.lensRadius;
 			camera.persp.projCamera.focalDistance = perspCamera.focalDistance;

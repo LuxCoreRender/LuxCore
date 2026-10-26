@@ -323,7 +323,7 @@ OPENCL_FORCE_INLINE void DirectHitInfiniteLight(__constant const Film* restrict 
 		LIGHTS_PARAM_DECL) {
 	// If the material is shadow transparent, Direct Light sampling
 	// will take care of transporting all emitted light
-	if (bsdf && bsdf->hitPoint.throughShadowTransparency)
+	if (bsdf && HitPoint_IsThroughShadowTransparency(&bsdf->hitPoint))
 		return;
 
 	const float3 throughput = VLOAD3F(pathThroughput->c);
@@ -373,7 +373,7 @@ OPENCL_FORCE_INLINE void DirectHitFiniteLight(__constant const Film* restrict fi
 	if (!CheckDirectHitVisibilityFlags(light, &pathInfo->depth, pathInfo->lastBSDFEvent) ||
 			// If the material is shadow transparent, Direct Light sampling
 			// will take care of transporting all emitted light
-			bsdf->hitPoint.throughShadowTransparency)
+			HitPoint_IsThroughShadowTransparency(&bsdf->hitPoint))
 		return;
 	
 	float directPdfA;
@@ -524,7 +524,7 @@ OPENCL_FORCE_INLINE bool DirectLight_BSDFSampling(
 	const bool misEnabled = !lastPathVertex &&
 			Light_IsEnvOrIntersectable(light) &&
 			CheckDirectHitVisibilityFlags(light, tmpDepthInfo, event) &&
-			!bsdf->hitPoint.throughShadowTransparency;
+			!HitPoint_IsThroughShadowTransparency(&bsdf->hitPoint);
 
 	const float weight = misEnabled ? PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
@@ -789,4 +789,196 @@ __kernel void Init(
 	__global GPUTaskStats *taskStat = &taskStats[gid];
 	taskStat->sampleCount = 0;
 }
+
+//------------------------------------------------------------------------------
+// Light tracing (see LightPathTask)
+//------------------------------------------------------------------------------
+
+#define KERNEL_ARGS_LIGHT_TRACING \
+		, __global LightPathTask *lightTasks \
+		/* The light paths done by each light task, read by the host for */ \
+		/* the film RADIANCE_PER_SCREEN_NORMALIZED sample count */ \
+		, __global uint *lightPathCounts \
+		, const uint lightTaskCount \
+		, const uint eyeTaskCount \
+		, __global const float* restrict emitLightsDistribution \
+		, __global const float* restrict lightFilterLUTs \
+		, __global float *filmScreenRadianceGroup0 \
+		, __global float *filmScreenRadianceGroup1 \
+		, __global float *filmScreenRadianceGroup2 \
+		, __global float *filmScreenRadianceGroup3 \
+		, __global float *filmScreenRadianceGroup4 \
+		, __global float *filmScreenRadianceGroup5 \
+		, __global float *filmScreenRadianceGroup6 \
+		, __global float *filmScreenRadianceGroup7
+
+// The light task rays are after the eye path rays and are not traced until
+// AdvanceLightPaths() starts the light paths
+__kernel void InitLightPaths(__global LightPathTask *lightTasks,
+		__global uint *lightPathCounts,
+		__global Ray *rays,
+		const uint lightTaskCount, const uint eyeTaskCount,
+		const uint seedBase) {
+	const size_t gid = get_global_id(0);
+	if (gid >= lightTaskCount)
+		return;
+
+	__global LightPathTask *task = &lightTasks[gid];
+
+	Seed seed;
+	Rnd_Init(seedBase + gid, &seed);
+	task->seed = seed;
+
+	task->state = LT_GENERATE;
+	lightPathCounts[gid] = 0;
+
+	rays[eyeTaskCount + gid].flags = RAY_FLAGS_MASKED;
+}
+
+// Clears one radiance group of the film RADIANCE_PER_SCREEN_NORMALIZED channel
+__kernel void LightTracing_ClearFilm(const uint filmPixelCount,
+		__global float *filmScreenRadianceGroup) {
+	const size_t gid = get_global_id(0);
+	if (gid < filmPixelCount * 3)
+		filmScreenRadianceGroup[gid] = 0.f;
+}
+
+#if defined(PARAM_LIGHT_TRACING)
+
+// Starts a new light path, as the beginning of PathTracer::RenderLightSample().
+// Returns false if the light emission failed (the light path is done).
+OPENCL_FORCE_INLINE bool LightTracing_GenerateLightPath(
+		__constant const GPUTaskConfiguration* restrict taskConfig,
+		__global LightPathTask *task, Seed *seed,
+		__global Ray *ray,
+		__global HitPoint *tmpHitPoint,
+		__global const Camera* restrict camera,
+		__global const float* restrict cameraBokehDistribution,
+		__global const float* restrict emitLightsDistribution,
+		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
+		const float worldRadius
+		LIGHTS_PARAM_DECL) {
+	const float time = mix(camera->base.shutterOpen, camera->base.shutterClose, Rnd_FloatValue(seed));
+
+	// Select one light source
+	float lightPickPdf;
+	const uint lightIndex = Distribution1D_SampleDiscrete(emitLightsDistribution,
+			Rnd_FloatValue(seed), &lightPickPdf);
+	if (lightPickPdf <= 0.f)
+		return false;
+	__global const LightSource* restrict light = &lights[lightIndex];
+
+	// Initialize the light path
+	const float u0 = Rnd_FloatValue(seed);
+	const float u1 = Rnd_FloatValue(seed);
+	const float u2 = Rnd_FloatValue(seed);
+	const float u3 = Rnd_FloatValue(seed);
+	const float passThroughEvent = Rnd_FloatValue(seed);
+	float3 rayOrig, rayDir;
+	float lightEmitPdfW;
+	const float3 flux = Light_Emit(light,
+			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+			tmpHitPoint, time, u0, u1, u2, u3, passThroughEvent,
+			&rayOrig, &rayDir, &lightEmitPdfW
+			LIGHTS_PARAM);
+	if (Spectrum_IsBlack(flux) || (lightEmitPdfW <= 0.f))
+		return false;
+
+	VSTORE3F(flux / (lightEmitPdfW * lightPickPdf), task->flux.c);
+	task->lightID = light->lightID;
+	task->time = time;
+
+	const float lensU = Rnd_FloatValue(seed);
+	const float lensV = Rnd_FloatValue(seed);
+	VSTORE3F(PerspectiveCamera_SampleLens(camera, cameraBokehDistribution, time, lensU, lensV),
+			&task->lensPoint.x);
+
+	// LightPathInfo initialization
+	PathDepthInfo_Init(&task->depth);
+	PathVolumeInfo_Init(&task->volume);
+	task->lastBSDFEvent = SPECULAR;
+	task->isNearlyS = false;
+
+	Ray_Init2(ray, rayOrig, rayDir, time);
+
+	return true;
+}
+
+// As FilmSampleSplatter::AtomicSplatSample() of a light sample.
+// lightFilterLUTs holds the FilterLUTs of the pixel filter: the number of LUTs
+// per axis (0 if there is no filter), the filter width and height, then the
+// width, height and data offset of each LUT, then the LUT data.
+OPENCL_FORCE_INLINE void LightTracing_SplatSample(
+		__global const float* restrict lightFilterLUTs,
+		__global float *filmScreenRadianceGroup,
+		const uint filmWidth,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3,
+		const float filmX, const float filmY, const float3 radiance) {
+	if (isnan(radiance.x) || isinf(radiance.x) ||
+			isnan(radiance.y) || isinf(radiance.y) ||
+			isnan(radiance.z) || isinf(radiance.z))
+		return;
+
+	const int lutsSize = (int)lightFilterLUTs[0];
+	if (lutsSize == 0) {
+		const int x = Floor2Int(filmX);
+		const int y = Floor2Int(filmY);
+
+		if ((x >= (int)filmSubRegion0) && (x <= (int)filmSubRegion1) &&
+				(y >= (int)filmSubRegion2) && (y <= (int)filmSubRegion3)) {
+			__global float *pixel = &filmScreenRadianceGroup[(x + y * filmWidth) * 3];
+			AtomicAdd(&pixel[0], radiance.x);
+			AtomicAdd(&pixel[1], radiance.y);
+			AtomicAdd(&pixel[2], radiance.z);
+		}
+		return;
+	}
+
+	const float filterWidthX = lightFilterLUTs[1];
+	const float filterWidthY = lightFilterLUTs[2];
+
+	// Compute sample's raster extent
+	const float dImageX = filmX - .5f;
+	const float dImageY = filmY - .5f;
+
+	// FilterLUTs::GetLUT()
+	const int lutX = clamp(Floor2Int(lutsSize * (dImageX - floor(filmX) + .5f)), 0, lutsSize - 1);
+	const int lutY = clamp(Floor2Int(lutsSize * (dImageY - floor(filmY) + .5f)), 0, lutsSize - 1);
+	__global const float* restrict lutInfo = &lightFilterLUTs[3 + 3 * (lutX + lutY * lutsSize)];
+	const int lutWidth = (int)lutInfo[0];
+	const int lutHeight = (int)lutInfo[1];
+	__global const float* restrict lut = &lightFilterLUTs[(uint)lutInfo[2]];
+
+	const int x0 = Floor2Int(dImageX - filterWidthX * .5f + .5f);
+	const int y0 = Floor2Int(dImageY - filterWidthY * .5f + .5f);
+
+	for (int iy = 0; iy < lutHeight; ++iy) {
+		const int y = y0 + iy;
+		if ((y < (int)filmSubRegion2) || (y > (int)filmSubRegion3))
+			continue;
+
+		for (int ix = 0; ix < lutWidth; ++ix) {
+			const int x = x0 + ix;
+			if ((x < (int)filmSubRegion0) || (x > (int)filmSubRegion1))
+				continue;
+
+			const float filterWeight = lut[ix + iy * lutWidth];
+			if (filterWeight == 0.f)
+				continue;
+
+			__global float *pixel = &filmScreenRadianceGroup[(x + y * filmWidth) * 3];
+			AtomicAdd(&pixel[0], radiance.x * filterWeight);
+			AtomicAdd(&pixel[1], radiance.y * filterWeight);
+			AtomicAdd(&pixel[2], radiance.z * filterWeight);
+		}
+	}
+}
+
+OPENCL_FORCE_INLINE bool LightTracing_IsNearlySpecular(const BSDFEvent event,
+		const float glossiness, const float glossinessThreshold) {
+	return (event & SPECULAR) || ((event & GLOSSY) && (glossiness <= glossinessThreshold));
+}
+
+#endif
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

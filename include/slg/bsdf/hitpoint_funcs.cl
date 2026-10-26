@@ -18,11 +18,13 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-// True for the hit points of light paths (adjoint BSDF evaluation). The
-// field exists only for the light tracing kernels (PARAM_LIGHT_TRACING): the
-// other kernels don't initialize it and the code reading it is removed.
+#define HitPoint_IsThroughShadowTransparency(hitPoint) (((hitPoint)->flags & HITPOINT_THROUGH_SHADOW_TRANSPARENCY) != 0)
+
+// True for the hit points of light paths (adjoint BSDF evaluation). Only the
+// light tracing kernels (PARAM_LIGHT_TRACING) set HITPOINT_FROM_LIGHT: the
+// code reading it is removed from the other kernels.
 #if defined(PARAM_LIGHT_TRACING)
-#define HitPoint_IsFromLight(hitPoint) ((hitPoint)->fromLight)
+#define HitPoint_IsFromLight(hitPoint) (((hitPoint)->flags & HITPOINT_FROM_LIGHT) != 0)
 #else
 #define HitPoint_IsFromLight(hitPoint) false
 #endif
@@ -49,10 +51,7 @@ OPENCL_FORCE_INLINE void HitPoint_Init(__global HitPoint *hitPoint, const bool t
 		const float passThroughEvnt,
 		const Transform *localToWorld, const float time
 		MATERIALS_PARAM_DECL) {
-	hitPoint->throughShadowTransparency = throughShadowTransp;
-#if defined(PARAM_LIGHT_TRACING)
-	hitPoint->fromLight = false;
-#endif
+	hitPoint->flags = throughShadowTransp ? HITPOINT_THROUGH_SHADOW_TRANSPARENCY : 0;
 	hitPoint->time = time;
 	hitPoint->passThroughEvent = passThroughEvnt;
 
@@ -100,10 +99,7 @@ OPENCL_FORCE_INLINE void HitPoint_Init(__global HitPoint *hitPoint, const bool t
 OPENCL_FORCE_INLINE void HitPoint_InitDefault(__global HitPoint *hitPoint) {
 	hitPoint->meshIndex = NULL_INDEX;
 
-	hitPoint->throughShadowTransparency = false;
-#if defined(PARAM_LIGHT_TRACING)
-	hitPoint->fromLight = false;
-#endif
+	hitPoint->flags = 0;
 	hitPoint->passThroughEvent = 0.f;
 
 	VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 0.f), &hitPoint->p.x);

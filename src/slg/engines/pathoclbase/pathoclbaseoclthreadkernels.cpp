@@ -148,6 +148,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		kernelsParameters.push_back("-D PARAM_MATERIAL_EVAL_STACK_SIZE=" + ToString(Max(cscene.maxMaterialEvalStackSize, 1u)));
 		kernelsParameters.push_back("-D PARAM_TEXTURE_EVAL_STACK_SIZE=" + ToString(Max(cscene.maxTextureEvalStackSize, 1u)));
 	}
+	if (renderEngine->lightTaskCount > 0)
+		kernelsParameters.push_back("-D PARAM_LIGHT_TRACING");
 
 	const string kernelSource = GetKernelSources();
 	const string microKernelSource = slg::ocl::KernelSource_pathoclbase_kernels_micro;
@@ -315,6 +317,22 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		advancePathsWorkGroupSizes[state] = workGroupSize;
 	}
 
+	// GPU light tracing kernels
+	if (renderEngine->lightTaskCount > 0) {
+		std::tie(initLightPathsKernel, initLightPathsWorkGroupSize) =
+				CompileKernel(intersectionDevice, *programs[0], "InitLightPaths");
+		std::tie(lightTracingClearFilmKernel, lightTracingClearFilmWorkGroupSize) =
+				CompileKernel(intersectionDevice, *programs[0], "LightTracing_ClearFilm");
+
+		const std::size_t programIndex = microKernelIndex.empty() ? 0 : 1 + microKernelIndex["AdvanceLightPaths"];
+		std::tie(advanceLightPathsKernel, advanceLightPathsWorkGroupSize) =
+				CompileKernel(intersectionDevice, *programs[programIndex], "AdvanceLightPaths");
+	} else {
+		initLightPathsKernel.reset();
+		lightTracingClearFilmKernel.reset();
+		advanceLightPathsKernel.reset();
+	}
+
 	const double tEnd = WallClockTime();
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 
@@ -384,7 +402,7 @@ void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	initKernelArgsCount = argIndex;
 }
 
-void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(
+u_int PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(
 	HardwareDeviceKernelRPtr advancePathsKernel, const u_int filmIndex
 ) {
 	CompiledScene *cscene = renderEngine->compiledScene;
@@ -477,6 +495,37 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, pgicRadiancePhotonsBVHNodesBuff);
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, pgicCausticPhotonsBuff);
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, pgicCausticPhotonsBVHNodesBuff);
+
+	return argIndex;
+}
+
+void PathOCLBaseOCLRenderThread::SetLightTracingKernelArgs(const u_int filmIndex) {
+	if (!advanceLightPathsKernel)
+		return;
+
+	const u_int taskCount = renderEngine->taskCount;
+	const u_int lightTaskCount = renderEngine->lightTaskCount;
+
+	// initLightPathsKernel kernel: the light seeds follow the ones of the
+	// eye paths of all threads
+	u_int argIndex = 0;
+	intersectionDevice.SetKernelArg(initLightPathsKernel, argIndex++, lightTasksBuff);
+	intersectionDevice.SetKernelArg(initLightPathsKernel, argIndex++, lightPathCountsBuff);
+	intersectionDevice.SetKernelArg(initLightPathsKernel, argIndex++, raysBuff);
+	intersectionDevice.SetKernelArg(initLightPathsKernel, argIndex++, lightTaskCount);
+	intersectionDevice.SetKernelArg(initLightPathsKernel, argIndex++, taskCount);
+	intersectionDevice.SetKernelArg(initLightPathsKernel, argIndex++, renderEngine->seedBase +
+			(u_int)renderEngine->renderOCLThreads.size() * taskCount + threadIndex * lightTaskCount);
+
+	// advanceLightPathsKernel kernel
+	argIndex = SetAdvancePathsKernelArgs(advanceLightPathsKernel, filmIndex);
+	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++, lightTasksBuff);
+	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++, lightPathCountsBuff);
+	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++, lightTaskCount);
+	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++, taskCount);
+	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++, emitLightsDistributionBuff);
+	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++, lightFilterLUTsBuff);
+	threadFilms[filmIndex]->SetLightTracingFilmKernelArgs(intersectionDevice, advanceLightPathsKernel, argIndex);
 }
 
 void PathOCLBaseOCLRenderThread::SetAllAdvancePathsKernelArgs(const u_int filmIndex) {
@@ -517,6 +566,12 @@ void PathOCLBaseOCLRenderThread::SetKernelArgs() {
 	SetAllAdvancePathsKernelArgs(0);
 
 	//--------------------------------------------------------------------------
+	// GPU light tracing kernels
+	//--------------------------------------------------------------------------
+
+	SetLightTracingKernelArgs(0);
+
+	//--------------------------------------------------------------------------
 	// initKernel
 	//--------------------------------------------------------------------------
 
@@ -530,6 +585,22 @@ void PathOCLBaseOCLRenderThread::EnqueueInitKernel() {
 	intersectionDevice.EnqueueKernel(initKernel,
 			HardwareDeviceRange(renderEngine->taskCount), HardwareDeviceRange(initWorkGroupSize));
 	initPathsPending = true;
+}
+
+void PathOCLBaseOCLRenderThread::EnqueueInitLightPathsKernel() {
+	const u_int lightTaskCount = renderEngine->lightTaskCount;
+	intersectionDevice.EnqueueKernel(initLightPathsKernel,
+			HardwareDeviceRange(RoundUp<u_int>(lightTaskCount, initLightPathsWorkGroupSize)),
+			HardwareDeviceRange(initLightPathsWorkGroupSize));
+}
+
+void PathOCLBaseOCLRenderThread::EnqueueAdvanceLightPathsKernel() {
+	const u_int lightTaskCount = renderEngine->lightTaskCount;
+	const double profileStart = BeginKernelProfile();
+	intersectionDevice.EnqueueKernel(advanceLightPathsKernel,
+			HardwareDeviceRange(RoundUp<u_int>(lightTaskCount, advanceLightPathsWorkGroupSize)),
+			HardwareDeviceRange(advanceLightPathsWorkGroupSize));
+	EndKernelProfile(KERNEL_PROFILE_LIGHT_TRACING, profileStart);
 }
 
 // Queues the paths in the given state for its micro-kernel: all the
@@ -572,7 +643,7 @@ bool PathOCLBaseOCLRenderThread::IsMaterialSortState(const slg::ocl::pathoclbase
 static const char *kernelProfileNames[] = {
 	"RT_NEXT_VERTEX", "HIT_NOTHING", "HIT_OBJECT", "DL_ILLUMINATE",
 	"DL_SAMPLE_BSDF", "RT_DL", "GENERATE_NEXT_VERTEX_RAY", "SPLAT_SAMPLE",
-	"NEXT_SAMPLE", "GENERATE_CAMERA_RAY", "TRACE (OptiX)", "PATH_QUEUES"
+	"NEXT_SAMPLE", "GENERATE_CAMERA_RAY", "TRACE (OptiX)", "PATH_QUEUES", "LIGHT_TRACING"
 };
 
 // Called after each iteration: at the end of the calibration, picks the

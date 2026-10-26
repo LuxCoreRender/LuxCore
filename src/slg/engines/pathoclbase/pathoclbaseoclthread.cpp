@@ -120,6 +120,10 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	eyePathInfosBuff = nullptr;
 	directLightVolInfosBuff = nullptr;
 	pixelFilterBuff = nullptr;
+	lightTasksBuff = nullptr;
+	lightPathCountsBuff = nullptr;
+	emitLightsDistributionBuff = nullptr;
+	lightFilterLUTsBuff = nullptr;
 
 	// OpenCL kernels
 	initSeedKernel = nullptr;
@@ -140,6 +144,9 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	advancePathsKernel_MK_SPLAT_SAMPLE = nullptr;
 	advancePathsKernel_MK_NEXT_SAMPLE = nullptr;
 	advancePathsKernel_MK_GENERATE_CAMERA_RAY = nullptr;
+	initLightPathsKernel = nullptr;
+	lightTracingClearFilmKernel = nullptr;
+	advanceLightPathsKernel = nullptr;
 
 	initKernelArgsCount  = 0;
 
@@ -248,6 +255,10 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	intersectionDevice.FreeBuffer(&eyePathInfosBuff);
 	intersectionDevice.FreeBuffer(&directLightVolInfosBuff);
 	intersectionDevice.FreeBuffer(&pixelFilterBuff);
+	intersectionDevice.FreeBuffer(&lightTasksBuff);
+	intersectionDevice.FreeBuffer(&lightPathCountsBuff);
+	intersectionDevice.FreeBuffer(&emitLightsDistributionBuff);
+	intersectionDevice.FreeBuffer(&lightFilterLUTsBuff);
 
 	started = false;
 
