@@ -581,5 +581,17 @@ typedef struct {
 	, maxTextureEvalStackSize \
 	IMAGEMAPS_PARAM SCENE_PARAM
 
+// Kernel specialization: when the host defines PARAM_TEXTURE_TYPES_MASK0-2,
+// only the texture types with their bit set are evaluated. The others can not
+// be in the scene, so their code is dead and removed by the compiler.
+#if defined(PARAM_TEXTURE_TYPES_MASK0)
+#define TEXTURE_TYPE_ENABLED(t) (((((t) >> 5) == 0 ? PARAM_TEXTURE_TYPES_MASK0 : \
+		(((t) >> 5) == 1 ? PARAM_TEXTURE_TYPES_MASK1 : PARAM_TEXTURE_TYPES_MASK2)) >> ((t) & 31)) & 1u)
+#else
+#define TEXTURE_TYPE_ENABLED(t) 1
+#endif
+// Used at the start of a case of a switch on the texture type
+#define TEXTURE_TYPE_GUARD(t) if (!TEXTURE_TYPE_ENABLED(t)) break
+
 #endif
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

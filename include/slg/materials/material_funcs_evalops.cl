@@ -69,132 +69,154 @@ OPENCL_FORCE_NOT_INLINE uint Material_EvalOp(
 		// MATTE
 		//----------------------------------------------------------------------
 		case MATTE:
+			MATERIAL_TYPE_GUARD(MATTE);
 			MatteMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		//----------------------------------------------------------------------
 		// MATTETRANSLUCENT
 		//----------------------------------------------------------------------
 		case MATTETRANSLUCENT:
+			MATERIAL_TYPE_GUARD(MATTETRANSLUCENT);
 			MatteTranslucentMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		//----------------------------------------------------------------------
 		// GLOSSY2
 		//----------------------------------------------------------------------
 		case GLOSSY2:
+			MATERIAL_TYPE_GUARD(GLOSSY2);
 			Glossy2Material_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;			
 		//----------------------------------------------------------------------
 		// METAL2
 		//----------------------------------------------------------------------
 		case METAL2:
+			MATERIAL_TYPE_GUARD(METAL2);
 			Metal2Material_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;			
 		//----------------------------------------------------------------------
 		// VELVET
 		//----------------------------------------------------------------------
 		case VELVET:
+			MATERIAL_TYPE_GUARD(VELVET);
 			VelvetMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;	
 		//----------------------------------------------------------------------
 		// CLOTH
 		//----------------------------------------------------------------------
 		case CLOTH:
+			MATERIAL_TYPE_GUARD(CLOTH);
 			ClothMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		//----------------------------------------------------------------------
 		// CARPAINT
 		//----------------------------------------------------------------------
 		case CARPAINT:
+			MATERIAL_TYPE_GUARD(CARPAINT);
 			CarPaintMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		//----------------------------------------------------------------------
 		// ROUGHMATTE
 		//----------------------------------------------------------------------
 		case ROUGHMATTE:
+			MATERIAL_TYPE_GUARD(ROUGHMATTE);
 			RoughMatteMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		//----------------------------------------------------------------------
 		// ROUGHMATTETRANSLUCENT
 		//----------------------------------------------------------------------
 		case ROUGHMATTETRANSLUCENT:
+			MATERIAL_TYPE_GUARD(ROUGHMATTETRANSLUCENT);
 			RoughMatteTranslucentMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		//----------------------------------------------------------------------
 		// GLOSSYTRANSLUCENT
 		//----------------------------------------------------------------------
 		case GLOSSYTRANSLUCENT:
+			MATERIAL_TYPE_GUARD(GLOSSYTRANSLUCENT);
 			GlossyTranslucentMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		//----------------------------------------------------------------------
 		// DISNEY
 		//----------------------------------------------------------------------
 		case DISNEY:
+			MATERIAL_TYPE_GUARD(DISNEY);
 			DisneyMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		//----------------------------------------------------------------------
 		// NULLMAT
 		//----------------------------------------------------------------------
 		case NULLMAT:
+			MATERIAL_TYPE_GUARD(NULLMAT);
 			NullMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		//----------------------------------------------------------------------
 		// MIX
 		//----------------------------------------------------------------------
 		case MIX:
+			MATERIAL_TYPE_GUARD(MIX);
 			MixMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		//----------------------------------------------------------------------
 		// GLOSSYCOATING
 		//----------------------------------------------------------------------
 		case GLOSSYCOATING:
+			MATERIAL_TYPE_GUARD(GLOSSYCOATING);
 			GlossyCoatingMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		//----------------------------------------------------------------------
 		// MIRROR
 		//----------------------------------------------------------------------
 		case MIRROR:
+			MATERIAL_TYPE_GUARD(MIRROR);
 			MirrorMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		//----------------------------------------------------------------------
 		// GLASS
 		//----------------------------------------------------------------------
 		case GLASS:
+			MATERIAL_TYPE_GUARD(GLASS);
 			GlassMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		//----------------------------------------------------------------------
 		// ARCHGLASS
 		//----------------------------------------------------------------------
 		case ARCHGLASS:
+			MATERIAL_TYPE_GUARD(ARCHGLASS);
 			ArchGlassMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		//----------------------------------------------------------------------
 		// ROUGHGLASS
 		//----------------------------------------------------------------------
 		case ROUGHGLASS:
+			MATERIAL_TYPE_GUARD(ROUGHGLASS);
 			RoughGlassMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		//----------------------------------------------------------------------
 		// TWOSIDED
 		//----------------------------------------------------------------------
 		case TWOSIDED:
+			MATERIAL_TYPE_GUARD(TWOSIDED);
 			TwoSidedMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		//----------------------------------------------------------------------
 		// CLEAR_VOL
 		//----------------------------------------------------------------------
 		case CLEAR_VOL:
+			MATERIAL_TYPE_GUARD(CLEAR_VOL);
 			ClearVolMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		//----------------------------------------------------------------------
 		// HOMOGENEOUS_VOL
 		//----------------------------------------------------------------------
 		case HOMOGENEOUS_VOL:
+			MATERIAL_TYPE_GUARD(HOMOGENEOUS_VOL);
 			HomogeneousVolMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		//----------------------------------------------------------------------
 		// HETEROGENEOUS_VOL
 		//----------------------------------------------------------------------
 		case HETEROGENEOUS_VOL:
+			MATERIAL_TYPE_GUARD(HETEROGENEOUS_VOL);
 			HeterogeneousVolMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		default:

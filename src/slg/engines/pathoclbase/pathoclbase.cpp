@@ -66,6 +66,7 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(RenderConfigRef rcfg,
 		compiledScene(nullptr), oclSampler(nullptr),
 		oclPixelFilter(nullptr), photonGICache(nullptr), lightSamplerSharedData(nullptr) {
 	writeKernelsToFile = false;
+	specializeKernels = false;
 	compileOnly = false;
 
 	//--------------------------------------------------------------------------
@@ -330,6 +331,7 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	SLG_LOG("[PathOCLBaseRenderEngine] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
 
 	writeKernelsToFile = cfg.Get(Property("opencl.kernel.writetofile")(false)).Get<bool>();
+	specializeKernels = cfg.Get(Property("opencl.kernel.specialize.enable")(false)).Get<bool>();
 
 	// Set by luxcore::KernelCacheFill() in order to compile the kernels
 	// without rendering anything

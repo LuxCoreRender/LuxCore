@@ -91,6 +91,26 @@ void PathOCLBaseOCLRenderThread::GetKernelParamters(
 	catch (std::bad_cast&) {}
 }
 
+// Kernel specialization: the masks of the material and texture types used
+// by the scene (see MATERIAL_TYPE_ENABLED and TEXTURE_TYPE_ENABLED). The
+// code of the other types is removed from the kernels.
+static void GetSceneTypesKernelParameters(vector<string> &params, const CompiledScene &cscene) {
+	static_assert(slg::ocl::HETEROGENEOUS_VOL < 32, "material types don't fit PARAM_MATERIAL_TYPES_MASK");
+	static_assert(slg::ocl::FRESNELCONST_TEX < 3 * 32, "texture types don't fit PARAM_TEXTURE_TYPES_MASK0-2");
+
+	u_int materialTypesMask = 0;
+	for (const auto &mat : cscene.mats)
+		materialTypesMask |= 1u << mat.type;
+
+	u_int textureTypesMask[3] = { 0, 0, 0 };
+	for (const auto &tex : cscene.texs)
+		textureTypesMask[tex.type >> 5] |= 1u << (tex.type & 31);
+
+	params.push_back("-D PARAM_MATERIAL_TYPES_MASK=" + ToString(materialTypesMask) + "u");
+	for (u_int i = 0; i < 3; ++i)
+		params.push_back("-D PARAM_TEXTURE_TYPES_MASK" + ToString(i) + "=" + ToString(textureTypesMask[i]) + "u");
+}
+
 string PathOCLBaseOCLRenderThread::GetKernelSources() {
 	return slg::ocl::GetPathOCLBaseKernelSources();
 }
@@ -120,6 +140,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	GetKernelParamters(kernelsParameters, intersectionDevice,
 			RenderEngine::RenderEngineType2String(renderEngine->GetType()),
 			MachineEpsilon::GetMin(), MachineEpsilon::GetMax());
+	if (renderEngine->specializeKernels)
+		GetSceneTypesKernelParameters(kernelsParameters, *renderEngine->compiledScene);
 
 	const string kernelSource = GetKernelSources();
 	const string microKernelSource = slg::ocl::KernelSource_pathoclbase_kernels_micro;

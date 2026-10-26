@@ -410,6 +410,18 @@ typedef struct {
 	, maxMaterialEvalStackSize \
 	TEXTURES_PARAM
 
+// Kernel specialization: when the host defines PARAM_MATERIAL_TYPES_MASK,
+// only the material (and volume) types with their bit set are evaluated. The
+// others can not be in the scene, so their code is dead and removed by the
+// compiler.
+#if defined(PARAM_MATERIAL_TYPES_MASK)
+#define MATERIAL_TYPE_ENABLED(t) ((PARAM_MATERIAL_TYPES_MASK >> (t)) & 1u)
+#else
+#define MATERIAL_TYPE_ENABLED(t) 1
+#endif
+// Used at the start of a case of a switch on the material type
+#define MATERIAL_TYPE_GUARD(t) if (!MATERIAL_TYPE_ENABLED(t)) break
+
 #define MATERIAL_EVALUATE_RETURN_BLACK { \
 		const float3 result = BLACK; \
 		EvalStack_PushFloat3(result); \
