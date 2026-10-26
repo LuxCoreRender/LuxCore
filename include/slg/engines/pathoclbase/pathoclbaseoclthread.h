@@ -191,6 +191,12 @@ protected:
 
 	void EnqueueInitKernel();
 	void EnqueueAdvancePathsKernel();
+	// With opencl.kernel.profile.enable, waits for the queue and returns the
+	// time; EndKernelProfile() waits again and adds the elapsed time to
+	// kernelProfileTimes[index]. Both do nothing when profiling is off.
+	double BeginKernelProfile();
+	void EndKernelProfile(const u_int index, const double startTime);
+	void LogKernelProfile() const;
 
 	static luxrays::oclKernelCache *AllocKernelCache(const std::string &type);
 	static void GetKernelParamters(std::vector<std::string> &params,
@@ -296,6 +302,13 @@ protected:
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_GENERATE_CAMERA_RAY;
 	// Indexed by the PathState of the micro-kernel
 	size_t advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_DONE];
+
+	// Profiling slots: one per micro-kernel (indexed by PathState), then
+	// the ray trace and the queue reset
+	static const u_int KERNEL_PROFILE_TRACE = slg::ocl::pathoclbase::MK_DONE;
+	static const u_int KERNEL_PROFILE_RESET_QUEUES = slg::ocl::pathoclbase::MK_DONE + 1;
+	static const u_int KERNEL_PROFILE_COUNT = slg::ocl::pathoclbase::MK_DONE + 2;
+	double kernelProfileTimes[KERNEL_PROFILE_COUNT] = {};
 
 	std::unique_ptr<slg::ocl::pathoclbase::GPUTaskStats[]> gpuTaskStats;
 
