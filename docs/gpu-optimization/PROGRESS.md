@@ -187,3 +187,20 @@ Not measured yet (T0.3).
   `repairwheel`/delvewheel).
 - Check with Blender's Python: import OK, CUDA + OptiX enabled, RTX 5070
   listed; LuxBall PATHOCL GPU render correct, task count 1048576.
+
+### 2026-10-26: Blender 4.5 addon zip, T3.2 on by default
+
+- Patching site-packages does not survive a Blender restart: Blender's
+  extension manager reinstalls the wheels listed in the addon manifest.
+- Install zip `D:\REPO\LuxCoreRepo\bench\addon\BlendLuxCoreDiginaat-2.11.1-blender45.zip`
+  (display name BlendLuxCoreDiginaat, id still `blendluxcore`): BlendLuxCore
+  `HEAD` + `wheels/` (stock nvrtc wheel, stock pyluxcore wheel with the local
+  `pyluxcore.pyd`, plain-named DLLs and the preload patch, RECORD rewritten)
+  + manifest `wheels` entry + `pyluxcore_installation_info.txt` holding
+  sha256("pyluxcore==2.11.2") so luxloader skips its PyPI download.
+- `opencl.kernel.specialize.enable` now defaults to true (commit on
+  `gpu-opt/T3.2-kernel-specialization`): the addon never sets it.
+- CUDA workgroup size: since T1.5 CUDA no longer uses 32; the occupancy API
+  picks 256-1024 per kernel unless `opencl.gpu.workgroup.size` is set.
+  Forcing 64 was requested and not done (smaller blocks; LuxBall 32 vs auto
+  was within noise).
