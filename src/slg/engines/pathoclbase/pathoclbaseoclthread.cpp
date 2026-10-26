@@ -107,6 +107,8 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	tasksDirectLightBuff = nullptr;
 	tasksStateBuff = nullptr;
 	pathStatesBuff = nullptr;
+	pathQueuesBuff = nullptr;
+	pathQueueCountsBuff = nullptr;
 	samplerSharedDataBuff = nullptr;
 	samplesBuff = nullptr;
 	sampleDataBuff = nullptr;
@@ -119,6 +121,7 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	// OpenCL kernels
 	initSeedKernel = nullptr;
 	initKernel = nullptr;
+	resetPathQueuesKernel = nullptr;
 	advancePathsKernel_MK_RT_NEXT_VERTEX = nullptr;
 	advancePathsKernel_MK_HIT_NOTHING = nullptr;
 	advancePathsKernel_MK_HIT_OBJECT = nullptr;
@@ -224,6 +227,8 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	intersectionDevice.FreeBuffer(&tasksDirectLightBuff);
 	intersectionDevice.FreeBuffer(&tasksStateBuff);
 	intersectionDevice.FreeBuffer(&pathStatesBuff);
+	intersectionDevice.FreeBuffer(&pathQueuesBuff);
+	intersectionDevice.FreeBuffer(&pathQueueCountsBuff);
 	intersectionDevice.FreeBuffer(&samplerSharedDataBuff);
 	intersectionDevice.FreeBuffer(&samplesBuff);
 	intersectionDevice.FreeBuffer(&sampleDataBuff);

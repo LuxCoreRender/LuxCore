@@ -31,6 +31,85 @@
 }*/
 
 //------------------------------------------------------------------------------
+// Path state and work queues
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE int PathState_QueueIndex(const PathState state) {
+	switch (state) {
+		case MK_HIT_NOTHING:
+			return PATH_QUEUE_HIT_NOTHING;
+		case MK_HIT_OBJECT:
+			return PATH_QUEUE_HIT_OBJECT;
+		case MK_DL_ILLUMINATE:
+			return PATH_QUEUE_DL_ILLUMINATE;
+		case MK_DL_SAMPLE_BSDF:
+			return PATH_QUEUE_DL_SAMPLE_BSDF;
+		case MK_GENERATE_NEXT_VERTEX_RAY:
+			return PATH_QUEUE_GENERATE_NEXT_VERTEX_RAY;
+		case MK_SPLAT_SAMPLE:
+			return PATH_QUEUE_SPLAT_SAMPLE;
+		case MK_NEXT_SAMPLE:
+			return PATH_QUEUE_NEXT_SAMPLE;
+		case MK_GENERATE_CAMERA_RAY:
+			return PATH_QUEUE_GENERATE_CAMERA_RAY;
+		default:
+			// MK_RT_NEXT_VERTEX, MK_RT_DL and MK_DONE have no queue
+			return -1;
+	}
+}
+
+// Returns the position of a new entry in the queue
+OPENCL_FORCE_INLINE uint PathQueue_Reserve(__global uint *pathQueueCounts, const int queueIndex) {
+#if defined(LUXRAYS_CUDA_DEVICE) && (__CUDA_ARCH__ >= 700)
+	// One atomic for all the active threads of the warp pushing to the same
+	// queue instead of one per thread
+	const unsigned int peers = __match_any_sync(__activemask(), queueIndex);
+	unsigned int lane;
+	asm("mov.u32 %0, %%laneid;" : "=r"(lane));
+	const int leader = __ffs(peers) - 1;
+
+	unsigned int base = 0;
+	if (lane == leader)
+		base = atomicAdd(&pathQueueCounts[queueIndex], __popc(peers));
+	base = __shfl_sync(peers, base, leader);
+
+	return base + __popc(peers & ((1u << lane) - 1u));
+#else
+	return atomic_inc(&pathQueueCounts[queueIndex]);
+#endif
+}
+
+// Sets the state of path gid and queues the path for the micro-kernel of
+// that state
+OPENCL_FORCE_INLINE void PathState_Set(const size_t gid, const PathState state,
+		__global PathState *pathStates,
+		__global uint *pathQueues, __global uint *pathQueueCounts) {
+	pathStates[gid] = state;
+
+	const int queueIndex = PathState_QueueIndex(state);
+	if (queueIndex >= 0) {
+		const uint pos = PathQueue_Reserve(pathQueueCounts, queueIndex);
+		pathQueues[queueIndex * get_global_size(0) + pos] = gid;
+	}
+}
+
+#define PATH_STATE_SET(state) PathState_Set(gid, (state), pathStates, pathQueues, pathQueueCounts)
+
+// Used by the micro-kernels with a queue: one thread for each queued path.
+// Kernels are launched with taskCount threads, the threads past the number of
+// queued paths exit at once.
+#define PATH_QUEUE_GET_GID(queueIndex) \
+	if (get_global_id(0) >= pathQueueCounts[queueIndex]) \
+		return; \
+	const size_t gid = pathQueues[(queueIndex) * get_global_size(0) + get_global_id(0)]
+
+__kernel void ResetPathQueues(__global uint *pathQueueCounts) {
+	const size_t gid = get_global_id(0);
+	if (gid < PATH_QUEUE_COUNT)
+		pathQueueCounts[gid] = 0;
+}
+
+//------------------------------------------------------------------------------
 // Init functions
 //------------------------------------------------------------------------------
 
@@ -41,7 +120,6 @@ OPENCL_FORCE_INLINE void InitSampleResult(
 		const uint filmSubRegion2, const uint filmSubRegion3,
 		__global float *pixelFilterDistribution
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
 	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
 
 	SampleResult_Init(&taskConfig->film, sampleResult);
@@ -97,7 +175,6 @@ OPENCL_FORCE_INLINE void GenerateEyePath(
 		const uint tileStartX, const uint tileStartY
 #endif
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
 	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
 
 	EyePathInfo_Init(pathInfo);
@@ -453,6 +530,8 @@ OPENCL_FORCE_INLINE bool DirectLight_BSDFSampling(
 		, __global GPUTaskDirectLight *tasksDirectLight \
 		, __global GPUTaskState *tasksState \
 		, __global PathState *pathStates \
+		, __global uint *pathQueues \
+		, __global uint *pathQueueCounts \
 		, __global GPUTaskStats *taskStats \
 		KERNEL_ARGS_FAST_PIXEL_FILTER \
 		, __global void *samplerSharedDataBuff \
@@ -554,6 +633,8 @@ __kernel void Init(
 		__global GPUTaskDirectLight *tasksDirectLight,
 		__global GPUTaskState *tasksState,
 		__global PathState *pathStates,
+		__global uint *pathQueues,
+		__global uint *pathQueueCounts,
 		__global GPUTaskStats *taskStats,
 		__global void *samplerSharedDataBuff,
 		__global void *samplesBuff,
@@ -574,7 +655,7 @@ __kernel void Init(
 	__global TilePathSamplerSharedData *samplerSharedData = (__global TilePathSamplerSharedData *)samplerSharedDataBuff;
 
 	if (gid >= filmWidth * filmHeight * Sqr(samplerSharedData->aaSamples)) {
-		pathStates[gid] = MK_DONE;
+		PATH_STATE_SET(MK_DONE);
 		// Mark the ray like like one to NOT trace
 		rays[gid].flags = RAY_FLAGS_MASKED;
 
@@ -623,12 +704,12 @@ __kernel void Init(
 				tileStartX, tileStartY
 #endif
 				SAMPLER_PARAM);
-		pathStates[gid] = MK_RT_NEXT_VERTEX;
+		PATH_STATE_SET(MK_RT_NEXT_VERTEX);
 	} else {
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
-		pathStates[gid] = MK_DONE;
+		PATH_STATE_SET(MK_DONE);
 #else
-		pathStates[gid] = MK_GENERATE_CAMERA_RAY;
+		PATH_STATE_SET(MK_GENERATE_CAMERA_RAY);
 #endif
 		// Mark the ray like like one to NOT trace
 		rays[gid].flags = RAY_FLAGS_MASKED;

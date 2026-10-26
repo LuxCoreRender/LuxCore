@@ -187,6 +187,7 @@ protected:
 		const std::string &name
 	);
 
+	void EnqueueInitKernel();
 	void EnqueueAdvancePathsKernel();
 
 	static luxrays::oclKernelCache *AllocKernelCache(const std::string &type);
@@ -257,6 +258,8 @@ protected:
 	luxrays::HardwareDeviceBuffer *tasksDirectLightBuff;
 	luxrays::HardwareDeviceBuffer *tasksStateBuff;
 	luxrays::HardwareDeviceBuffer *pathStatesBuff;
+	luxrays::HardwareDeviceBuffer *pathQueuesBuff;
+	luxrays::HardwareDeviceBuffer *pathQueueCountsBuff;
 	luxrays::HardwareDeviceBuffer *samplerSharedDataBuff;
 	luxrays::HardwareDeviceBuffer *samplesBuff;
 	luxrays::HardwareDeviceBuffer *sampleDataBuff;
@@ -276,6 +279,7 @@ protected:
 	// OpenCL kernels
 	luxrays::HardwareDeviceKernelUPtr initSeedKernel;
 	luxrays::HardwareDeviceKernelUPtr initKernel;
+	luxrays::HardwareDeviceKernelUPtr resetPathQueuesKernel;
 	size_t initWorkGroupSize;
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_RT_NEXT_VERTEX;
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_HIT_NOTHING;

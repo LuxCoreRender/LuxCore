@@ -53,6 +53,24 @@ typedef enum {
 	MK_DONE = 10
 } PathState;
 
+// Work queues: each micro-kernel of these states runs only on the paths
+// queued for it. They are the states entered only from micro-kernels that
+// run earlier in the same iteration (or from Init), so a queue is filled and
+// consumed within one iteration and all queues are reset at its end.
+// MK_RT_NEXT_VERTEX and MK_RT_DL are entered across iterations and keep
+// running on all paths.
+typedef enum {
+	PATH_QUEUE_HIT_NOTHING = 0,
+	PATH_QUEUE_HIT_OBJECT = 1,
+	PATH_QUEUE_DL_ILLUMINATE = 2,
+	PATH_QUEUE_DL_SAMPLE_BSDF = 3,
+	PATH_QUEUE_GENERATE_NEXT_VERTEX_RAY = 4,
+	PATH_QUEUE_SPLAT_SAMPLE = 5,
+	PATH_QUEUE_NEXT_SAMPLE = 6,
+	PATH_QUEUE_GENERATE_CAMERA_RAY = 7,
+	PATH_QUEUE_COUNT = 8
+} PathQueue;
+
 typedef struct {
 	union {
 		struct {

@@ -247,6 +247,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		{filmClearKernel, filmClearWorkGroupSize, "Film_Clear"},
 		{initSeedKernel, initWorkGroupSize, "InitSeed"},
 		{initKernel, initWorkGroupSize, "Init"},
+		{resetPathQueuesKernel, initWorkGroupSize, "ResetPathQueues"},
 	};
 
 	for (auto& [kernel, workGroupSize, name] : kernels) {
@@ -300,6 +301,9 @@ void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	intersectionDevice.SetKernelArg(initSeedKernel, argIndex++, tasksBuff);
 	intersectionDevice.SetKernelArg(initSeedKernel, argIndex++, renderEngine->seedBase + threadIndex * renderEngine->taskCount);
 
+	// resetPathQueuesKernel kernel
+	intersectionDevice.SetKernelArg(resetPathQueuesKernel, 0, pathQueueCountsBuff);
+
 	// initKernel kernel
 	argIndex = 0;
 	intersectionDevice.SetKernelArg(initKernel, argIndex++, taskConfigBuff);
@@ -307,6 +311,8 @@ void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	intersectionDevice.SetKernelArg(initKernel, argIndex++, tasksDirectLightBuff);
 	intersectionDevice.SetKernelArg(initKernel, argIndex++, tasksStateBuff);
 	intersectionDevice.SetKernelArg(initKernel, argIndex++, pathStatesBuff);
+	intersectionDevice.SetKernelArg(initKernel, argIndex++, pathQueuesBuff);
+	intersectionDevice.SetKernelArg(initKernel, argIndex++, pathQueueCountsBuff);
 	intersectionDevice.SetKernelArg(initKernel, argIndex++, taskStatsBuff);
 	intersectionDevice.SetKernelArg(initKernel, argIndex++, samplerSharedDataBuff);
 	intersectionDevice.SetKernelArg(initKernel, argIndex++, samplesBuff);
@@ -335,6 +341,8 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, tasksDirectLightBuff);
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, tasksStateBuff);
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, pathStatesBuff);
+	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, pathQueuesBuff);
+	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, pathQueueCountsBuff);
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, taskStatsBuff);
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, pixelFilterBuff);
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, samplerSharedDataBuff);
@@ -461,6 +469,14 @@ void PathOCLBaseOCLRenderThread::SetKernelArgs() {
 	SetInitKernelArgs(0);
 }
 
+void PathOCLBaseOCLRenderThread::EnqueueInitKernel() {
+	// Init queues the paths for the first iteration
+	intersectionDevice.EnqueueKernel(resetPathQueuesKernel,
+			HardwareDeviceRange(initWorkGroupSize), HardwareDeviceRange(initWorkGroupSize));
+	intersectionDevice.EnqueueKernel(initKernel,
+			HardwareDeviceRange(renderEngine->taskCount), HardwareDeviceRange(initWorkGroupSize));
+}
+
 void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel() {
 	const u_int taskCount = renderEngine->taskCount;
 
@@ -485,6 +501,11 @@ void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel() {
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_GENERATE_CAMERA_RAY,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+
+	// All queued paths have been consumed: the queues are filled again
+	// during the next iteration
+	intersectionDevice.EnqueueKernel(resetPathQueuesKernel,
+			HardwareDeviceRange(initWorkGroupSize), HardwareDeviceRange(initWorkGroupSize));
 }
 
 #endif

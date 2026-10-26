@@ -91,7 +91,7 @@ __kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 	// If continueToTrace, there is nothing to do, just keep the same state
 	if (!continueToTrace) {
 		if (rayHits[gid].meshIndex == NULL_INDEX)
-			pathStates[gid] = MK_HIT_NOTHING;
+			PATH_STATE_SET(MK_HIT_NOTHING);
 		else {
 			const BSDFEvent eventTypes = BSDF_GetEventTypes(&taskState->bsdf
 					MATERIALS_PARAM);
@@ -99,7 +99,7 @@ __kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 			sampleResult->lastPathVertex = PathDepthInfo_IsLastPathVertex(&pathInfo->depth, 
 					&taskConfig->pathTracer.maxPathDepth, eventTypes);
 
-			pathStates[gid] = MK_HIT_OBJECT;
+			PATH_STATE_SET(MK_HIT_OBJECT);
 		}
 	}
 }
@@ -114,7 +114,7 @@ __kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 __kernel void AdvancePaths_MK_HIT_NOTHING(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	PATH_QUEUE_GET_GID(PATH_QUEUE_HIT_NOTHING);
 
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[gid];
@@ -191,7 +191,7 @@ __kernel void AdvancePaths_MK_HIT_NOTHING(
 		sampleResult->alpha = 0.f;
 	}
 
-	pathStates[gid] = MK_SPLAT_SAMPLE;
+	PATH_STATE_SET(MK_SPLAT_SAMPLE);
 }
 
 //------------------------------------------------------------------------------
@@ -204,7 +204,7 @@ __kernel void AdvancePaths_MK_HIT_NOTHING(
 __kernel void AdvancePaths_MK_HIT_OBJECT(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	PATH_QUEUE_GET_GID(PATH_QUEUE_HIT_OBJECT);
 
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[gid];
@@ -269,7 +269,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 		const float3 radiance = VLOAD3F(&taskState->throughput.c[0]) * BSDF_GetBakeMapValue(bsdf MATERIALS_PARAM);
 		VADD3F(sampleResult->radiancePerPixelNormalized[0].c, radiance);
 
-		pathStates[gid] = MK_SPLAT_SAMPLE;
+		PATH_STATE_SET(MK_SPLAT_SAMPLE);
 		return;
 	} else if (BSDF_HasBakeMap(bsdf, LIGHTMAP MATERIALS_PARAM)) {
 		const float3 radiance = VLOAD3F(&taskState->throughput.c[0]) *
@@ -277,7 +277,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 				BSDF_GetBakeMapValue(bsdf MATERIALS_PARAM);
 		VADD3F(sampleResult->radiancePerPixelNormalized[0].c, radiance);
 
-		pathStates[gid] = MK_SPLAT_SAMPLE;
+		PATH_STATE_SET(MK_SPLAT_SAMPLE);
 		return;
 	}
 
@@ -329,7 +329,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 							VADD3F(sampleResult->radiancePerPixelNormalized[i].c, VLOAD3F(radiance[i].c));
 					}
 				}
-				pathStates[gid] = MK_SPLAT_SAMPLE;
+				PATH_STATE_SET(MK_SPLAT_SAMPLE);
 				return;
 			}
 			case PGIC_DEBUG_SHOWCAUSTIC: {
@@ -343,7 +343,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 							&sampleResult->radiancePerPixelNormalized[0]
 							MATERIALS_PARAM);
 				}
-				pathStates[gid] = MK_SPLAT_SAMPLE;
+				PATH_STATE_SET(MK_SPLAT_SAMPLE);
 				return;
 			}
 			case PGIC_DEBUG_SHOWINDIRECTPATHMIX: {
@@ -364,7 +364,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 						VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 1.f), sampleResult->radiancePerPixelNormalized[0].c);
 						taskState->photonGIShowIndirectPathMixUsed = true;
 
-						pathStates[gid] = MK_SPLAT_SAMPLE;
+						PATH_STATE_SET(MK_SPLAT_SAMPLE);
 						return;
 					}
 
@@ -417,7 +417,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 							}
 
 							// I can terminate the path, all done
-							pathStates[gid] = MK_SPLAT_SAMPLE;
+							PATH_STATE_SET(MK_SPLAT_SAMPLE);
 							return;
 						}
 					}
@@ -436,8 +436,8 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 	//
 	// I handle as a special case when the path vertex is both the first
 	// and the last: I do direct light sampling without MIS.
-	pathStates[gid] = (sampleResult->lastPathVertex && !sampleResult->firstPathVertex) ?
-		MK_SPLAT_SAMPLE : MK_DL_ILLUMINATE;
+	PATH_STATE_SET((sampleResult->lastPathVertex && !sampleResult->firstPathVertex) ?
+		MK_SPLAT_SAMPLE : MK_DL_ILLUMINATE);
 }
 
 //------------------------------------------------------------------------------
@@ -548,7 +548,7 @@ __kernel void AdvancePaths_MK_RT_DL(
 			pathState = MK_GENERATE_NEXT_VERTEX_RAY;
 
 		// Save the state
-		pathStates[gid] = pathState;
+		PATH_STATE_SET(pathState);
 	}
 }
 
@@ -562,7 +562,7 @@ __kernel void AdvancePaths_MK_RT_DL(
 __kernel void AdvancePaths_MK_DL_ILLUMINATE(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	PATH_QUEUE_GET_GID(PATH_QUEUE_DL_ILLUMINATE);
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
@@ -620,11 +620,11 @@ __kernel void AdvancePaths_MK_DL_ILLUMINATE(
 				&taskDirectLight->illumInfo
 				LIGHTS_PARAM)) {
 		// I have now to evaluate the BSDF
-		pathStates[gid] = MK_DL_SAMPLE_BSDF;
+		PATH_STATE_SET(MK_DL_SAMPLE_BSDF);
 	} else {
 		// No shadow ray to trace, move to the next vertex ray
 		// however, I have to Check if this is the last path vertex
-		pathStates[gid] = (sampleResult->lastPathVertex) ? MK_SPLAT_SAMPLE : MK_GENERATE_NEXT_VERTEX_RAY;
+		PATH_STATE_SET((sampleResult->lastPathVertex) ? MK_SPLAT_SAMPLE : MK_GENERATE_NEXT_VERTEX_RAY);
 	}
 
 	//--------------------------------------------------------------------------
@@ -643,7 +643,7 @@ __kernel void AdvancePaths_MK_DL_ILLUMINATE(
 __kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	PATH_QUEUE_GET_GID(PATH_QUEUE_DL_SAMPLE_BSDF);
 
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[gid];
@@ -705,11 +705,11 @@ __kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 		directLightVolInfos[gid] = pathInfo->volume;
 
 		// I have to trace the shadow ray
-		pathStates[gid] = MK_RT_DL;
+		PATH_STATE_SET(MK_RT_DL);
 	} else {
 		// No shadow ray to trace, move to the next vertex ray
 		// however, I have to check if this is the last path vertex
-		pathStates[gid] = (sampleResult->lastPathVertex) ? MK_SPLAT_SAMPLE : MK_GENERATE_NEXT_VERTEX_RAY;
+		PATH_STATE_SET((sampleResult->lastPathVertex) ? MK_SPLAT_SAMPLE : MK_GENERATE_NEXT_VERTEX_RAY);
 	}
 }
 
@@ -723,7 +723,7 @@ __kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	PATH_QUEUE_GET_GID(PATH_QUEUE_GENERATE_NEXT_VERTEX_RAY);
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
@@ -863,7 +863,7 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 		pathState = MK_SPLAT_SAMPLE;
 
 	// Save the state
-	pathStates[gid] = pathState;
+	PATH_STATE_SET(pathState);
 
 	//--------------------------------------------------------------------------
 
@@ -881,7 +881,7 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 __kernel void AdvancePaths_MK_SPLAT_SAMPLE(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	PATH_QUEUE_GET_GID(PATH_QUEUE_SPLAT_SAMPLE);
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
@@ -965,7 +965,7 @@ __kernel void AdvancePaths_MK_SPLAT_SAMPLE(
 	taskStats[gid].sampleCount += 1;
 
 	// Save the state
-	pathStates[gid] = MK_NEXT_SAMPLE;
+	PATH_STATE_SET(MK_NEXT_SAMPLE);
 
 	//--------------------------------------------------------------------------
 
@@ -983,7 +983,7 @@ __kernel void AdvancePaths_MK_SPLAT_SAMPLE(
 __kernel void AdvancePaths_MK_NEXT_SAMPLE(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	PATH_QUEUE_GET_GID(PATH_QUEUE_NEXT_SAMPLE);
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
@@ -1022,9 +1022,9 @@ __kernel void AdvancePaths_MK_NEXT_SAMPLE(
 
 	// Generate a new path and camera ray only it is not TILEPATHOCL
 #if !defined(RENDER_ENGINE_TILEPATHOCL) && !defined(RENDER_ENGINE_RTPATHOCL)
-	pathStates[gid] = MK_GENERATE_CAMERA_RAY;
+	PATH_STATE_SET(MK_GENERATE_CAMERA_RAY);
 #else
-	pathStates[gid] = MK_DONE;
+	PATH_STATE_SET(MK_DONE);
 	// Mark the ray like like one to NOT trace
 	rays[gid].flags = RAY_FLAGS_MASKED;
 #endif
@@ -1048,7 +1048,7 @@ __kernel void AdvancePaths_MK_GENERATE_CAMERA_RAY(
 	// Generate a new path and camera ray only it is not TILEPATHOCL: path regeneration
 	// is not used in this case
 #if !defined(RENDER_ENGINE_TILEPATHOCL) && !defined(RENDER_ENGINE_RTPATHOCL)
-	const size_t gid = get_global_id(0);
+	PATH_QUEUE_GET_GID(PATH_QUEUE_GENERATE_CAMERA_RAY);
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
@@ -1092,7 +1092,7 @@ __kernel void AdvancePaths_MK_GENERATE_CAMERA_RAY(
 			ray,
 			pathInfo
 			SAMPLER_PARAM);
-	pathStates[gid] = MK_RT_NEXT_VERTEX;
+	PATH_STATE_SET(MK_RT_NEXT_VERTEX);
 
 	//--------------------------------------------------------------------------
 
