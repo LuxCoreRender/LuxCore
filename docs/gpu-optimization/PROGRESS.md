@@ -435,3 +435,24 @@ Kernel profile = `kprof.py` as above (ms of kernel time per M samples, one
   mean difference on those two scenes needs explaining.
 - Next: T5.5 (registers), T5.6 (fuse the BSDF kernels; with T5.7 the three
   kernels may use different orders, so fusing now needs one order for all).
+
+### 2026-10-26: GPU-first roadmap, T5.5 baseline, T6.1 started
+
+- The user set the direction: this fork is a GPU-first, unbiased renderer.
+  `PLAN.md` has the roadmap (Phases 6-9) with the list of what a GPU render
+  still does on the CPU, and the T6.1 design.
+- The user reported noisy caustics and chose GPU light tracing (unbiased)
+  over speeding up the PhotonGI caustic cache (blurs). In Blender both
+  "Add Light Tracing" and "Use Caustic Cache" are off by default, so by
+  default caustics come only from GPU path tracing.
+- T5.5 baseline, offline compile of the current kernels (kernel dump from
+  `-D opencl.kernel.writetofile 1`, NVRTC 12.9 + ptxas sm_120, script
+  `nvrtc_regs.py` in the session scratchpad): LuxBall with only 3 material
+  and 3 texture types compiled in still uses 255 / 254 / 255 / 242 / 242 /
+  253 registers in RT_NEXT_VERTEX / HIT_OBJECT / RT_DL / DL_ILLUMINATE /
+  DL_SAMPLE_BSDF / GENERATE_NEXT_VERTEX_RAY. The offline numbers match the
+  cached PTX within 3 registers. Kernel dumps: `bench\kdump\*-T5.7.cl`.
+- NVRTC 13 (asked by the user, not tested): LuxCore's loader tries
+  `nvrtc64_130_0.dll` before `nvrtc64_120_0.dll` (`deps/cuew/src/cuew.cpp:625`),
+  so it can be tested by copying the DLLs into a bin copy. The driver JIT
+  (CUDA 13.5) makes the final SASS, so expect a small effect.
