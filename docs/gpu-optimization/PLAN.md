@@ -46,6 +46,7 @@ measured numbers in `PROGRESS.md`.
 | T1.4 | Include NVRTC built-in options (and NVRTC version) in the CUDA kernel cache key so option changes invalidate the cache (`cudaKernelCache` in `cuda.cpp`). | todo | Changing an option triggers a recompile without manual cache deletion. |
 | T1.5 | Block size: sweep `opencl.gpu.workgroup.size` 32/64/128/256 per scene. If a size wins consistently, make CUDA pick it (e.g. `cuOccupancyMaxPotentialBlockSize` in `CUDADevice::GetKernelWorkGroupSize`, and stop forcing 32 for CUDA devices in `oclrenderengine.cpp`; keep 32 for OpenCL). | todo | Measured gain on most scenes, none slower. |
 | T1.6 | Register cap: sweep `CU_JIT_MAX_REGISTERS` via `cuModuleLoadDataEx` options (`cuda.cpp`, module load) together with T1.5. Check spills with `CU_JIT_INFO_LOG_BUFFER`. | todo | Measured gain; keep default if none. |
+| T1.7 | Paths in flight: sweep `opencl.task.count` 512K (current cap for 12 GB) / 1M / 2M with the script's `-D`. Laine 2013 saw +5% going from 1M to 8M paths. If a larger pool wins, raise the cap in `PathOCLRenderEngine::UpdateTaskCount` for cards with enough VRAM. | todo | Measured gain; VRAM use stays well under 12 GB on LynxSpider. |
 
 Phase 1 tasks T1.1-T1.3 are committed together on branch
 `gpu-opt/T1.1-T1.3-optix-nvrtc`; verify them with T0.3 numbers before merging.
@@ -54,7 +55,7 @@ Phase 1 tasks T1.1-T1.3 are committed together on branch
 
 | ID | Task | Status | Acceptance |
 |---|---|---|---|
-| T2.1 | Move `PathState` out of `GPUTaskState` into its own `uint` buffer so state checks are coalesced. Touches about 66 `->state` uses in `pathoclbase_kernels_micro.cl` / `pathoclbase_funcs.cl`, kernel args (`KERNEL_ARGS`), buffer alloc in `pathoclbaseoclthreadinit.cpp`, and TILEPATHOCL which shares the kernels. Skip if T3.1 is done first (it subsumes this). | todo | Est. 2-5%. Image within noise. |
+| T2.1 | Structure-of-arrays for hot path state. Step 1: move `PathState` out of `GPUTaskState` into its own `uint` buffer so state checks are coalesced (about 66 `->state` uses in `pathoclbase_kernels_micro.cl` / `pathoclbase_funcs.cl`, kernel args `KERNEL_ARGS`, buffer alloc in `pathoclbaseoclthreadinit.cpp`, TILEPATHOCL shares the kernels). Step 2: profile which other `GPUTaskState` / `EyePathInfo` fields are read by many kernels (e.g. `throughput`) and split those too. Laine 2013 measured +80% total from SOA vs AOS path state; LuxCore's gain will be smaller because its kernels are not split by material, but this is the cheapest layout win. | todo | Step 1 est. 2-5%, step 2 more. Image within noise. |
 | T2.2 | Shadow rays terminate on first hit when exact: add a shadow-ray flag in `Ray.flags`, pass `OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT` only for those rays, and only when the scene has no shadow-transparent materials and no volumes (decide on host, pass as kernel arg or define). Requires a careful read of `MK_RT_DL` and `throughShadowTransparency` handling first; write the analysis in `PROGRESS.md` before coding. | todo | Est. 5-15% of shadow trace time. LuxBall/DLSC faster; scenes with transparency/volumes unchanged and correct. |
 | T2.3 | Pinned host memory (`cuMemHostAlloc`/`cuMemHostRegister`) for film and task-stats readback buffers. | todo | Est. <=1%. Merge only if measurable. |
 | T2.4 | Non-default CUDA stream per device plus a CUDA graph for the per-iteration sequence (1 trace + 10 micro-kernels). OptiX launch must use the same stream. | todo | Est. 1-3%. |
@@ -63,8 +64,28 @@ Phase 1 tasks T1.1-T1.3 are committed together on branch
 
 | ID | Task | Status | Acceptance |
 |---|---|---|---|
-| T3.1 | Per-state work queues (stream compaction): each micro-kernel runs only on paths in its state, using atomic-append queues or a prefix sum. Changes the render loop, kernel args and every micro-kernel. | todo | Est. 10-25%. Design note in `PROGRESS.md` first. |
-| T3.2 | Scene-feature kernel specialization: compile-time defines for used material/texture/light types, volumes, PhotonGI, etc., with `#if` guards in kernel code. Cost: recompiles when the feature set changes; must keep `kernelcachefill` working. | todo | Est. 10-30% depending on scene. Design note first. |
+| T3.1 | Per-state work queues (stream compaction), as in Laine 2013 section 4.4 and Padilla 2026 section 3.1: the kernel that sets a path's next state appends the path index to that state's queue (one counter + index array per state, preallocated, 4 bytes x taskCount each). Each micro-kernel then reads `queue[gid]` and exits if `gid >= count`. CUDA has no indirect dispatch, so keep launching `taskCount` threads: idle threads only read the counter, not the path state. Aggregate the atomics per warp (ballot + one `atomic_add` per warp); Laine measured +40% from this, though recent NVCC/NVRTC may already do it automatically, so check the PTX first. Changes the render loop, kernel args and every micro-kernel. | todo | Est. 10-25%. Design note in `PROGRESS.md` first. |
+| T3.2 | Scene-feature kernel specialization: compile-time defines for used material/texture/light types, volumes, PhotonGI, etc., with `#if` guards in kernel code. Cost: recompiles when the feature set changes; must keep `kernelcachefill` working. Alternative from Laine 2013 section 4.3: split `MK_HIT_OBJECT` / BSDF evaluation into per-material kernels fed by per-material queues (needs T3.1), with expensive materials in their own kernel and simple ones grouped. | todo | Est. 10-30% depending on scene. Design note first. |
+
+## References
+
+PDFs are in `D:\REPO\LuxCoreRepo\papers\` (outside git; do not commit them).
+Extract text with `pdftotext -layout <file> <out.txt>` (available in Git Bash).
+
+- `laine2013hpg_paper.pdf`: Laine, Karras, Aila, "Megakernels Considered
+  Harmful: Wavefront Path Tracing on GPUs", HPG 2013. The design LuxCore's
+  micro-kernels follow, minus the queues. Key measured effects: SOA path state
+  +80% total vs AOS (T2.1), queues so each kernel runs only on its paths
+  (T3.1), warp-coalesced queue atomics +40% (T3.1), per-material kernels (T3.2),
+  path pool 1M to 8M +5% (T1.7). Pool of 1M paths at 212 bytes each.
+- `2605.27323v1.pdf`: Padilla, Webster, Kim, "Megakernel vs Wavefront GPU Path
+  Tracing", arXiv 2605.27323, 2026. Vulkan + RT cores on an RTX 3060 Ti:
+  wavefront +16% over megakernel, attributed to cache locality (higher L2 and
+  VRAM throughput). Section 3.1: launching every bounce over all pixels
+  wastes threads and memory traffic; they compact active paths with atomic
+  index lists (T3.1). Neither design saturated any GPU unit, so latency,
+  memory traffic and synchronization are the limits, which supports layout
+  and queue work over more arithmetic tuning.
 
 ## Out of scope
 

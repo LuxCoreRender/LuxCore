@@ -70,3 +70,18 @@ Not measured yet (T0.3).
 - Found: cold PathOCL kernel compile takes 147 s (with `--Ofast-compile=min`).
 - Found: OptiX logs at level 4 (`cudadevice.cpp:174`), e.g. KNOBS/DISKCACHE lines.
 - Found: linear outputs can only be `.exr`/`.hdr`; the script uses `.hdr`.
+
+### 2026-10-26: papers reviewed
+
+- Read `papers/laine2013hpg_paper.pdf` and `papers/2605.27323v1.pdf`
+  (summaries and task mapping in `PLAN.md`, "References").
+- LuxCore PATHOCL already is a wavefront path tracer, but without the two
+  things Laine 2013 found most valuable: queues (every micro-kernel runs over
+  all paths) and SOA path state (`GPUTaskState` is one AOS struct with an
+  embedded `BSDF`).
+- Plan changes: added T1.7 (path pool size sweep); T2.1 widened from the
+  state field to SOA for hot path state; T3.1 got a concrete queue design
+  (no indirect dispatch on CUDA: launch `taskCount`, exit on `gid >= count`);
+  T3.2 got the per-material-kernel alternative.
+- Priority after Phase 1: T2.1, then T3.1. Both papers point to memory
+  layout and wasted threads, not arithmetic, as the limit.
