@@ -384,6 +384,25 @@ u_int CUDADevice::GetKernelWorkGroupSize(HardwareDeviceKernelRPtr kernel) {
 	return 32;
 }
 
+u_int CUDADevice::GetKernelOccupancyWorkGroupSize(HardwareDeviceKernelRPtr kernel) {
+	assert (kernel);
+	assert (!kernel->IsNull());
+
+	auto& cudaDeviceKernel = dynamic_cast<CUDADeviceKernelRef>(*kernel);
+
+	int minGridSize, blockSize;
+	CHECK_CUDA_ERROR(cuOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize,
+			cudaDeviceKernel.cudaKernel, nullptr, 0, 0));
+
+	// Round down to a power of 2 so it divides the global sizes (task count
+	// is a multiple of 8192)
+	u_int size = 32;
+	while (size * 2 <= (u_int)blockSize)
+		size *= 2;
+
+	return size;
+}
+
 void CUDADevice::SetKernelArg(HardwareDeviceKernelRPtr kernel,
 		const u_int index, const size_t size, const void *arg) {
 	assert (kernel);

@@ -52,6 +52,10 @@ OCLRenderEngine::OCLRenderEngine(RenderConfigRef rcfg,
 	// Note: I'm using 32 because some driver (i.e. NVIDIA) suggests a value and than
 	// throws a clEnqueueNDRangeKernel(CL_OUT_OF_RESOURCES)
 	const u_int forceGPUWorkSize = cfg.Get(GetDefaultProps()->Get("opencl.gpu.workgroup.size")).Get<u_int>();
+	// CUDA devices don't have the NVIDIA OpenCL driver problem: unless the
+	// property is set, the PathOCL kernels use the block size with the
+	// highest occupancy (the other kernels keep the device default)
+	const u_int forceCUDAWorkSize = cfg.IsDefined("opencl.gpu.workgroup.size") ? forceGPUWorkSize : 0;
 
 	const string oclDeviceConfig = cfg.Get(GetDefaultProps()->Get("opencl.devices.select")).Get<string>();
 	const string cudaOptixDeviceConfig = cfg.Get(GetDefaultProps()->Get("cuda.optix.devices.select")).Get<string>();
@@ -96,7 +100,9 @@ OCLRenderEngine::OCLRenderEngine(RenderConfigRef rcfg,
 		bool selected = false;
 		if (haveSelectionString) {
 			if (oclDeviceConfig.at(i) == '1') {
-				if (desc.GetType() & (DEVICE_TYPE_OPENCL_GPU | DEVICE_TYPE_CUDA_GPU))
+				if (desc.GetType() & DEVICE_TYPE_CUDA_GPU)
+					desc.SetForceWorkGroupSize(forceCUDAWorkSize);
+				else if (desc.GetType() & DEVICE_TYPE_OPENCL_GPU)
 					desc.SetForceWorkGroupSize(forceGPUWorkSize);
 				else if (desc.GetType() & DEVICE_TYPE_OPENCL_CPU)
 					desc.SetForceWorkGroupSize(forceCPUWorkSize);
@@ -107,7 +113,9 @@ OCLRenderEngine::OCLRenderEngine(RenderConfigRef rcfg,
 		} else {
 			if ((useCPUs && (desc.GetType() & DEVICE_TYPE_OPENCL_CPU)) ||
 					(useGPUs && desc.GetType() & (DEVICE_TYPE_OPENCL_GPU | DEVICE_TYPE_CUDA_GPU))) {
-				if (desc.GetType() & (DEVICE_TYPE_OPENCL_GPU | DEVICE_TYPE_CUDA_GPU))
+				if (desc.GetType() & DEVICE_TYPE_CUDA_GPU)
+					desc.SetForceWorkGroupSize(forceCUDAWorkSize);
+				else if (desc.GetType() & DEVICE_TYPE_OPENCL_GPU)
 					desc.SetForceWorkGroupSize(forceGPUWorkSize);
 				else if (desc.GetType() & DEVICE_TYPE_OPENCL_CPU)
 					desc.SetForceWorkGroupSize(forceCPUWorkSize);

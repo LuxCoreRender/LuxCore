@@ -193,6 +193,11 @@ public:
 		const std::string &kernelName
 	) = 0;
 	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernelRPtr kernel) = 0;
+	// The work group size with the highest occupancy for the kernel, if the
+	// device can compute it, otherwise GetKernelWorkGroupSize()
+	virtual u_int GetKernelOccupancyWorkGroupSize(HardwareDeviceKernelRPtr kernel) {
+		return GetKernelWorkGroupSize(kernel);
+	}
 
 	virtual void SetKernelArg(HardwareDeviceKernelRPtr kernel,
 			const u_int index, const size_t size, const void *arg) = 0;
