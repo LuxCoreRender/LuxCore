@@ -214,11 +214,16 @@ void PathOCLRenderEngine::UpdateTaskCount() {
 		// In this case, I will tune task count for RTPATHOCL
 		taskCount = GetFilm().GetWidth() * GetFilm().GetHeight() / intersectionDevices.size();
 	} else {
-		const u_int defaultTaskCount = 512ull * 1024ull;
+		// More paths in flight keep the GPU busier. 1M paths use about 2.7GB
+		// of per-path buffers (LynxSpider), so only cards with more than 10GB
+		// get them.
+		const u_int defaultTaskCount = 1024ull * 1024ull;
 
 		// Compute the cap to the number of tasks
 		u_int taskCap = defaultTaskCount;
 		for(DeviceDescription& devDesc: selectedDeviceDescs) {
+			if (devDesc.GetMaxMemory() <= 10ull * 1024ull * 1024ull * 1024ull)
+				taskCap = Min(taskCap, 512u * 1024u);
 			if (devDesc.GetMaxMemory() <= 8ull* 1024ull * 1024ull * 1024ull) // For 8GB cards
 				taskCap = Min(taskCap, 256u * 1024u);
 			if (devDesc.GetMaxMemory() <= 4ull * 1024ull * 1024ull * 1024ull) // For 4GB cards
