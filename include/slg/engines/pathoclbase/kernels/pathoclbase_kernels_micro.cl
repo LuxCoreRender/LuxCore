@@ -24,6 +24,17 @@
 
 //#define DEBUG_PRINTF_KERNEL_NAME 1
 
+// Declares a pointer to one of the GPUTask temporaries (tmpBsdf, tmpHitPoint,
+// tmpPathDepthInfo), used only inside one micro-kernel. On CUDA it points to
+// a kernel local: local memory is interleaved per thread, so the accesses of
+// a warp are coalesced, while the GPUTask array of structs is not. OpenCL
+// __global pointers can't point to private memory, so OpenCL keeps the buffer.
+#if defined(LUXRAYS_CUDA_DEVICE)
+#define GPUTASK_TMP(type, name) type name##Local; __global type *name = &name##Local
+#else
+#define GPUTASK_TMP(type, name) __global type *name = &tasks[gid].name
+#endif
+
 //------------------------------------------------------------------------------
 // Evaluation of the Path finite state machine.
 //
@@ -72,12 +83,13 @@ __kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 	const float passThroughEvent = Rnd_FloatValue(&seedPassThroughEvent);
 	taskState->seedPassThroughEvent = seedPassThroughEvent;
 
+	GPUTASK_TMP(HitPoint, tmpHitPoint);
 	int throughShadowTransparency = taskState->throughShadowTransparency;
 	const bool continueToTrace = Scene_Intersect(taskConfig,
 			EYE_RAY | ((pathInfo->depth.depth == 0) ? CAMERA_RAY : INDIRECT_RAY),
 			&throughShadowTransparency,
 			&pathInfo->volume,
-			&tasks[gid].tmpHitPoint,
+			tmpHitPoint,
 			passThroughEvent,
 			&rays[gid], &rayHits[gid], &taskState->bsdf,
 			&connectionThroughput, VLOAD3F(taskState->throughput.c),
@@ -486,15 +498,17 @@ __kernel void AdvancePaths_MK_RT_DL(
 	const float passThroughEvent = Rnd_FloatValue(&seedPassThroughEvent);
 	taskDirectLight->seedPassThroughEvent = seedPassThroughEvent;
 
+	GPUTASK_TMP(HitPoint, tmpHitPoint);
+	GPUTASK_TMP(BSDF, tmpBsdf);
 	int throughShadowTransparency = taskDirectLight->throughShadowTransparency;
 	const bool continueToTrace =
 		Scene_Intersect(taskConfig,
 			EYE_RAY | SHADOW_RAY,
 			&throughShadowTransparency,
 			&directLightVolInfos[gid],
-			&task->tmpHitPoint,
+			tmpHitPoint,
 			passThroughEvent,
-			&rays[gid], &rayHits[gid], &task->tmpBsdf,
+			&rays[gid], &rayHits[gid], tmpBsdf,
 			&connectionThroughput, WHITE,
 			NULL,
 			true
@@ -605,13 +619,14 @@ __kernel void AdvancePaths_MK_DL_ILLUMINATE(
 	// It will set eventually to true if the light is visible
 	taskDirectLight->directLightResult = NOT_VISIBLE;
 
+	GPUTASK_TMP(HitPoint, tmpHitPoint);
 	if (!BSDF_IsDelta(bsdf
 			MATERIALS_PARAM) &&
 			DirectLight_Illuminate(
 				bsdf,
 				&rays[gid],
 				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-				&task->tmpHitPoint,
+				tmpHitPoint,
 				rays[gid].time,
 				Sampler_GetSample(taskConfig, sampleOffset + IDX_DIRECTLIGHT_X SAMPLER_PARAM),
 				Sampler_GetSample(taskConfig, sampleOffset + IDX_DIRECTLIGHT_Y SAMPLER_PARAM),
@@ -674,12 +689,13 @@ __kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 	// End of variables setup
 	//--------------------------------------------------------------------------
 
+	GPUTASK_TMP(PathDepthInfo, tmpPathDepthInfo);
 	if (DirectLight_BSDFSampling(
 			taskConfig,
 			&tasksDirectLight[gid].illumInfo,
 			rays[gid].time, sampleResult->lastPathVertex,
 			pathInfo,
-			&task->tmpPathDepthInfo,
+			tmpPathDepthInfo,
 			&taskState->bsdf,
 			VLOAD3F(&rays[gid].d.x)
 			LIGHTS_PARAM)) {
