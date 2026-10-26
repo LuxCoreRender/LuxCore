@@ -387,10 +387,11 @@ public:
 		OptixModuleCompileOptions moduleCompileOptions = {};
 		moduleCompileOptions.maxRegisterCount = OPTIX_COMPILE_DEFAULT_MAX_REGISTER_COUNT;
 		moduleCompileOptions.optLevel = OPTIX_COMPILE_OPTIMIZATION_DEFAULT;
-		moduleCompileOptions.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO;
+		moduleCompileOptions.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_NONE;
 
 		OptixPipelineCompileOptions pipelineCompileOptions = {};
 		pipelineCompileOptions.usesMotionBlur = usesMotionBlur;
+		pipelineCompileOptions.usesPrimitiveTypeFlags = OPTIX_PRIMITIVE_TYPE_FLAGS_TRIANGLE;
 		pipelineCompileOptions.traversableGraphFlags = usesMotionBlur ?
 			OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_ANY : OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_SINGLE_LEVEL_INSTANCING;
 		pipelineCompileOptions.numPayloadValues = 0;
@@ -489,7 +490,7 @@ public:
 
 		OptixPipelineLinkOptions pipelineLinkOptions = {};
 		pipelineLinkOptions.maxTraceDepth = 1;
-		pipelineLinkOptions.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO;
+		pipelineLinkOptions.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_NONE;
 
 		optixErrLogSize = sizeof(optixErrLog);
 		CHECK_OPTIX_ERROR(optixPipelineCreate(
@@ -594,7 +595,8 @@ private:
 		HardwareDeviceBuffer *trisBuff = nullptr;
 		cudaDevice->AllocBufferRO(&trisBuff, mesh.GetTriangles().data(), sizeof(Triangle) * mesh.GetTotalTriangleCount());
 
-		const u_int triangleInputFlags[1] = { OPTIX_GEOMETRY_FLAG_NONE };
+		// There is no any-hit program so let the hardware skip that stage
+		const u_int triangleInputFlags[1] = { OPTIX_GEOMETRY_FLAG_DISABLE_ANYHIT };
 
 		// Initialize OptixBuildInput for each mesh
 		OptixBuildInput buildInput = {};
@@ -632,7 +634,7 @@ private:
 		// Allocate temporary build buffers
 
 		OptixAccelBuildOptions accelOptions = {};
-		accelOptions.buildFlags = OPTIX_BUILD_FLAG_ALLOW_COMPACTION;
+		accelOptions.buildFlags = OPTIX_BUILD_FLAG_ALLOW_COMPACTION | OPTIX_BUILD_FLAG_PREFER_FAST_TRACE;
 		accelOptions.operation = OPTIX_BUILD_OPERATION_BUILD;
 		accelOptions.motionOptions.numKeys = 0;
 
@@ -730,9 +732,15 @@ void OptixKernel::EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
 		// Note: the assumption here is that rayBuff and rayHitBuff are always
 		// the same otherwise I would have to synchronize the EnqueueWriteBuffer().
 		// This is always true at the moment for all render engines.
-		optixAccelParams.rayBuff = ((CUDADeviceBuffer *)rayBuff)->GetCUDADevicePointer();
-		optixAccelParams.rayHitBuff = ((CUDADeviceBuffer *)rayHitBuff)->GetCUDADevicePointer();
-		cudaDevice->EnqueueWriteBuffer(optixAccelParamsBuff, false, sizeof(OptixAccelParams), &optixAccelParams);
+		const CUdeviceptr rayBuffPtr = ((CUDADeviceBuffer *)rayBuff)->GetCUDADevicePointer();
+		const CUdeviceptr rayHitBuffPtr = ((CUDADeviceBuffer *)rayHitBuff)->GetCUDADevicePointer();
+		// Upload the parameters only when they change: they are usually the
+		// same for every launch
+		if ((optixAccelParams.rayBuff != rayBuffPtr) || (optixAccelParams.rayHitBuff != rayHitBuffPtr)) {
+			optixAccelParams.rayBuff = rayBuffPtr;
+			optixAccelParams.rayHitBuff = rayHitBuffPtr;
+			cudaDevice->EnqueueWriteBuffer(optixAccelParamsBuff, false, sizeof(OptixAccelParams), &optixAccelParams);
+		}
 
 		CHECK_OPTIX_ERROR(optixLaunch(
 				optixPipeline,
