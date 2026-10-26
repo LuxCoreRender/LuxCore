@@ -270,6 +270,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		{initSeedKernel, initWorkGroupSize, "InitSeed"},
 		{initKernel, initWorkGroupSize, "Init"},
 		{resetPathQueuesKernel, resetPathQueuesWorkGroupSize, "ResetPathQueues"},
+		{queueRTPathsKernel, queueRTPathsWorkGroupSize, "QueueRTPaths"},
 	};
 
 	for (auto& [kernel, workGroupSize, name] : kernels) {
@@ -318,6 +319,12 @@ void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 
 	// resetPathQueuesKernel kernel
 	intersectionDevice.SetKernelArg(resetPathQueuesKernel, 0, pathQueueCountsBuff);
+
+	// queueRTPathsKernel kernel
+	argIndex = 0;
+	intersectionDevice.SetKernelArg(queueRTPathsKernel, argIndex++, pathStatesBuff);
+	intersectionDevice.SetKernelArg(queueRTPathsKernel, argIndex++, pathQueuesBuff);
+	intersectionDevice.SetKernelArg(queueRTPathsKernel, argIndex++, pathQueueCountsBuff);
 
 	// initKernel kernel
 	argIndex = 0;
@@ -490,6 +497,8 @@ void PathOCLBaseOCLRenderThread::EnqueueInitKernel() {
 			HardwareDeviceRange(resetPathQueuesWorkGroupSize), HardwareDeviceRange(resetPathQueuesWorkGroupSize));
 	intersectionDevice.EnqueueKernel(initKernel,
 			HardwareDeviceRange(renderEngine->taskCount), HardwareDeviceRange(initWorkGroupSize));
+	intersectionDevice.EnqueueKernel(queueRTPathsKernel,
+			HardwareDeviceRange(renderEngine->taskCount), HardwareDeviceRange(queueRTPathsWorkGroupSize));
 }
 
 void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel() {
@@ -540,11 +549,13 @@ void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel() {
 	EndKernelProfile(slg::ocl::pathoclbase::MK_GENERATE_CAMERA_RAY, profileStart);
 
 	// All queued paths have been consumed: the queues are filled again
-	// during the next iteration
+	// during the next iteration, the ray tracing ones right now
 	profileStart = BeginKernelProfile();
 	intersectionDevice.EnqueueKernel(resetPathQueuesKernel,
 			HardwareDeviceRange(resetPathQueuesWorkGroupSize), HardwareDeviceRange(resetPathQueuesWorkGroupSize));
-	EndKernelProfile(KERNEL_PROFILE_RESET_QUEUES, profileStart);
+	intersectionDevice.EnqueueKernel(queueRTPathsKernel,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(queueRTPathsWorkGroupSize));
+	EndKernelProfile(KERNEL_PROFILE_PATH_QUEUES, profileStart);
 }
 
 double PathOCLBaseOCLRenderThread::BeginKernelProfile() {
@@ -570,7 +581,7 @@ void PathOCLBaseOCLRenderThread::LogKernelProfile() const {
 	static const char *names[KERNEL_PROFILE_COUNT] = {
 		"RT_NEXT_VERTEX", "HIT_NOTHING", "HIT_OBJECT", "DL_ILLUMINATE",
 		"DL_SAMPLE_BSDF", "RT_DL", "GENERATE_NEXT_VERTEX_RAY", "SPLAT_SAMPLE",
-		"NEXT_SAMPLE", "GENERATE_CAMERA_RAY", "TRACE (OptiX)", "RESET_PATH_QUEUES"
+		"NEXT_SAMPLE", "GENERATE_CAMERA_RAY", "TRACE (OptiX)", "PATH_QUEUES"
 	};
 	double total = 0.0;
 	for (u_int i = 0; i < KERNEL_PROFILE_COUNT; ++i)

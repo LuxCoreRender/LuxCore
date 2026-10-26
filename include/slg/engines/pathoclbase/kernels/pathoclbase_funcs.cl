@@ -53,7 +53,8 @@ OPENCL_FORCE_INLINE int PathState_QueueIndex(const PathState state) {
 		case MK_GENERATE_CAMERA_RAY:
 			return PATH_QUEUE_GENERATE_CAMERA_RAY;
 		default:
-			// MK_RT_NEXT_VERTEX, MK_RT_DL and MK_DONE have no queue
+			// MK_RT_NEXT_VERTEX and MK_RT_DL are queued by QueueRTPaths,
+			// MK_DONE has no queue
 			return -1;
 	}
 }
@@ -107,6 +108,21 @@ __kernel void ResetPathQueues(__global uint *pathQueueCounts) {
 	const size_t gid = get_global_id(0);
 	if (gid < PATH_QUEUE_COUNT)
 		pathQueueCounts[gid] = 0;
+}
+
+// Queues the paths waiting for a ray to be traced, so the micro-kernels run
+// after the next trace get full warps
+__kernel void QueueRTPaths(__global PathState *pathStates,
+		__global uint *pathQueues, __global uint *pathQueueCounts) {
+	const size_t gid = get_global_id(0);
+
+	const PathState pathState = pathStates[gid];
+	const int queueIndex = (pathState == MK_RT_NEXT_VERTEX) ? PATH_QUEUE_RT_NEXT_VERTEX :
+		((pathState == MK_RT_DL) ? PATH_QUEUE_RT_DL : -1);
+	if (queueIndex >= 0) {
+		const uint pos = PathQueue_Reserve(pathQueueCounts, queueIndex);
+		pathQueues[queueIndex * get_global_size(0) + pos] = gid;
+	}
 }
 
 //------------------------------------------------------------------------------
