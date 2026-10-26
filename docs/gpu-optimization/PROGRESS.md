@@ -238,3 +238,49 @@ Not measured yet (T0.3).
   in two A/Bs, likely its PhotonGI cache build inside the 20 s).
 - Next lever (T2.7): structure-of-arrays for `GPUTaskState`/`BSDF`,
   `tmpHitPoint`, `SampleResult`.
+
+### 2026-10-26: Nsight Compute profile, new roadmap (Phase 5)
+
+- User goal: Octane-class speed on the RTX 5070. Octane is not installed,
+  so parity is not measurable here; tracked via samples/sec instead.
+- T2.7a (private BSDF copy in `MK_GENERATE_NEXT_VERTEX_RAY`, CUDA only):
+  kernel 18.01 -> 18.10 ms per M samples, no gain. Kept on branch
+  `gpu-opt/T2.7-local-bsdf`, not merged.
+- Sobol vs RANDOM sampler (kernel profile, LuxBall): 83.1 vs 81.0 ms per M
+  samples in total. The sampler costs about 2.5%: not a lever.
+- Nsight Compute works once GPU performance counters are allowed for all
+  users (NVIDIA Control Panel, Developer, Manage GPU Performance Counters;
+  the user enabled it). Without it: `ERR_NVGPUCTRPERM`. Command used, from
+  the scene dir, with `TEMP`/`TMP` set to `bench\T2.6\tmp` so the kernel
+  cache is warm:
+
+  ```
+  "C:\Program Files\NVIDIA Corporation\Nsight Compute 2025.1.1\target\windows-desktop-win7-x64\ncu.exe"
+    --target-processes all -k "regex:MK_(GENERATE_NEXT_VERTEX_RAY|DL_ILLUMINATE|...)"
+    --launch-skip 160 --launch-count 8 --set full --import-source no
+    -o bench\ncu\luxball-full <bin>\luxcoreconsole.exe <usual -D overrides> render.cfg
+  ```
+
+  Read reports with `extras\python\ncu_report.py` (the CSV export mixes
+  locale number formats). Report: `bench\ncu\luxball-full.ncu-rep`.
+- LuxBall, `bin-T2.6` (combined), one launch per kernel after 20
+  iterations. occ = achieved occupancy, lanes = active threads per warp
+  instruction, ld/st = sectors per global load/store request:
+
+  | Kernel | ms | regs | occ % | issue % | lanes | ld | st | top stall (cycles/issue) |
+  |---|---|---|---|---|---|---|---|---|
+  | RT_NEXT_VERTEX | 2.00 | 247 | 15.7 | 7.7 | 15.8 | 8.5 | 16.3 | long_scoreboard 19.6 |
+  | HIT_OBJECT | 0.94 | 255 | 14.5 | 7.1 | 9.2 | 4.4 | 6.8 | long_scoreboard 19.5 |
+  | RT_DL | 1.27 | 250 | 12.5 | 8.9 | 4.8 | 3.7 | 4.3 | long_scoreboard 14.0 |
+  | DL_ILLUMINATE | 2.54 | 252 | 16.1 | 6.6 | 26.4 | 6.8 | 29.1 | long_scoreboard 22.0 |
+  | DL_SAMPLE_BSDF | 1.42 | 254 | 15.2 | 6.7 | 16.4 | 11.3 | 18.6 | long_scoreboard 22.1 |
+  | GENERATE_NEXT_VERTEX_RAY | 3.14 | 255 | 16.1 | 5.7 | 18.1 | 10.1 | 17.5 | long_scoreboard 28.1 |
+  | SPLAT_SAMPLE | 0.36 | 40 | 86.6 | 1.7 | 31.4 | 9.0 | 25.6 | long_scoreboard 326, lg_throttle 253 |
+  | GENERATE_CAMERA_RAY | 1.40 | 60 | 59.6 | 2.7 | 26.0 | 4.4 | 31.9 | lg_throttle 150, long_scoreboard 108 |
+
+- Reading: the kernels are memory-latency bound with too few warps
+  (registers), uncoalesced per-path structs and half-empty warps. DRAM is
+  not saturated (26-45% in the heavy kernels; `RT_NEXT_VERTEX` moves 542 MB
+  per launch, L2 at 67%). SASS: each heavy kernel is 94-102K instructions
+  with about 1600 calls (cuobjdump of an earlier combined cubin).
+- New plan: Phase 5 in `PLAN.md` (T5.1-T5.7). T2.7 is replaced by T5.3.
