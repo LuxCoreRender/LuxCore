@@ -83,9 +83,24 @@ OPENCL_FORCE_INLINE uint PathQueue_Reserve(__global uint *pathQueueCounts, const
 #endif
 }
 
-// Sets the state of path gid: QueuePaths queues it for the micro-kernel of
-// that state
-#define PATH_STATE_SET(state) pathStates[gid] = (state)
+// Sets the state of path gid. MK_GENERATE_NEXT_VERTEX_RAY is queued here, in
+// the order the micro-kernels of the iteration finish their warps: warps
+// that finish together have paths of similar cost (often the same
+// materials), a weak sort that a path order scan loses (LynxSpider
+// MK_GENERATE_NEXT_VERTEX_RAY 17.3 -> 29.3 ms per M samples). The other
+// states are queued by QueuePaths.
+OPENCL_FORCE_INLINE void PathState_Set(const size_t gid, const PathState state,
+		__global PathState *pathStates,
+		__global uint *pathQueues, __global uint *pathQueueCounts) {
+	pathStates[gid] = state;
+
+	if (state == MK_GENERATE_NEXT_VERTEX_RAY) {
+		const uint pos = PathQueue_Reserve(pathQueueCounts, PATH_QUEUE_GENERATE_NEXT_VERTEX_RAY);
+		pathQueues[PATH_QUEUE_GENERATE_NEXT_VERTEX_RAY * get_global_size(0) + pos] = gid;
+	}
+}
+
+#define PATH_STATE_SET(state) PathState_Set(gid, (state), pathStates, pathQueues, pathQueueCounts)
 
 // Used by the micro-kernels with a queue: one thread for each queued path.
 // Kernels are launched with taskCount threads, the threads past the number of

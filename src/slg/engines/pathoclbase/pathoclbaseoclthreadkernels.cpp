@@ -524,11 +524,14 @@ void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel() {
 
 	for (const auto &[microKernel, state] : microKernels) {
 		// Queue the paths in this state: all the micro-kernels that can set
-		// it have already run in this iteration
+		// it have already run in this iteration. MK_GENERATE_NEXT_VERTEX_RAY
+		// is queued by PATH_STATE_SET() (see PathState_Set())
 		double profileStart = BeginKernelProfile();
-		intersectionDevice.SetKernelArg(queuePathsKernel, 3, (u_int)state);
-		intersectionDevice.EnqueueKernel(queuePathsKernel,
-				HardwareDeviceRange(taskCount), HardwareDeviceRange(queuePathsWorkGroupSize));
+		if (state != slg::ocl::pathoclbase::MK_GENERATE_NEXT_VERTEX_RAY) {
+			intersectionDevice.SetKernelArg(queuePathsKernel, 3, (u_int)state);
+			intersectionDevice.EnqueueKernel(queuePathsKernel,
+					HardwareDeviceRange(taskCount), HardwareDeviceRange(queuePathsWorkGroupSize));
+		}
 		EndKernelProfile(KERNEL_PROFILE_PATH_QUEUES, profileStart);
 
 		profileStart = BeginKernelProfile();
