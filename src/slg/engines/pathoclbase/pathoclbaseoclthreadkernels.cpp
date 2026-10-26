@@ -503,6 +503,7 @@ void PathOCLBaseOCLRenderThread::EnqueueInitKernel() {
 			HardwareDeviceRange(resetPathQueuesWorkGroupSize), HardwareDeviceRange(resetPathQueuesWorkGroupSize));
 	intersectionDevice.EnqueueKernel(initKernel,
 			HardwareDeviceRange(renderEngine->taskCount), HardwareDeviceRange(initWorkGroupSize));
+	initPathsPending = true;
 }
 
 void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel() {
@@ -523,6 +524,10 @@ void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel() {
 	};
 
 	for (const auto &[microKernel, state] : microKernels) {
+		if (!initPathsPending && ((state == slg::ocl::pathoclbase::MK_NEXT_SAMPLE) ||
+				(state == slg::ocl::pathoclbase::MK_GENERATE_CAMERA_RAY)))
+			continue;
+
 		// Queue the paths in this state: all the micro-kernels that can set
 		// it have already run in this iteration. MK_GENERATE_NEXT_VERTEX_RAY
 		// is queued by PATH_STATE_SET() (see PathState_Set())
@@ -539,6 +544,7 @@ void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel() {
 				HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[state]));
 		EndKernelProfile(state, profileStart);
 	}
+	initPathsPending = false;
 
 	// All queued paths have been consumed
 	const double profileStart = BeginKernelProfile();

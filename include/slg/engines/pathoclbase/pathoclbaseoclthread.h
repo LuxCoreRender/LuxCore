@@ -295,6 +295,11 @@ protected:
 	size_t resetPathQueuesWorkGroupSize;
 	luxrays::HardwareDeviceKernelUPtr queuePathsKernel;
 	size_t queuePathsWorkGroupSize;
+	// Only Init can leave paths in MK_GENERATE_CAMERA_RAY (the samples
+	// Sampler_Init() rejects) and nothing sets MK_NEXT_SAMPLE: MK_SPLAT_SAMPLE
+	// does their work. So their queues and kernels run only in the first
+	// iteration after Init.
+	bool initPathsPending;
 	size_t initWorkGroupSize;
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_RT_NEXT_VERTEX;
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_HIT_NOTHING;

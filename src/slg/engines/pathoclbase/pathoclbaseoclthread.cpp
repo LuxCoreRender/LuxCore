@@ -123,6 +123,7 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	initKernel = nullptr;
 	resetPathQueuesKernel = nullptr;
 	queuePathsKernel = nullptr;
+	initPathsPending = true;
 	advancePathsKernel_MK_RT_NEXT_VERTEX = nullptr;
 	advancePathsKernel_MK_HIT_NOTHING = nullptr;
 	advancePathsKernel_MK_HIT_OBJECT = nullptr;
