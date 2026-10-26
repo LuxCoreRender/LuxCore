@@ -935,7 +935,7 @@ __kernel void AdvancePaths_MK_SPLAT_SAMPLE(
 	filmRadianceGroupScale[7] = MAKE_FLOAT3(filmRadianceGroupScale7_R, filmRadianceGroupScale7_G, filmRadianceGroupScale7_B);
 
 	if (sampleResult->isHoldout) {
-		SampleResult_ClearRadiance(sampleResult);
+		SampleResult_ClearRadiance(&taskConfig->film, sampleResult);
 		VSTORE3F(BLACK, sampleResult->albedo.c);
 	}
 
