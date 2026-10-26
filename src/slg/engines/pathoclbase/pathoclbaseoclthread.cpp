@@ -109,6 +109,9 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	pathStatesBuff = nullptr;
 	pathQueuesBuff = nullptr;
 	pathQueueCountsBuff = nullptr;
+	materialQueueCountsBuff = nullptr;
+	materialQueueCursorsBuff = nullptr;
+	pathMaterialKeysBuff = nullptr;
 	samplerSharedDataBuff = nullptr;
 	samplesBuff = nullptr;
 	sampleDataBuff = nullptr;
@@ -123,6 +126,9 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	initKernel = nullptr;
 	resetPathQueuesKernel = nullptr;
 	queuePathsKernel = nullptr;
+	countPathsByMaterialKernel = nullptr;
+	scanPathsByMaterialKernel = nullptr;
+	queuePathsByMaterialKernel = nullptr;
 	initPathsPending = true;
 	advancePathsKernel_MK_RT_NEXT_VERTEX = nullptr;
 	advancePathsKernel_MK_HIT_NOTHING = nullptr;
@@ -180,6 +186,8 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	intersectionDevice.FreeBuffer(&materialsBuff);
 	intersectionDevice.FreeBuffer(&materialEvalOpsBuff);
 	intersectionDevice.FreeBuffer(&materialEvalStackBuff);
+	intersectionDevice.FreeBuffer(&materialQueueCountsBuff);
+	intersectionDevice.FreeBuffer(&materialQueueCursorsBuff);
 	intersectionDevice.FreeBuffer(&texturesBuff);
 	intersectionDevice.FreeBuffer(&textureEvalOpsBuff);
 	intersectionDevice.FreeBuffer(&textureEvalStackBuff);
@@ -231,6 +239,7 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	intersectionDevice.FreeBuffer(&pathStatesBuff);
 	intersectionDevice.FreeBuffer(&pathQueuesBuff);
 	intersectionDevice.FreeBuffer(&pathQueueCountsBuff);
+	intersectionDevice.FreeBuffer(&pathMaterialKeysBuff);
 	intersectionDevice.FreeBuffer(&samplerSharedDataBuff);
 	intersectionDevice.FreeBuffer(&samplesBuff);
 	intersectionDevice.FreeBuffer(&sampleDataBuff);
@@ -248,6 +257,14 @@ void PathOCLBaseOCLRenderThread::Stop() {
 
 void PathOCLBaseOCLRenderThread::StartRenderThread() {
 	threadDone = false;
+
+	// The scene may have changed: calibrate the material sort again
+	materialSortIteration = 0;
+	for (u_int i = 0; i < slg::ocl::pathoclbase::MK_DONE; ++i) {
+		materialSortTimes[i][0] = 0.0;
+		materialSortTimes[i][1] = 0.0;
+		materialSortEnabled[i] = false;
+	}
 
 	// Create the thread for the rendering
 	renderThread = std::make_unique<luxrays::JThread>(

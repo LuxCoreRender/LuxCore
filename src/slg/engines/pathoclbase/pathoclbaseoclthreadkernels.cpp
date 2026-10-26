@@ -20,6 +20,7 @@
 #include <limits>
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#include <chrono>
 #include <mutex>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -276,6 +277,9 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		{initKernel, initWorkGroupSize, "Init"},
 		{resetPathQueuesKernel, resetPathQueuesWorkGroupSize, "ResetPathQueues"},
 		{queuePathsKernel, queuePathsWorkGroupSize, "QueuePaths"},
+		{countPathsByMaterialKernel, countPathsByMaterialWorkGroupSize, "CountPathsByMaterial"},
+		{scanPathsByMaterialKernel, scanPathsByMaterialWorkGroupSize, "ScanPathsByMaterial"},
+		{queuePathsByMaterialKernel, queuePathsByMaterialWorkGroupSize, "QueuePathsByMaterial"},
 	};
 
 	for (auto& [kernel, workGroupSize, name] : kernels) {
@@ -331,6 +335,28 @@ void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	intersectionDevice.SetKernelArg(queuePathsKernel, argIndex++, pathQueuesBuff);
 	intersectionDevice.SetKernelArg(queuePathsKernel, argIndex++, pathQueueCountsBuff);
 	intersectionDevice.SetKernelArg(queuePathsKernel, argIndex++, 0u);
+
+	// Material sorted queue kernels (the state argument is set at each launch)
+	const u_int materialsCount = renderEngine->compiledScene->mats.size();
+	argIndex = 0;
+	intersectionDevice.SetKernelArg(countPathsByMaterialKernel, argIndex++, pathStatesBuff);
+	intersectionDevice.SetKernelArg(countPathsByMaterialKernel, argIndex++, tasksStateBuff);
+	intersectionDevice.SetKernelArg(countPathsByMaterialKernel, argIndex++, pathMaterialKeysBuff);
+	intersectionDevice.SetKernelArg(countPathsByMaterialKernel, argIndex++, materialQueueCountsBuff);
+	intersectionDevice.SetKernelArg(countPathsByMaterialKernel, argIndex++, 0u);
+	intersectionDevice.SetKernelArg(countPathsByMaterialKernel, argIndex++, materialsCount);
+	argIndex = 0;
+	intersectionDevice.SetKernelArg(scanPathsByMaterialKernel, argIndex++, materialQueueCountsBuff);
+	intersectionDevice.SetKernelArg(scanPathsByMaterialKernel, argIndex++, materialQueueCursorsBuff);
+	intersectionDevice.SetKernelArg(scanPathsByMaterialKernel, argIndex++, pathQueueCountsBuff);
+	intersectionDevice.SetKernelArg(scanPathsByMaterialKernel, argIndex++, 0u);
+	intersectionDevice.SetKernelArg(scanPathsByMaterialKernel, argIndex++, materialsCount);
+	argIndex = 0;
+	intersectionDevice.SetKernelArg(queuePathsByMaterialKernel, argIndex++, pathStatesBuff);
+	intersectionDevice.SetKernelArg(queuePathsByMaterialKernel, argIndex++, pathMaterialKeysBuff);
+	intersectionDevice.SetKernelArg(queuePathsByMaterialKernel, argIndex++, pathQueuesBuff);
+	intersectionDevice.SetKernelArg(queuePathsByMaterialKernel, argIndex++, materialQueueCursorsBuff);
+	intersectionDevice.SetKernelArg(queuePathsByMaterialKernel, argIndex++, 0u);
 
 	// initKernel kernel
 	argIndex = 0;
@@ -506,6 +532,72 @@ void PathOCLBaseOCLRenderThread::EnqueueInitKernel() {
 	initPathsPending = true;
 }
 
+// Queues the paths in the given state for its micro-kernel: all the
+// micro-kernels that can set the state have already run in this iteration
+void PathOCLBaseOCLRenderThread::EnqueueQueuePathsKernels(const slg::ocl::pathoclbase::PathState state,
+		const bool sortByMaterial) {
+	const u_int taskCount = renderEngine->taskCount;
+
+	if (sortByMaterial) {
+		intersectionDevice.SetKernelArg(countPathsByMaterialKernel, 4, (u_int)state);
+		intersectionDevice.EnqueueKernel(countPathsByMaterialKernel,
+				HardwareDeviceRange(taskCount), HardwareDeviceRange(countPathsByMaterialWorkGroupSize));
+		intersectionDevice.SetKernelArg(scanPathsByMaterialKernel, 3, (u_int)state);
+		intersectionDevice.EnqueueKernel(scanPathsByMaterialKernel,
+				HardwareDeviceRange(1), HardwareDeviceRange(1));
+		intersectionDevice.SetKernelArg(queuePathsByMaterialKernel, 4, (u_int)state);
+		intersectionDevice.EnqueueKernel(queuePathsByMaterialKernel,
+				HardwareDeviceRange(taskCount), HardwareDeviceRange(queuePathsByMaterialWorkGroupSize));
+	} else {
+		intersectionDevice.SetKernelArg(queuePathsKernel, 3, (u_int)state);
+		intersectionDevice.EnqueueKernel(queuePathsKernel,
+				HardwareDeviceRange(taskCount), HardwareDeviceRange(queuePathsWorkGroupSize));
+	}
+}
+
+// The micro-kernels evaluating the BSDF, when there is more than one material.
+// MK_DL_ILLUMINATE only checks BSDF_IsDelta() and samples a light: sorted, it
+// was 10-50% slower on all the bench scenes.
+bool PathOCLBaseOCLRenderThread::IsMaterialSortState(const slg::ocl::pathoclbase::PathState state) const {
+	switch (state) {
+		case slg::ocl::pathoclbase::MK_HIT_OBJECT:
+		case slg::ocl::pathoclbase::MK_DL_SAMPLE_BSDF:
+		case slg::ocl::pathoclbase::MK_GENERATE_NEXT_VERTEX_RAY:
+			return renderEngine->compiledScene->mats.size() > 1;
+		default:
+			return false;
+	}
+}
+
+static const char *kernelProfileNames[] = {
+	"RT_NEXT_VERTEX", "HIT_NOTHING", "HIT_OBJECT", "DL_ILLUMINATE",
+	"DL_SAMPLE_BSDF", "RT_DL", "GENERATE_NEXT_VERTEX_RAY", "SPLAT_SAMPLE",
+	"NEXT_SAMPLE", "GENERATE_CAMERA_RAY", "TRACE (OptiX)", "PATH_QUEUES"
+};
+
+// Called after each iteration: at the end of the calibration, picks the
+// faster queue order of each state
+void PathOCLBaseOCLRenderThread::UpdateMaterialSortCalibration() {
+	if (materialSortIteration >= MATERIAL_SORT_WARMUP + MATERIAL_SORT_CALIBRATION)
+		return;
+
+	++materialSortIteration;
+	if (materialSortIteration < MATERIAL_SORT_WARMUP + MATERIAL_SORT_CALIBRATION)
+		return;
+
+	for (u_int i = 0; i < slg::ocl::pathoclbase::MK_DONE; ++i) {
+		const slg::ocl::pathoclbase::PathState state = (slg::ocl::pathoclbase::PathState)i;
+		if (!IsMaterialSortState(state))
+			continue;
+
+		materialSortEnabled[state] = (materialSortTimes[state][1] < materialSortTimes[state][0]);
+		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Material sort " << kernelProfileNames[state] <<
+				": path order " << materialSortTimes[state][0] * 1000.0 << "ms, sorted " <<
+				materialSortTimes[state][1] * 1000.0 << "ms, using " <<
+				(materialSortEnabled[state] ? "sorted" : "path order"));
+	}
+}
+
 void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel() {
 	const u_int taskCount = renderEngine->taskCount;
 
@@ -523,28 +615,45 @@ void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel() {
 		{&advancePathsKernel_MK_GENERATE_CAMERA_RAY, slg::ocl::pathoclbase::MK_GENERATE_CAMERA_RAY},
 	};
 
+	// During the material sort calibration, odd iterations sort and even ones
+	// keep the path order
+	const bool calibrating = (materialSortIteration >= MATERIAL_SORT_WARMUP) &&
+			(materialSortIteration < MATERIAL_SORT_WARMUP + MATERIAL_SORT_CALIBRATION);
+	const bool calibrationSort = (materialSortIteration & 1);
+
 	for (const auto &[microKernel, state] : microKernels) {
 		if (!initPathsPending && ((state == slg::ocl::pathoclbase::MK_NEXT_SAMPLE) ||
 				(state == slg::ocl::pathoclbase::MK_GENERATE_CAMERA_RAY)))
 			continue;
 
-		// Queue the paths in this state: all the micro-kernels that can set
-		// it have already run in this iteration. MK_GENERATE_NEXT_VERTEX_RAY
-		// is queued by PATH_STATE_SET() (see PathState_Set())
-		double profileStart = BeginKernelProfile();
-		if (state != slg::ocl::pathoclbase::MK_GENERATE_NEXT_VERTEX_RAY) {
-			intersectionDevice.SetKernelArg(queuePathsKernel, 3, (u_int)state);
-			intersectionDevice.EnqueueKernel(queuePathsKernel,
-					HardwareDeviceRange(taskCount), HardwareDeviceRange(queuePathsWorkGroupSize));
+		const bool sortable = IsMaterialSortState(state);
+		const bool timeSort = calibrating && sortable;
+		const bool sortByMaterial = sortable && (timeSort ? calibrationSort : materialSortEnabled[state]);
+
+		// WallClockTime() is too coarse on Windows (GetTickCount())
+		std::chrono::steady_clock::time_point sortStart;
+		if (timeSort) {
+			intersectionDevice.FinishQueue();
+			sortStart = std::chrono::steady_clock::now();
 		}
+
+		double profileStart = BeginKernelProfile();
+		EnqueueQueuePathsKernels(state, sortByMaterial);
 		EndKernelProfile(KERNEL_PROFILE_PATH_QUEUES, profileStart);
 
 		profileStart = BeginKernelProfile();
 		intersectionDevice.EnqueueKernel(*microKernel,
 				HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[state]));
 		EndKernelProfile(state, profileStart);
+
+		if (timeSort) {
+			intersectionDevice.FinishQueue();
+			materialSortTimes[state][sortByMaterial] +=
+					std::chrono::duration<double>(std::chrono::steady_clock::now() - sortStart).count();
+		}
 	}
 	initPathsPending = false;
+	UpdateMaterialSortCalibration();
 
 	// All queued paths have been consumed
 	const double profileStart = BeginKernelProfile();
@@ -573,16 +682,11 @@ void PathOCLBaseOCLRenderThread::LogKernelProfile() const {
 	if (!renderEngine->profileKernels)
 		return;
 
-	static const char *names[KERNEL_PROFILE_COUNT] = {
-		"RT_NEXT_VERTEX", "HIT_NOTHING", "HIT_OBJECT", "DL_ILLUMINATE",
-		"DL_SAMPLE_BSDF", "RT_DL", "GENERATE_NEXT_VERTEX_RAY", "SPLAT_SAMPLE",
-		"NEXT_SAMPLE", "GENERATE_CAMERA_RAY", "TRACE (OptiX)", "PATH_QUEUES"
-	};
 	double total = 0.0;
 	for (u_int i = 0; i < KERNEL_PROFILE_COUNT; ++i)
 		total += kernelProfileTimes[i];
 	for (u_int i = 0; i < KERNEL_PROFILE_COUNT; ++i)
-		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernel profile " << names[i] << ": " <<
+		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernel profile " << kernelProfileNames[i] << ": " <<
 				kernelProfileTimes[i] * 1000.0 << "ms (" << (total > 0.0 ? 100.0 * kernelProfileTimes[i] / total : 0.0) << "%)");
 }
 

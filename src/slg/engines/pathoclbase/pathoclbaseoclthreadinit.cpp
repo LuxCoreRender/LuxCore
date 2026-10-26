@@ -162,6 +162,13 @@ void PathOCLBaseOCLRenderThread::InitMaterials() {
 				renderEngine->compiledScene->maxMaterialEvalStackSize * taskCount),
 			"Material evaluation stacks");
 
+	// Material sorted queues: the counters must start at 0 (the sort clears
+	// them after use)
+	const vector<u_int> zeros(materialsCount + 1, 0);
+	intersectionDevice.AllocBufferRW(&materialQueueCountsBuff, (void *)&zeros[0],
+			sizeof(u_int) * zeros.size(), "Material queue counts");
+	intersectionDevice.AllocBufferRW(&materialQueueCursorsBuff, nullptr,
+			sizeof(u_int) * zeros.size(), "Material queue cursors");
 }
 
 bool PathOCLBaseOCLRenderThread::UseLocalEvalStacks() const {
@@ -384,6 +391,8 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	// counters are reset by the ResetPathQueues kernel.
 	intersectionDevice.AllocBufferRW(&pathQueuesBuff, nullptr, sizeof(u_int) * slg::ocl::pathoclbase::PATH_QUEUE_COUNT * taskCount, "PathQueues");
 	intersectionDevice.AllocBufferRW(&pathQueueCountsBuff, nullptr, sizeof(u_int) * slg::ocl::pathoclbase::PATH_QUEUE_COUNT, "PathQueueCounts");
+	// Material of each path, written and read by the material sort
+	intersectionDevice.AllocBufferRW(&pathMaterialKeysBuff, nullptr, sizeof(u_int) * taskCount, "PathMaterialKeys");
 }
 
 void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
