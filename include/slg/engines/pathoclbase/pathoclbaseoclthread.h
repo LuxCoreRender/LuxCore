@@ -293,8 +293,8 @@ protected:
 	luxrays::HardwareDeviceKernelUPtr initKernel;
 	luxrays::HardwareDeviceKernelUPtr resetPathQueuesKernel;
 	size_t resetPathQueuesWorkGroupSize;
-	luxrays::HardwareDeviceKernelUPtr queueRTPathsKernel;
-	size_t queueRTPathsWorkGroupSize;
+	luxrays::HardwareDeviceKernelUPtr queuePathsKernel;
+	size_t queuePathsWorkGroupSize;
 	size_t initWorkGroupSize;
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_RT_NEXT_VERTEX;
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_HIT_NOTHING;

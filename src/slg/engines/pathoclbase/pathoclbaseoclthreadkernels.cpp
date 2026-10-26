@@ -275,7 +275,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		{initSeedKernel, initWorkGroupSize, "InitSeed"},
 		{initKernel, initWorkGroupSize, "Init"},
 		{resetPathQueuesKernel, resetPathQueuesWorkGroupSize, "ResetPathQueues"},
-		{queueRTPathsKernel, queueRTPathsWorkGroupSize, "QueueRTPaths"},
+		{queuePathsKernel, queuePathsWorkGroupSize, "QueuePaths"},
 	};
 
 	for (auto& [kernel, workGroupSize, name] : kernels) {
@@ -325,11 +325,12 @@ void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	// resetPathQueuesKernel kernel
 	intersectionDevice.SetKernelArg(resetPathQueuesKernel, 0, pathQueueCountsBuff);
 
-	// queueRTPathsKernel kernel
+	// queuePathsKernel kernel (the state argument is set at each launch)
 	argIndex = 0;
-	intersectionDevice.SetKernelArg(queueRTPathsKernel, argIndex++, pathStatesBuff);
-	intersectionDevice.SetKernelArg(queueRTPathsKernel, argIndex++, pathQueuesBuff);
-	intersectionDevice.SetKernelArg(queueRTPathsKernel, argIndex++, pathQueueCountsBuff);
+	intersectionDevice.SetKernelArg(queuePathsKernel, argIndex++, pathStatesBuff);
+	intersectionDevice.SetKernelArg(queuePathsKernel, argIndex++, pathQueuesBuff);
+	intersectionDevice.SetKernelArg(queuePathsKernel, argIndex++, pathQueueCountsBuff);
+	intersectionDevice.SetKernelArg(queuePathsKernel, argIndex++, 0u);
 
 	// initKernel kernel
 	argIndex = 0;
@@ -497,69 +498,52 @@ void PathOCLBaseOCLRenderThread::SetKernelArgs() {
 }
 
 void PathOCLBaseOCLRenderThread::EnqueueInitKernel() {
-	// Init queues the paths for the first iteration
+	// The queues are filled by QueuePaths during the first iteration
 	intersectionDevice.EnqueueKernel(resetPathQueuesKernel,
 			HardwareDeviceRange(resetPathQueuesWorkGroupSize), HardwareDeviceRange(resetPathQueuesWorkGroupSize));
 	intersectionDevice.EnqueueKernel(initKernel,
 			HardwareDeviceRange(renderEngine->taskCount), HardwareDeviceRange(initWorkGroupSize));
-	intersectionDevice.EnqueueKernel(queueRTPathsKernel,
-			HardwareDeviceRange(renderEngine->taskCount), HardwareDeviceRange(queueRTPathsWorkGroupSize));
 }
 
 void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel() {
 	const u_int taskCount = renderEngine->taskCount;
 
-	double profileStart;
+	// Micro kernels version, in the order of the path state machine
+	const std::tuple<const HardwareDeviceKernelUPtr *, slg::ocl::pathoclbase::PathState> microKernels[] = {
+		{&advancePathsKernel_MK_RT_NEXT_VERTEX, slg::ocl::pathoclbase::MK_RT_NEXT_VERTEX},
+		{&advancePathsKernel_MK_HIT_NOTHING, slg::ocl::pathoclbase::MK_HIT_NOTHING},
+		{&advancePathsKernel_MK_HIT_OBJECT, slg::ocl::pathoclbase::MK_HIT_OBJECT},
+		{&advancePathsKernel_MK_RT_DL, slg::ocl::pathoclbase::MK_RT_DL},
+		{&advancePathsKernel_MK_DL_ILLUMINATE, slg::ocl::pathoclbase::MK_DL_ILLUMINATE},
+		{&advancePathsKernel_MK_DL_SAMPLE_BSDF, slg::ocl::pathoclbase::MK_DL_SAMPLE_BSDF},
+		{&advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, slg::ocl::pathoclbase::MK_GENERATE_NEXT_VERTEX_RAY},
+		{&advancePathsKernel_MK_SPLAT_SAMPLE, slg::ocl::pathoclbase::MK_SPLAT_SAMPLE},
+		{&advancePathsKernel_MK_NEXT_SAMPLE, slg::ocl::pathoclbase::MK_NEXT_SAMPLE},
+		{&advancePathsKernel_MK_GENERATE_CAMERA_RAY, slg::ocl::pathoclbase::MK_GENERATE_CAMERA_RAY},
+	};
 
-	// Micro kernels version
-	profileStart = BeginKernelProfile();
-	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_RT_NEXT_VERTEX,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_RT_NEXT_VERTEX]));
-	EndKernelProfile(slg::ocl::pathoclbase::MK_RT_NEXT_VERTEX, profileStart);
-	profileStart = BeginKernelProfile();
-	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_HIT_NOTHING,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_HIT_NOTHING]));
-	EndKernelProfile(slg::ocl::pathoclbase::MK_HIT_NOTHING, profileStart);
-	profileStart = BeginKernelProfile();
-	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_HIT_OBJECT,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_HIT_OBJECT]));
-	EndKernelProfile(slg::ocl::pathoclbase::MK_HIT_OBJECT, profileStart);
-	profileStart = BeginKernelProfile();
-	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_RT_DL,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_RT_DL]));
-	EndKernelProfile(slg::ocl::pathoclbase::MK_RT_DL, profileStart);
-	profileStart = BeginKernelProfile();
-	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_DL_ILLUMINATE,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_DL_ILLUMINATE]));
-	EndKernelProfile(slg::ocl::pathoclbase::MK_DL_ILLUMINATE, profileStart);
-	profileStart = BeginKernelProfile();
-	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_DL_SAMPLE_BSDF,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_DL_SAMPLE_BSDF]));
-	EndKernelProfile(slg::ocl::pathoclbase::MK_DL_SAMPLE_BSDF, profileStart);
-	profileStart = BeginKernelProfile();
-	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_GENERATE_NEXT_VERTEX_RAY]));
-	EndKernelProfile(slg::ocl::pathoclbase::MK_GENERATE_NEXT_VERTEX_RAY, profileStart);
-	profileStart = BeginKernelProfile();
-	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_SPLAT_SAMPLE,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_SPLAT_SAMPLE]));
-	EndKernelProfile(slg::ocl::pathoclbase::MK_SPLAT_SAMPLE, profileStart);
-	profileStart = BeginKernelProfile();
-	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_NEXT_SAMPLE,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_NEXT_SAMPLE]));
-	EndKernelProfile(slg::ocl::pathoclbase::MK_NEXT_SAMPLE, profileStart);
-	profileStart = BeginKernelProfile();
-	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_GENERATE_CAMERA_RAY,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_GENERATE_CAMERA_RAY]));
-	EndKernelProfile(slg::ocl::pathoclbase::MK_GENERATE_CAMERA_RAY, profileStart);
+	for (const auto &[microKernel, state] : microKernels) {
+		// Queue the paths in this state: all the micro-kernels that can set
+		// it have already run in this iteration. MK_GENERATE_NEXT_VERTEX_RAY
+		// is queued by PATH_STATE_SET() (see PathState_Set())
+		double profileStart = BeginKernelProfile();
+		if (state != slg::ocl::pathoclbase::MK_GENERATE_NEXT_VERTEX_RAY) {
+			intersectionDevice.SetKernelArg(queuePathsKernel, 3, (u_int)state);
+			intersectionDevice.EnqueueKernel(queuePathsKernel,
+					HardwareDeviceRange(taskCount), HardwareDeviceRange(queuePathsWorkGroupSize));
+		}
+		EndKernelProfile(KERNEL_PROFILE_PATH_QUEUES, profileStart);
 
-	// All queued paths have been consumed: the queues are filled again
-	// during the next iteration, the ray tracing ones right now
-	profileStart = BeginKernelProfile();
+		profileStart = BeginKernelProfile();
+		intersectionDevice.EnqueueKernel(*microKernel,
+				HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[state]));
+		EndKernelProfile(state, profileStart);
+	}
+
+	// All queued paths have been consumed
+	const double profileStart = BeginKernelProfile();
 	intersectionDevice.EnqueueKernel(resetPathQueuesKernel,
 			HardwareDeviceRange(resetPathQueuesWorkGroupSize), HardwareDeviceRange(resetPathQueuesWorkGroupSize));
-	intersectionDevice.EnqueueKernel(queueRTPathsKernel,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(queueRTPathsWorkGroupSize));
 	EndKernelProfile(KERNEL_PROFILE_PATH_QUEUES, profileStart);
 }
 
