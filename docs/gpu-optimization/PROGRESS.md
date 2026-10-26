@@ -129,3 +129,36 @@ Not measured yet (T0.3).
   specialization) is likely a bigger lever than wasted threads.
 - T3.1 (queues) first A/B: LuxBall 11.87 -> 11.89 (+0.2%), DLSC
   12.44 -> 13.13 (+5.5%). Remaining scenes pending.
+
+### 2026-10-26: all tasks implemented, fast A/B of `gpu-opt/combined`
+
+- `gpu-opt/combined` = T1.1-T1.7, T2.1 step 1, T2.2, T3.1, T3.2 (plus docs).
+  T2.3 and T2.4 rejected by analysis (see PLAN.md).
+- Fast A/B, `main` vs combined with `opencl.kernel.specialize.enable 1`
+  (`bench.py ab --runs 2 --halttime 20`, M samples/sec):
+
+  | Scene | main | combined | change |
+  |---|---|---|---|
+  | LuxBall | 12.16 | 11.47 | -5.7% |
+  | DLSC | 12.52 | 13.07 | +4.4% |
+  | LuxCore2.1Benchmark | 9.52 | 9.51 | 0% |
+  | DanishMood | 5.24 | 6.13 | +17% (main runs 5.72 / 4.76) |
+  | LynxSpider | 5.59 | 8.31 | +49% |
+
+- `cuda.kernel.maxregisters 128` on top of combined: mixed within noise
+  (LuxBall +6%, DanishMood -15% with one run at 4.05). Keep default 0.
+- LuxBall is slower with combined. T3.1 alone was neutral on LuxBall and
+  the first sequential T1.1-T1.3 run was also -5% on LuxBall: isolate
+  T1.1-T1.3 (PREFER_FAST_TRACE, `--Ofast-compile` removal), T1.5 and T1.7
+  on LuxBall next.
+- Absolute numbers drift a lot during a long session (main DanishMood
+  10.54 at the start, 5.2-5.7 here; LuxCore2.1Benchmark 13.49 -> 9.5).
+  Only interleaved A/B numbers are comparable.
+- Image check at 128 spp (`compare main-img combined-img`): all scenes pass
+  the RMSE test. Mean brightness: LuxCore2.1Benchmark -1.85% vs +0.98%
+  between seeds. Cause: the scene uses the PhotonGI indirect cache, rebuilt
+  every run; the same build and seed shifts by -0.5% between two runs, spread
+  over the whole image (not fireflies). With
+  `-D path.photongi.indirect.enabled 0`: candidate mean +0.001%, RMSE
+  0.0083 vs noise floor 0.0835. No bias.
+- For bias checks of PhotonGI scenes, disable the indirect cache.
