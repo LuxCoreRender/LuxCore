@@ -66,7 +66,7 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(RenderConfigRef rcfg,
 		compiledScene(nullptr), oclSampler(nullptr),
 		oclPixelFilter(nullptr), photonGICache(nullptr), lightSamplerSharedData(nullptr) {
 	writeKernelsToFile = false;
-	specializeKernels = false;
+	specializeKernels = true;
 	compileOnly = false;
 
 	//--------------------------------------------------------------------------
@@ -336,7 +336,7 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	SLG_LOG("[PathOCLBaseRenderEngine] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
 
 	writeKernelsToFile = cfg.Get(Property("opencl.kernel.writetofile")(false)).Get<bool>();
-	specializeKernels = cfg.Get(Property("opencl.kernel.specialize.enable")(false)).Get<bool>();
+	specializeKernels = cfg.Get(Property("opencl.kernel.specialize.enable")(true)).Get<bool>();
 
 	// CUDA: cap on the registers used by each kernel thread (0 = compiler
 	// choice). A lower cap allows more resident warps per SM, at the cost of
