@@ -284,3 +284,82 @@ Not measured yet (T0.3).
   per launch, L2 at 67%). SASS: each heavy kernel is 94-102K instructions
   with about 1600 calls (cuobjdump of an earlier combined cubin).
 - New plan: Phase 5 in `PLAN.md` (T5.1-T5.7). T2.7 is replaced by T5.3.
+
+### 2026-10-26: T5.1, T5.2, T5.8 (merged), T5.3 (no gain), T5.9
+
+Kernel profile = `kprof.py` (one 30 s LuxBall run per build after a warm-up
+run, ms of kernel time per M samples; single runs vary by about 1 ms per
+kernel). A/B = 3 runs of 20 s per scene, median M samples/sec.
+
+- T5.1 (`gpu-opt/T5.1-local-temporaries`): on CUDA the `GPUTask`
+  temporaries (`tmpHitPoint`, `tmpBsdf`, `tmpPathDepthInfo`) are kernel
+  locals (`GPUTASK_TMP` in `pathoclbase_kernels_micro.cl`). They are written
+  and read back within one kernel: in global memory the reads go to L2
+  (stores evict L1), in local memory they hit L1. LuxBall kernel total
+  81.8 -> 70.5, `DL_ILLUMINATE` 16.0 -> 5-8.
+- T5.2 (`gpu-opt/T5.2-rt-queues`): queues for `MK_RT_NEXT_VERTEX` and
+  `MK_RT_DL`, built by `QueueRTPaths` after each iteration. 70.5 -> 67.2.
+  `RT_NEXT_VERTEX` warps are fuller (15.8 -> 26.5 lanes, half the
+  instructions) but the kernel stays L2-bound (72%, 31.5 sectors per store
+  request, 506 MB DRAM per launch from the AoS `BSDF` stores).
+- T5.8 (`gpu-opt/T5.8-local-evalstacks`): with `kernel specialization` on
+  CUDA, the material/texture eval stacks are kernel locals sized by
+  `PARAM_MATERIAL_EVAL_STACK_SIZE`/`PARAM_TEXTURE_EVAL_STACK_SIZE`
+  (`evalstack_funcs.cl`); the global stack buffers shrink to 1 float.
+  67.2 -> 65.8. Nsight table: `bench\ncu\tab-T5.8.txt`, report
+  `bench\ncu\luxball-T5.8.ncu-rep`.
+- Image check T5.8 (T5.1+T5.2+T5.8), 128 spp vs `main`, all pass:
+
+  | Scene | noise floor RMSE | candidate RMSE | same-seed RMSE vs T2.6 |
+  |---|---|---|---|
+  | LuxBall | 0.0252 | 0.0059 | 0.0059 |
+  | DLSC | 0.191 | 0.052 | 0.015 |
+  | LuxCore2.1Benchmark | 0.066 | 0.011 | 0.019 |
+  | DanishMood | 0.033 | 0.0055 | 0.0075 |
+  | LynxSpider | 0.021 | 0.0035 | 0.0028 |
+
+- A/B T2.6 (combined) vs T5.8, M samples/sec:
+
+  | Scene | T2.6 | T5.8 | change |
+  |---|---|---|---|
+  | LuxBall | 11.36 | 14.76 | +29.9% |
+  | DLSC | 13.84 | 17.53 | +26.7% |
+  | LuxCore2.1Benchmark | 9.12 | 10.69 | +17.2% |
+  | DanishMood | 5.42 | 7.37 | +36.0% (noisy: 4.0-7.6) |
+  | LynxSpider | 8.17 | 10.31 | +26.2% |
+
+- Paths in flight sweep on T5.8 (LuxBall): 1M, 256K, 128K, 64K all give
+  15.0-15.4 M samples/sec. DRAM bandwidth is not the limit.
+- T5.3 (`gpu-opt/T5.3-transposed-taskstate`, not merged): `GPUTaskState`
+  stored transposed on CUDA (word i of path gid at `[i * taskCount + gid]`),
+  each kernel copies it to a local struct and writes back the words it may
+  change. 65.2 -> 81.6: the queues hand a warp scattered path indices, so
+  the transposed words of a warp fall in different sectors. With
+  scan-built queues (below) 70.4: still a loss, the full copy reads all 97
+  words while AoS reads only the fields a kernel uses. A transposed layout
+  only pays with per-field strided access through all the BSDF code.
+- T5.9 (`gpu-opt/T5.9-scan-queues`): `QueuePaths` scans the path states
+  right before each micro-kernel (one launch per state, state passed as an
+  argument) instead of pushing in `PATH_STATE_SET()`. Queues are then in
+  ascending path order and neighbouring lanes touch neighbouring rays,
+  hits and sample results. Scans cost 1.1-1.5 ms per M samples (push was
+  0.1-0.3). Scanning every state: LuxBall +9.5%, DLSC +9.0%, but
+  LynxSpider -9.5%: its `MK_GENERATE_NEXT_VERTEX_RAY` went 17.3 -> 28.3 ms.
+  Pushing in completion order groups paths of similar cost (warps that
+  finish together), a weak material sort the scan loses. So
+  `MK_GENERATE_NEXT_VERTEX_RAY` is still pushed in `PATH_STATE_SET()`, all
+  other states are scanned. Image check passes on all 5 scenes. A/B vs T5.8:
+
+  | Scene | T5.8 | T5.9 | change |
+  |---|---|---|---|
+  | LuxBall | 15.27 | 15.86 | +3.9% |
+  | DLSC | 17.42 | 18.86 | +8.3% |
+  | LuxCore2.1Benchmark | 10.74 | 10.94 | +1.9% |
+  | DanishMood | 6.63 | 6.52 | -1.7% (noisy: 6.3-7.7) |
+  | LynxSpider | 10.04 | 10.55 | +5.1% |
+
+- Hint for T5.7: the completion-order effect above shows material
+  coherence matters a lot in `MK_GENERATE_NEXT_VERTEX_RAY` on LynxSpider.
+- Next: branch `gpu-opt/ridiculous` from `gpu-opt/combined`. Lossless work
+  first (T5.5, T5.4, T5.6, T5.7); lossy options later, only behind config
+  properties that default to off (user decision 2026-10-26).
