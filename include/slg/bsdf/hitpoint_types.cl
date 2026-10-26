@@ -42,8 +42,11 @@ typedef struct {
 	// BSDF initialization (while tracing the next path vertex ray)
 	float passThroughEvent;
 
-	// Transformation from local object to world reference frame
-	Transform localToWorld;
+	// Ray time: with meshIndex and triangleIndex, it gives the transformation
+	// from local object to world reference frame (see
+	// HitPoint_GetLocalToWorld()). The transformation itself (128 bytes) is
+	// not stored: it is rarely used after the HitPoint initialization.
+	float time;
 
 	// Interior and exterior volume (this includes volume priority system
 	// computation and scene default world volume)

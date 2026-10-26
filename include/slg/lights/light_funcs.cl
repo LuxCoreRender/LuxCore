@@ -479,11 +479,12 @@ OPENCL_FORCE_INLINE float3 TriangleLight_Illuminate(__global const LightSource *
 	const uint materialIndex = sceneObjs[meshIndex].materialIndex;
 
 	// Initialized local to world object space transformation
-	ExtMesh_GetLocal2World(time, meshIndex, triangleIndex, &tmpHitPoint->localToWorld EXTMESH_PARAM);
+	Transform localToWorld;
+	ExtMesh_GetLocal2World(time, meshIndex, triangleIndex, &localToWorld EXTMESH_PARAM);
 
 	float b0, b1, b2;
 	float3 samplePoint;
-	ExtMesh_Sample(&tmpHitPoint->localToWorld,
+	ExtMesh_Sample(&localToWorld,
 			meshIndex, triangleIndex,
 			u0, u1,
 			&samplePoint, &b0, &b1, &b2
@@ -499,7 +500,8 @@ OPENCL_FORCE_INLINE float3 TriangleLight_Illuminate(__global const LightSource *
 		meshIndex, triangleIndex,
 		samplePoint, -sampleDir,
 		b1, b2,
-		passThroughEvent
+		passThroughEvent,
+		&localToWorld, time
 		MATERIALS_PARAM);
 	// Add bump?
 		// lightMaterial->Bump(&hitPoint, 1.f);

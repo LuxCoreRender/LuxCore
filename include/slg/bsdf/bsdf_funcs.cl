@@ -32,7 +32,9 @@ OPENCL_FORCE_INLINE void BSDF_Init(
 	const uint triangleIndex = rayHit->triangleIndex;
 
 	// Initialized local to world object space transformation
-	ExtMesh_GetLocal2World(ray->time, meshIndex, triangleIndex, &bsdf->hitPoint.localToWorld EXTMESH_PARAM);
+	const float time = ray->time;
+	Transform localToWorld;
+	ExtMesh_GetLocal2World(time, meshIndex, triangleIndex, &localToWorld EXTMESH_PARAM);
 
 	const float3 rayOrig = VLOAD3F(&ray->o.x);
 	const float3 rayDir = VLOAD3F(&ray->d.x);
@@ -42,7 +44,8 @@ OPENCL_FORCE_INLINE void BSDF_Init(
 		meshIndex, triangleIndex,
 		hitPointP, -rayDir,
 		rayHit->b1, rayHit->b2,
-		passThroughEvent
+		passThroughEvent,
+		&localToWorld, time
 		MATERIALS_PARAM);
 
 	// Save the scene object index
@@ -111,7 +114,9 @@ OPENCL_FORCE_INLINE void BSDF_InitVolume(
 	VSTORE3F(geometryN, &bsdf->hitPoint.fixedDir.x);
 
 	bsdf->sceneObjectIndex = NULL_INDEX;
-	Matrix4x4_IdentityGlobal(&bsdf->hitPoint.localToWorld.m);
+	// Volume scatter points have no mesh (meshIndex is NULL_INDEX): their local
+	// to world transformation is the identity
+	bsdf->hitPoint.time = 0.f;
 	bsdf->materialIndex = volumeIndex;
 
 	VSTORE3F(geometryN, &bsdf->hitPoint.geometryN.x);
