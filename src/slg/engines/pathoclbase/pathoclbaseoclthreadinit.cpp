@@ -358,6 +358,21 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	//--------------------------------------------------------------------------
 
 	intersectionDevice.AllocBufferRW(&tasksStateBuff, nullptr, sizeof(slg::ocl::pathoclbase::GPUTaskState) * taskCount, "GPUTaskState");
+
+	//--------------------------------------------------------------------------
+	// Allocate pathStatesBuff
+	//--------------------------------------------------------------------------
+
+	intersectionDevice.AllocBufferRW(&pathStatesBuff, nullptr, sizeof(slg::ocl::pathoclbase::PathState) * taskCount, "PathState");
+
+	//--------------------------------------------------------------------------
+	// Allocate pathQueuesBuff and pathQueueCountsBuff
+	//--------------------------------------------------------------------------
+
+	// One queue of taskCount path indices for each queued micro-kernel. The
+	// counters are reset by the ResetPathQueues kernel.
+	intersectionDevice.AllocBufferRW(&pathQueuesBuff, nullptr, sizeof(u_int) * slg::ocl::pathoclbase::PATH_QUEUE_COUNT * taskCount, "PathQueues");
+	intersectionDevice.AllocBufferRW(&pathQueueCountsBuff, nullptr, sizeof(u_int) * slg::ocl::pathoclbase::PATH_QUEUE_COUNT, "PathQueueCounts");
 }
 
 void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {

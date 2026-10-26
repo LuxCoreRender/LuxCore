@@ -102,8 +102,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 			HardwareDeviceRange(engine->taskCount), HardwareDeviceRange(initWorkGroupSize));
 
 	// Initialize the tasks buffer
-	intersectionDevice.EnqueueKernel(initKernel,
-			HardwareDeviceRange(engine->taskCount), HardwareDeviceRange(initWorkGroupSize));
+	EnqueueInitKernel();
 
 	// Check if I have to load the start film
 	if (engine->hasStartFilm && (threadIndex == 0))

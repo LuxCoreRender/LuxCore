@@ -146,16 +146,21 @@ typedef struct {
 #define SOBOL_MAX_DIMENSIONS 21201
 #define SOBOL_STARTOFFSET 32
 
+// gid is the index of the path (and of its sampler data). It is not always
+// get_global_id(0): the micro-kernels with a work queue run one thread per
+// queued path.
 #define SAMPLER_PARAM_DECL \
 		, Seed *seed \
 		, __global void *samplerSharedDataBuff \
 		, __global void *samplesBuff \
 		, __global float *samplesDataBuff \
-		, __global SampleResult *sampleResultsBuff
+		, __global SampleResult *sampleResultsBuff \
+		, const size_t gid
 #define SAMPLER_PARAM \
 		, seed \
 		, samplerSharedDataBuff \
 		, samplesBuff \
 		, samplesDataBuff \
-		, sampleResultsBuff
+		, sampleResultsBuff \
+		, gid
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4
