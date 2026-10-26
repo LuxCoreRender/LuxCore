@@ -333,6 +333,14 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	writeKernelsToFile = cfg.Get(Property("opencl.kernel.writetofile")(false)).Get<bool>();
 	specializeKernels = cfg.Get(Property("opencl.kernel.specialize.enable")(false)).Get<bool>();
 
+	// CUDA: cap on the registers used by each kernel thread (0 = compiler
+	// choice). A lower cap allows more resident warps per SM, at the cost of
+	// register spills. It does not change the computed results.
+	const u_int cudaMaxRegisters = cfg.Get(Property("cuda.kernel.maxregisters")(0u)).Get<u_int>();
+	additionalCUDAKernelOptions.clear();
+	if (cudaMaxRegisters > 0)
+		additionalCUDAKernelOptions.push_back("--maxrregcount=" + ToString(cudaMaxRegisters));
+
 	// Set by luxcore::KernelCacheFill() in order to compile the kernels
 	// without rendering anything
 	compileOnly = compileOnlyMode;
