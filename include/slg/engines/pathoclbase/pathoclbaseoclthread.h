@@ -170,6 +170,8 @@ protected:
 	void InitPhotonGI();
 	void InitKernels();
 	void InitGPUTaskBuffer();
+	// Uploads renderEngine->taskConfig
+	void UpdateGPUTaskConfiguration();
 	void InitSamplerSharedDataBuffer();
 	void InitSamplesBuffer();
 	void InitSampleDataBuffer();

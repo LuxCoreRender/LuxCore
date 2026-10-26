@@ -82,10 +82,9 @@ void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions
 		InitTextures();
 		InitMaterials();
 
-		// Update the scene part of the task configuration (default volume,
-		// shadow ray any hit)
-		intersectionDevice.AllocBufferRO(&taskConfigBuff, &renderEngine->taskConfig,
-				sizeof(slg::ocl::pathoclbase::GPUTaskConfiguration), "GPUTaskConfiguration");
+		// The scene part of the task configuration (default volume, shadow
+		// ray any hit) depends on the materials
+		UpdateGPUTaskConfiguration();
 	}
 
 	if (cscene->wasSceneObjectsCompiled) {
