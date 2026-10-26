@@ -20,22 +20,29 @@
 
 // Macros used mostly for Texture and Material evluations
 
-#define EvalStack_PushInt(a) { ((__global int *)evalStack)[*evalStackOffset] = a; *evalStackOffset = *evalStackOffset + 1; }
-#define EvalStack_PopInt(a) { *evalStackOffset = *evalStackOffset - 1; a = ((__global int *)evalStack)[*evalStackOffset]; }
+// The stacks of all threads are interleaved: element i of the stack of
+// thread gid is at evalStack[i * EVAL_STACK_STRIDE] with
+// evalStack = &stacks[gid], so the threads of a warp access consecutive
+// addresses (coalesced) instead of one cache line each
+#define EVAL_STACK_STRIDE get_global_size(0)
+#define EVAL_STACK_ELEM(i) evalStack[(i) * EVAL_STACK_STRIDE]
 
-#define EvalStack_PushUInt(a) { ((__global uint *)evalStack)[*evalStackOffset] = a; *evalStackOffset = *evalStackOffset + 1; }
-#define EvalStack_PopUInt(a) { *evalStackOffset = *evalStackOffset - 1; a = ((__global uint *)evalStack)[*evalStackOffset]; }
+#define EvalStack_PushInt(a) { ((__global int *)evalStack)[(*evalStackOffset) * EVAL_STACK_STRIDE] = a; *evalStackOffset = *evalStackOffset + 1; }
+#define EvalStack_PopInt(a) { *evalStackOffset = *evalStackOffset - 1; a = ((__global int *)evalStack)[(*evalStackOffset) * EVAL_STACK_STRIDE]; }
 
-#define EvalStack_PushFloat(a) { evalStack[*evalStackOffset] = a; *evalStackOffset = *evalStackOffset + 1; }
+#define EvalStack_PushUInt(a) { ((__global uint *)evalStack)[(*evalStackOffset) * EVAL_STACK_STRIDE] = a; *evalStackOffset = *evalStackOffset + 1; }
+#define EvalStack_PopUInt(a) { *evalStackOffset = *evalStackOffset - 1; a = ((__global uint *)evalStack)[(*evalStackOffset) * EVAL_STACK_STRIDE]; }
+
+#define EvalStack_PushFloat(a) { EVAL_STACK_ELEM(*evalStackOffset) = a; *evalStackOffset = *evalStackOffset + 1; }
 #define EvalStack_PushFloat2(a) { EvalStack_PushFloat(a.x); EvalStack_PushFloat(a.y); }
 #define EvalStack_PushFloat3(a) { EvalStack_PushFloat(a.x); EvalStack_PushFloat(a.y); EvalStack_PushFloat(a.z); }
-#define EvalStack_PopFloat(a) { *evalStackOffset = *evalStackOffset - 1; a = evalStack[*evalStackOffset]; }
+#define EvalStack_PopFloat(a) { *evalStackOffset = *evalStackOffset - 1; a = EVAL_STACK_ELEM(*evalStackOffset); }
 #define EvalStack_PopFloat2(a) { EvalStack_PopFloat(a.y); EvalStack_PopFloat(a.x); }
 #define EvalStack_PopFloat3(a) { EvalStack_PopFloat(a.z); EvalStack_PopFloat(a.y); EvalStack_PopFloat(a.x); }
-#define EvalStack_ReadFloat(x) (evalStack[(*evalStackOffset) + x])
-#define EvalStack_ReadFloat2(x) (MAKE_FLOAT2(evalStack[(*evalStackOffset) + x], evalStack[(*evalStackOffset) + x + 1]))
-#define EvalStack_ReadFloat3(x) (MAKE_FLOAT3(evalStack[(*evalStackOffset) + x], evalStack[(*evalStackOffset) + x + 1], evalStack[(*evalStackOffset) + x + 2]))
+#define EvalStack_ReadFloat(x) (EVAL_STACK_ELEM((*evalStackOffset) + x))
+#define EvalStack_ReadFloat2(x) (MAKE_FLOAT2(EVAL_STACK_ELEM((*evalStackOffset) + x), EVAL_STACK_ELEM((*evalStackOffset) + x + 1)))
+#define EvalStack_ReadFloat3(x) (MAKE_FLOAT3(EVAL_STACK_ELEM((*evalStackOffset) + x), EVAL_STACK_ELEM((*evalStackOffset) + x + 1), EVAL_STACK_ELEM((*evalStackOffset) + x + 2)))
 
-#define EvalStack_PushBSDFEvent(a) { ((__global BSDFEvent *)evalStack)[*evalStackOffset] = a; *evalStackOffset = *evalStackOffset + 1; }
-#define EvalStack_PopBSDFEvent(a) { *evalStackOffset = *evalStackOffset - 1; a = ((__global BSDFEvent *)evalStack)[*evalStackOffset]; }
+#define EvalStack_PushBSDFEvent(a) { ((__global BSDFEvent *)evalStack)[(*evalStackOffset) * EVAL_STACK_STRIDE] = a; *evalStackOffset = *evalStackOffset + 1; }
+#define EvalStack_PopBSDFEvent(a) { *evalStackOffset = *evalStackOffset - 1; a = ((__global BSDFEvent *)evalStack)[(*evalStackOffset) * EVAL_STACK_STRIDE]; }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4
