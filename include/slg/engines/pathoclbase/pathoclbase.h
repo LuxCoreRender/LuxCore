@@ -90,6 +90,8 @@ protected:
 	
 	std::vector<std::string> additionalOpenCLKernelOptions, additionalCUDAKernelOptions;
 	bool writeKernelsToFile;
+	// Compile only the material and texture types used by the scene
+	bool specializeKernels;
 	bool compileOnly;
 
 	// Pixel filter related variables
