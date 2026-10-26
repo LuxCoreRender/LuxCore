@@ -286,7 +286,8 @@ protected:
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_SPLAT_SAMPLE;
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_NEXT_SAMPLE;
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_GENERATE_CAMERA_RAY;
-	size_t advancePathsWorkGroupSize;
+	// Indexed by the PathState of the micro-kernel
+	size_t advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_DONE];
 
 	std::unique_ptr<slg::ocl::pathoclbase::GPUTaskStats[]> gpuTaskStats;
 

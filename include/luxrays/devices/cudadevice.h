@@ -192,6 +192,7 @@ public:
 		const std::string &kernelName
 	) override;
 	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernelRPtr kernel) override;
+	virtual u_int GetKernelOccupancyWorkGroupSize(HardwareDeviceKernelRPtr kernel) override;
 	virtual void SetKernelArg(HardwareDeviceKernelRPtr kernel,
 			const u_int index, const size_t size, const void *arg) override;
 

@@ -62,7 +62,7 @@ PathOCLBaseOCLRenderThread::CompileKernel(
 		workGroupSize = device.GetDeviceDesc().GetForceWorkGroupSize();
 	}
 	else {
-		workGroupSize = device.GetKernelWorkGroupSize(kernel);
+		workGroupSize = device.GetKernelOccupancyWorkGroupSize(kernel);
 		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] "
 				<< name << " workgroup size: " << workGroupSize);
 	}
@@ -255,23 +255,21 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 
 
 	// AdvancePaths kernel (Micro-Kernels)
-	std::tuple<HardwareDeviceKernelUPtr&, const char *>
+	std::tuple<HardwareDeviceKernelUPtr&, slg::ocl::pathoclbase::PathState, const char *>
 	microKernels[] = {
-		{advancePathsKernel_MK_RT_NEXT_VERTEX, "AdvancePaths_MK_RT_NEXT_VERTEX"},
-		{advancePathsKernel_MK_HIT_NOTHING, "AdvancePaths_MK_HIT_NOTHING"},
-		{advancePathsKernel_MK_HIT_OBJECT, "AdvancePaths_MK_HIT_OBJECT"},
-		{advancePathsKernel_MK_RT_DL, "AdvancePaths_MK_RT_DL"},
-		{advancePathsKernel_MK_DL_ILLUMINATE, "AdvancePaths_MK_DL_ILLUMINATE"},
-		{advancePathsKernel_MK_DL_SAMPLE_BSDF, "AdvancePaths_MK_DL_SAMPLE_BSDF"},
-		{advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, "AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY"},
-		{advancePathsKernel_MK_SPLAT_SAMPLE, "AdvancePaths_MK_SPLAT_SAMPLE"},
-		{advancePathsKernel_MK_NEXT_SAMPLE, "AdvancePaths_MK_NEXT_SAMPLE"},
-		{advancePathsKernel_MK_GENERATE_CAMERA_RAY, "AdvancePaths_MK_GENERATE_CAMERA_RAY"},
+		{advancePathsKernel_MK_RT_NEXT_VERTEX, slg::ocl::pathoclbase::MK_RT_NEXT_VERTEX, "AdvancePaths_MK_RT_NEXT_VERTEX"},
+		{advancePathsKernel_MK_HIT_NOTHING, slg::ocl::pathoclbase::MK_HIT_NOTHING, "AdvancePaths_MK_HIT_NOTHING"},
+		{advancePathsKernel_MK_HIT_OBJECT, slg::ocl::pathoclbase::MK_HIT_OBJECT, "AdvancePaths_MK_HIT_OBJECT"},
+		{advancePathsKernel_MK_RT_DL, slg::ocl::pathoclbase::MK_RT_DL, "AdvancePaths_MK_RT_DL"},
+		{advancePathsKernel_MK_DL_ILLUMINATE, slg::ocl::pathoclbase::MK_DL_ILLUMINATE, "AdvancePaths_MK_DL_ILLUMINATE"},
+		{advancePathsKernel_MK_DL_SAMPLE_BSDF, slg::ocl::pathoclbase::MK_DL_SAMPLE_BSDF, "AdvancePaths_MK_DL_SAMPLE_BSDF"},
+		{advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, slg::ocl::pathoclbase::MK_GENERATE_NEXT_VERTEX_RAY, "AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY"},
+		{advancePathsKernel_MK_SPLAT_SAMPLE, slg::ocl::pathoclbase::MK_SPLAT_SAMPLE, "AdvancePaths_MK_SPLAT_SAMPLE"},
+		{advancePathsKernel_MK_NEXT_SAMPLE, slg::ocl::pathoclbase::MK_NEXT_SAMPLE, "AdvancePaths_MK_NEXT_SAMPLE"},
+		{advancePathsKernel_MK_GENERATE_CAMERA_RAY, slg::ocl::pathoclbase::MK_GENERATE_CAMERA_RAY, "AdvancePaths_MK_GENERATE_CAMERA_RAY"},
 	};
 
-	advancePathsWorkGroupSize = std::numeric_limits<size_t>::max();
-
-	for (auto& [microKernel, name] : microKernels) {
+	for (auto& [microKernel, state, name] : microKernels) {
 		// Find the program with this micro-kernel (all the micro-kernels are
 		// in the same program unless the source has been split)
 		const std::size_t programIndex = microKernelIndex.empty() ? 0 : 1 + microKernelIndex[name];
@@ -281,13 +279,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 
 		// Assign to class members
 		microKernel = std::move(kernel);
-		advancePathsWorkGroupSize = std::min(advancePathsWorkGroupSize, workGroupSize);
+		advancePathsWorkGroupSizes[state] = workGroupSize;
 	}
-
-	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex
-			<< "] AdvancePaths_MK_* workgroup size: "
-			<< advancePathsWorkGroupSize
-	);
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
@@ -464,25 +457,25 @@ void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel() {
 
 	// Micro kernels version
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_RT_NEXT_VERTEX,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_RT_NEXT_VERTEX]));
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_HIT_NOTHING,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_HIT_NOTHING]));
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_HIT_OBJECT,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_HIT_OBJECT]));
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_RT_DL,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_RT_DL]));
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_DL_ILLUMINATE,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_DL_ILLUMINATE]));
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_DL_SAMPLE_BSDF,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_DL_SAMPLE_BSDF]));
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_GENERATE_NEXT_VERTEX_RAY]));
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_SPLAT_SAMPLE,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_SPLAT_SAMPLE]));
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_NEXT_SAMPLE,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_NEXT_SAMPLE]));
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_GENERATE_CAMERA_RAY,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_GENERATE_CAMERA_RAY]));
 }
 
 #endif
