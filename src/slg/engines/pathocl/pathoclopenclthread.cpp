@@ -182,7 +182,9 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 
 		for (u_int i = 0; i < iterations; ++i) {
 			// Trace rays
+			const double profileStart = BeginKernelProfile();
 			intersectionDevice.EnqueueTraceRayBuffer(raysBuff, hitsBuff, taskCount);
+			EndKernelProfile(KERNEL_PROFILE_TRACE, profileStart);
 
 			// Advance to next path state
 			EnqueueAdvancePathsKernel();
@@ -222,6 +224,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 
 	threadFilms[0]->RecvFilm(intersectionDevice);
 	intersectionDevice.FinishQueue();
+	LogKernelProfile();
 	
 	threadDone = true;
 

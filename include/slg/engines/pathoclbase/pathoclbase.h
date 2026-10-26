@@ -93,6 +93,9 @@ protected:
 	bool writeKernelsToFile;
 	// Compile only the material and texture types used by the scene
 	bool specializeKernels;
+	// Wait for each GPU kernel and log the time spent in each one (slow,
+	// for measurements only)
+	bool profileKernels;
 	bool compileOnly;
 
 	// Pixel filter related variables

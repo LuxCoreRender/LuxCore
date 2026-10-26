@@ -495,32 +495,89 @@ void PathOCLBaseOCLRenderThread::EnqueueInitKernel() {
 void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel() {
 	const u_int taskCount = renderEngine->taskCount;
 
+	double profileStart;
+
 	// Micro kernels version
+	profileStart = BeginKernelProfile();
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_RT_NEXT_VERTEX,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_RT_NEXT_VERTEX]));
+	EndKernelProfile(slg::ocl::pathoclbase::MK_RT_NEXT_VERTEX, profileStart);
+	profileStart = BeginKernelProfile();
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_HIT_NOTHING,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_HIT_NOTHING]));
+	EndKernelProfile(slg::ocl::pathoclbase::MK_HIT_NOTHING, profileStart);
+	profileStart = BeginKernelProfile();
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_HIT_OBJECT,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_HIT_OBJECT]));
+	EndKernelProfile(slg::ocl::pathoclbase::MK_HIT_OBJECT, profileStart);
+	profileStart = BeginKernelProfile();
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_RT_DL,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_RT_DL]));
+	EndKernelProfile(slg::ocl::pathoclbase::MK_RT_DL, profileStart);
+	profileStart = BeginKernelProfile();
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_DL_ILLUMINATE,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_DL_ILLUMINATE]));
+	EndKernelProfile(slg::ocl::pathoclbase::MK_DL_ILLUMINATE, profileStart);
+	profileStart = BeginKernelProfile();
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_DL_SAMPLE_BSDF,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_DL_SAMPLE_BSDF]));
+	EndKernelProfile(slg::ocl::pathoclbase::MK_DL_SAMPLE_BSDF, profileStart);
+	profileStart = BeginKernelProfile();
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_GENERATE_NEXT_VERTEX_RAY]));
+	EndKernelProfile(slg::ocl::pathoclbase::MK_GENERATE_NEXT_VERTEX_RAY, profileStart);
+	profileStart = BeginKernelProfile();
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_SPLAT_SAMPLE,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_SPLAT_SAMPLE]));
+	EndKernelProfile(slg::ocl::pathoclbase::MK_SPLAT_SAMPLE, profileStart);
+	profileStart = BeginKernelProfile();
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_NEXT_SAMPLE,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_NEXT_SAMPLE]));
+	EndKernelProfile(slg::ocl::pathoclbase::MK_NEXT_SAMPLE, profileStart);
+	profileStart = BeginKernelProfile();
 	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_GENERATE_CAMERA_RAY,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_GENERATE_CAMERA_RAY]));
+	EndKernelProfile(slg::ocl::pathoclbase::MK_GENERATE_CAMERA_RAY, profileStart);
 
 	// All queued paths have been consumed: the queues are filled again
 	// during the next iteration
+	profileStart = BeginKernelProfile();
 	intersectionDevice.EnqueueKernel(resetPathQueuesKernel,
 			HardwareDeviceRange(resetPathQueuesWorkGroupSize), HardwareDeviceRange(resetPathQueuesWorkGroupSize));
+	EndKernelProfile(KERNEL_PROFILE_RESET_QUEUES, profileStart);
+}
+
+double PathOCLBaseOCLRenderThread::BeginKernelProfile() {
+	if (!renderEngine->profileKernels)
+		return 0.0;
+
+	intersectionDevice.FinishQueue();
+	return WallClockTime();
+}
+
+void PathOCLBaseOCLRenderThread::EndKernelProfile(const u_int index, const double startTime) {
+	if (!renderEngine->profileKernels)
+		return;
+
+	intersectionDevice.FinishQueue();
+	kernelProfileTimes[index] += WallClockTime() - startTime;
+}
+
+void PathOCLBaseOCLRenderThread::LogKernelProfile() const {
+	if (!renderEngine->profileKernels)
+		return;
+
+	static const char *names[KERNEL_PROFILE_COUNT] = {
+		"RT_NEXT_VERTEX", "HIT_NOTHING", "HIT_OBJECT", "DL_ILLUMINATE",
+		"DL_SAMPLE_BSDF", "RT_DL", "GENERATE_NEXT_VERTEX_RAY", "SPLAT_SAMPLE",
+		"NEXT_SAMPLE", "GENERATE_CAMERA_RAY", "TRACE (OptiX)", "RESET_PATH_QUEUES"
+	};
+	double total = 0.0;
+	for (u_int i = 0; i < KERNEL_PROFILE_COUNT; ++i)
+		total += kernelProfileTimes[i];
+	for (u_int i = 0; i < KERNEL_PROFILE_COUNT; ++i)
+		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernel profile " << names[i] << ": " <<
+				kernelProfileTimes[i] * 1000.0 << "ms (" << (total > 0.0 ? 100.0 * kernelProfileTimes[i] / total : 0.0) << "%)");
 }
 
 #endif

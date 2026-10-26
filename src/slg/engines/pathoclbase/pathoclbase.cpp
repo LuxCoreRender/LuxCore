@@ -67,6 +67,7 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(RenderConfigRef rcfg,
 		oclPixelFilter(nullptr), photonGICache(nullptr), lightSamplerSharedData(nullptr) {
 	writeKernelsToFile = false;
 	specializeKernels = true;
+	profileKernels = false;
 	compileOnly = false;
 
 	//--------------------------------------------------------------------------
@@ -337,6 +338,7 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 
 	writeKernelsToFile = cfg.Get(Property("opencl.kernel.writetofile")(false)).Get<bool>();
 	specializeKernels = cfg.Get(Property("opencl.kernel.specialize.enable")(true)).Get<bool>();
+	profileKernels = cfg.Get(Property("opencl.kernel.profile.enable")(false)).Get<bool>();
 
 	// CUDA: cap on the registers used by each kernel thread (0 = compiler
 	// choice). A lower cap allows more resident warps per SM, at the cost of
