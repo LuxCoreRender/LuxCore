@@ -663,3 +663,80 @@ part after the fix: 0.9987 of the run before it.
 Next: T6.2 (light path efficiency). Open from this task: the OrangeJuice
 CPU/GPU eye path difference above; a pyluxcore build for Blender with this
 branch.
+
+### 2026-10-27: T6.2 guided light emission (branch `gpu-opt/T6.2-light-path-efficiency`)
+
+The GPU light tracer splats only caustic connections, so a light path is
+useful only if its first vertex is on a "caster", an object whose material
+can be nearly specular. T6.2 emits most light paths toward the casters.
+
+- Casters: `CompiledScene::CompileLightTracingCasters()` (compilelights.cpp),
+  objects whose material has SPECULAR events or GLOSSY with glossiness <=
+  `path.hybridbackforward.glossinessthreshold` (the same per material
+  constants the kernel tests, so the set is exact), minus NULL materials
+  (always pass-through) and materials with a not black shadow transparency
+  and no override (light paths stop there). World bounding boxes,
+  clustered to at most 32 bounding spheres (median split of the largest).
+  Recompiled on geometry and material edits, uploaded as
+  `lightCastersBuff`.
+- Emission (`LightEmitGuide` in `light_funcs.cl`): with probability
+  `path.hybridbackforward.gpulighttracing.guidedprob` (default 0.9, 0
+  disables) the second half of the emission is sampled toward a caster:
+  lights with a position (point, map point, spot, sphere, map sphere,
+  triangle) sample the direction uniformly in the cone toward a caster
+  sphere, picked by solid angle; environment lights (constant, infinite,
+  sky2, sun, distant, sharp distant) sample the ray origin on the emission
+  disk uniformly in the shadow of a caster sphere, picked by area. The pdf
+  is the mixture of the light pdf and the guided pdf (number of cones /
+  shadows holding the sample over their total), so the estimate is
+  unbiased for any caster set. Cones use 1 - cos and a sine test to stay
+  accurate for small cones; the sampled cone always counts itself.
+  Not guided: projection, laser, triangle lights with emission theta 0.
+  The constant infinite light now samples a direction plus a disk origin
+  (same distribution as its former 2 sphere points).
+- No change without hybrid: all the code is under `PARAM_LIGHT_TRACING`.
+
+Test setup warning: `opencl.native.threads.count` must be 0 for GPU-only
+hybrid runs. Without it luxcoreconsole starts CPU native threads that trace
+eye paths and Metropolis light paths too (the first T6.2 checks were
+useless because of this).
+
+Verification: light-only images from a temporary debug build (eye
+radiance cleared before `Sampler_SplatSample()`, not committed), 2-glasses
+and 9 variants with other lights (scenes generated into
+`bench\T6.2\scenes`; env variants without the walls and ceiling),
+PATHOCL, SOBOL, GPU only, 40 s per run, images in `bench\T6.2`:
+
+| Light | mean guided / plain | caustic tile noise plain | guided | eye spp plain / guided |
+|---|---|---|---|---|
+| point | 1.0001 | 2.97e-4 | 2.94e-5 | 369 / 346 |
+| spot (aimed at glasses) | 1.0004 | 0.0838 | 0.0381 | 493 / 476 |
+| sphere | 0.9984 | | | 375 / 335 |
+| mesh (bulb, triangle lights) | 0.9988 | 1.80 | 0.221 | 562 / 503 |
+| mesh, emission theta 30 | 1.0005 | | | 567 / 500 |
+| sun | 0.9999 | 0.379 | 0.0245 | 686 / 684 |
+| sky2 | 1.0019 | 1.65 | 0.0732 | 760 / 797 |
+| constant infinite | 1.0049 | 0.217 | 0.0110 | 775 / 800 |
+| distant (theta 2) | 1.0011 | | | 701 / 691 |
+| sharp distant | 1.0017 | | | 700 / 687 |
+
+Noise = RMSE between seeds 1 and 2 / sqrt(2) over the 50x50 tiles with
+more than 10% of the max tile light; the brightest tiles agree within
+noise for every light. Full images (eye + light, GPU only) agree too:
+2-glasses light part (image minus the eye-only run) plain 1.5456e-4 /
+1.5403e-4, guided 1.5431e-4 / 1.5431e-4 (two seeds), T6.1 600 s reference
+1.5467e-4. guidedprob 0.99: noise within 1% of 0.9 (point, sky2), so 0.9
+stays: it bounds the damage if a caster were ever missed.
+
+Cost: guided light paths are longer, so the light kernel takes a larger
+share of each iteration (eye spp column). LuxCore2.1Benchmark (sun +
+sky2, only archglass casters: their transmission is pass-through, so no
+caustic at all, light part 0 with plain and guided): eye spp 678 plain,
+586 / 583 guided. Moved to T6.5 (light/eye work balance).
+
+Default (no hybrid) image check, `bench.py image` 256 spp vs
+`T6.1-base-img`: LuxBall RMSE 0.0025 (noise floor 0.0168), DLSC 0.0249
+(0.132), mean +0.002% / +0.073%: pass (eye kernels compile from the same
+preprocessed code as T6.1).
+
+Next: T6.5 (work balance), then T7.1 + T7.2 per the roadmap order.

@@ -18,6 +18,7 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#include <algorithm>
 #include <iosfwd>
 #include <limits>
 
@@ -759,6 +760,97 @@ void CompiledScene::CompileLights() {
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("Lights compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+}
+
+//------------------------------------------------------------------------------
+// Light tracing casters
+//------------------------------------------------------------------------------
+
+// At most this many bounding spheres: the light tracing kernel loops over all
+// of them for each light path
+static const u_int LIGHT_TRACING_MAX_CASTERS = 32;
+
+void CompiledScene::CompileLightTracingCasters() {
+	lightTracingCasters.clear();
+	if (!pathTracer->hybridBackForwardEnable)
+		return;
+
+	// The objects where a light path vertex can be nearly specular
+	// (PathInfo::CanBeNearlySpecular()): every caustic connection starts there
+	const float glossinessThreshold = pathTracer->hybridBackForwardGlossinessThreshold;
+	vector<BBox> bboxes;
+	const u_int objCount = scene.GetObjects().GetSize();
+	for (u_int i = 0; i < objCount; ++i) {
+		auto& scnObj = scene.GetObjects().GetSceneObject(i);
+		auto& mat = scnObj.GetMaterial();
+
+		// A NULL material is always passed through
+		if (mat.GetType() == NULLMAT)
+			continue;
+		// Light paths stop on a not black shadow transparency
+		// (PathTracer::RenderLightSample())
+		if (!mat.GetPassThroughShadowTransparency().Black() &&
+				!mat.GetPassThroughShadowTransparencyOverride())
+			continue;
+
+		const BSDFEvent eventTypes = mat.GetEventTypes();
+		if ((eventTypes & SPECULAR) ||
+				((eventTypes & GLOSSY) && (mat.GetGlossiness() <= glossinessThreshold))) {
+			const BBox bbox = scnObj.GetExtMesh().GetBBox();
+			if (bbox.IsValid())
+				bboxes.push_back(bbox);
+		}
+	}
+
+	// Cluster the objects: split the cluster with the largest bounding sphere
+	// at the median of the box centers along its longest axis
+	struct Cluster {
+		u_int begin, end;
+		BBox bbox;
+		float radius;
+	};
+	auto makeCluster = [&bboxes](const u_int begin, const u_int end) {
+		Cluster cluster = { begin, end, BBox(), 0.f };
+		for (u_int i = begin; i < end; ++i)
+			cluster.bbox = Union(cluster.bbox, bboxes[i]);
+		Point center;
+		cluster.bbox.BoundingSphere(&center, &cluster.radius);
+		return cluster;
+	};
+
+	vector<Cluster> clusters;
+	if (!bboxes.empty())
+		clusters.push_back(makeCluster(0, bboxes.size()));
+	while (clusters.size() < LIGHT_TRACING_MAX_CASTERS) {
+		int largest = -1;
+		for (u_int i = 0; i < clusters.size(); ++i) {
+			if ((clusters[i].end - clusters[i].begin > 1) &&
+					((largest < 0) || (clusters[i].radius > clusters[largest].radius)))
+				largest = i;
+		}
+		if (largest < 0)
+			break;
+
+		const Cluster cluster = clusters[largest];
+		const u_int axis = cluster.bbox.MaximumExtent();
+		const u_int mid = (cluster.begin + cluster.end) / 2;
+		nth_element(bboxes.begin() + cluster.begin, bboxes.begin() + mid, bboxes.begin() + cluster.end,
+				[axis](const BBox &a, const BBox &b) { return a.Center()[axis] < b.Center()[axis]; });
+		clusters[largest] = makeCluster(cluster.begin, mid);
+		clusters.push_back(makeCluster(mid, cluster.end));
+	}
+
+	for (auto const &cluster : clusters) {
+		Point center;
+		float radius;
+		cluster.bbox.BoundingSphere(&center, &radius);
+		lightTracingCasters.push_back(center.x);
+		lightTracingCasters.push_back(center.y);
+		lightTracingCasters.push_back(center.z);
+		lightTracingCasters.push_back(radius);
+	}
+
+	SLG_LOG("Light tracing casters: " << bboxes.size() << " objects in " << clusters.size() << " bounding spheres");
 }
 
 #endif

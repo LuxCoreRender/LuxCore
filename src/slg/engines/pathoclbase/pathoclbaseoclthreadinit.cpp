@@ -344,6 +344,20 @@ void PathOCLBaseOCLRenderThread::InitLightTracing() {
 		intersectionDevice.FreeBuffer(&lightFilterLUTsBuff);
 		lightPathCounts.reset();
 	}
+
+	InitLightTracingCasters();
+}
+
+void PathOCLBaseOCLRenderThread::InitLightTracingCasters() {
+	const vector<float> &casters = renderEngine->compiledScene->lightTracingCasters;
+
+	if (renderEngine->lightTaskCount > 0) {
+		// Never empty, the kernel argument needs a buffer
+		const float noCaster = 0.f;
+		intersectionDevice.AllocBufferRO(&lightCastersBuff, casters.empty() ? &noCaster : casters.data(),
+				sizeof(float) * Max<size_t>(casters.size(), 1), "LightTracingCasters");
+	} else
+		intersectionDevice.FreeBuffer(&lightCastersBuff);
 }
 
 void PathOCLBaseOCLRenderThread::InitImageMaps() {

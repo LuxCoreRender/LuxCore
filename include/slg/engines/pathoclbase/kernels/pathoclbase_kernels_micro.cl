@@ -1490,6 +1490,7 @@ __kernel void AdvanceLightPaths(
 					ray, tmpHitPoint,
 					camera, cameraBokehDistribution,
 					emitLightsDistribution,
+					lightCasters, lightCasterCount, lightGuidedProb,
 					worldCenterX, worldCenterY, worldCenterZ, worldRadius
 					LIGHTS_PARAM)) {
 				state = LT_RT_NEXT_VERTEX;

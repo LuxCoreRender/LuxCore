@@ -66,6 +66,7 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(RenderConfigRef rcfg,
 		compiledScene(nullptr), oclSampler(nullptr),
 		oclPixelFilter(nullptr), photonGICache(nullptr), lightSamplerSharedData(nullptr) {
 	lightTaskCount = 0;
+	lightGuidedProb = 0.f;
 	writeKernelsToFile = false;
 	specializeKernels = true;
 	profileKernels = false;

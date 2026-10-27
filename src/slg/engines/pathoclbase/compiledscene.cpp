@@ -116,6 +116,8 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 		CompileLights();
 	if (editActions.Has(IMAGEMAPS_EDIT))
 		CompileImageMaps();
+	if (wasGeometryCompiled || wasSceneObjectsCompiled)
+		CompileLightTracingCasters();
 
 	if (wasGeometryCompiled || wasMaterialsCompiled || wasSceneObjectsCompiled ||
 			wasLightsCompiled || wasImageMapsCompiled)

@@ -158,7 +158,12 @@ void PathOCLRenderEngine::StartLockLess() {
 			// temporaries of the GPUTask with the same index.
 			lightTaskCount = taskCount;
 			lightFilterLUTs = CompileLightFilterLUTs(GetPixelFilter().get());
-			SLG_LOG("[PathOCLRenderEngine] GPU light tracing task count: " << lightTaskCount);
+			// The share of the light paths emitted toward the nearly specular
+			// objects, the others use the light distribution (unbiased for
+			// every value below 1)
+			lightGuidedProb = Clamp(cfg.Get(Property("path.hybridbackforward.gpulighttracing.guidedprob")(.9f)).Get<float>(), 0.f, .999f);
+			SLG_LOG("[PathOCLRenderEngine] GPU light tracing task count: " << lightTaskCount <<
+					", guided emission probability: " << lightGuidedProb);
 		} else
 			SLG_LOG("[PathOCLRenderEngine] GPU light tracing supports only the perspective camera");
 	}
@@ -362,6 +367,7 @@ PropertiesUPtr PathOCLRenderEngine::GetDefaultProps() {
 			PathTracer::GetDefaultProps() <<
 			Property("pathocl.pixelatomics.enable")(true) <<
 			Property("path.hybridbackforward.gpulighttracing.enable")(true) <<
+			Property("path.hybridbackforward.gpulighttracing.guidedprob")(.9f) <<
 			Property("opencl.task.count")("AUTO") <<
 			PhotonGICache::GetDefaultProps();
 

@@ -124,6 +124,7 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	lightPathCountsBuff = nullptr;
 	emitLightsDistributionBuff = nullptr;
 	lightFilterLUTsBuff = nullptr;
+	lightCastersBuff = nullptr;
 
 	// OpenCL kernels
 	initSeedKernel = nullptr;
@@ -259,6 +260,7 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	intersectionDevice.FreeBuffer(&lightPathCountsBuff);
 	intersectionDevice.FreeBuffer(&emitLightsDistributionBuff);
 	intersectionDevice.FreeBuffer(&lightFilterLUTsBuff);
+	intersectionDevice.FreeBuffer(&lightCastersBuff);
 
 	started = false;
 
@@ -344,6 +346,11 @@ void PathOCLBaseOCLRenderThread::EndSceneEdit(const EditActionList &editActions)
 	if (cscene->wasPhotonGICompiled) {
 		// Update PhotonGI cache
 		InitPhotonGI();
+	}
+
+	if (cscene->wasGeometryCompiled || cscene->wasSceneObjectsCompiled) {
+		// Update the light tracing casters
+		InitLightTracingCasters();
 	}
 
 	//--------------------------------------------------------------------------

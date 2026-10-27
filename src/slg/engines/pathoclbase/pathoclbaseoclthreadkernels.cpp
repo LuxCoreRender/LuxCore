@@ -525,6 +525,13 @@ void PathOCLBaseOCLRenderThread::SetLightTracingKernelArgs(const u_int filmIndex
 	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++, taskCount);
 	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++, emitLightsDistributionBuff);
 	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++, lightFilterLUTsBuff);
+	// No guided emission without casters
+	const u_int lightCasterCount = (renderEngine->lightGuidedProb > 0.f) ?
+		(u_int)renderEngine->compiledScene->lightTracingCasters.size() / 4 : 0;
+	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++, lightCastersBuff);
+	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++, lightCasterCount);
+	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++,
+		(lightCasterCount > 0) ? renderEngine->lightGuidedProb : 0.f);
 	threadFilms[filmIndex]->SetLightTracingFilmKernelArgs(intersectionDevice, advanceLightPathsKernel, argIndex);
 }
 

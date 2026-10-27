@@ -100,6 +100,11 @@ public:
 	// The emit light strategy, used by the light tracing
 	std::vector<float> emitLightsDistribution;
 	u_int emitLightsDistributionSize;
+	// The bounding spheres (center x, y, z, radius) of the objects where a
+	// light path can have a nearly specular vertex, for the guided emission
+	// of the light tracing (see LightEmitGuide). Empty without the hybrid
+	// back/forward path tracing.
+	std::vector<float> lightTracingCasters;
 	// DLSC related data
 	std::vector<slg::ocl::DLSCacheEntry> dlscAllEntries;
 	std::vector<float> dlscDistributions; 
@@ -186,6 +191,7 @@ private:
 	void CompileDLSC(const LightStrategyDLSCache& dlscLightStrategy);
 	void CompileELVC(EnvLightVisibilityCacheRPtr visibilityMapCache);
 	void CompileLightStrategy();
+	void CompileLightTracingCasters();
 
 	void CompilePhotonGI();
 	void CompilePathTracer();

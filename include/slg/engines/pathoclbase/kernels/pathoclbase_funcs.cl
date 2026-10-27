@@ -803,6 +803,11 @@ __kernel void Init(
 		, const uint eyeTaskCount \
 		, __global const float* restrict emitLightsDistribution \
 		, __global const float* restrict lightFilterLUTs \
+		/* The bounding spheres of the casters for the guided emission (see */ \
+		/* LightEmitGuide) and the probability of the guided emission */ \
+		, __global const float* restrict lightCasters \
+		, const uint lightCasterCount \
+		, const float lightGuidedProb \
 		, __global float *filmScreenRadianceGroup0 \
 		, __global float *filmScreenRadianceGroup1 \
 		, __global float *filmScreenRadianceGroup2 \
@@ -855,6 +860,8 @@ OPENCL_FORCE_INLINE bool LightTracing_GenerateLightPath(
 		__global const Camera* restrict camera,
 		__global const float* restrict cameraBokehDistribution,
 		__global const float* restrict emitLightsDistribution,
+		__global const float* restrict lightCasters, const uint lightCasterCount,
+		const float lightGuidedProb,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float worldRadius
 		LIGHTS_PARAM_DECL) {
@@ -874,9 +881,16 @@ OPENCL_FORCE_INLINE bool LightTracing_GenerateLightPath(
 	const float u2 = Rnd_FloatValue(seed);
 	const float u3 = Rnd_FloatValue(seed);
 	const float passThroughEvent = Rnd_FloatValue(seed);
+
+	LightEmitGuide guide;
+	guide.casters = lightCasters;
+	guide.casterCount = lightCasterCount;
+	guide.prob = (lightCasterCount > 0) ? lightGuidedProb : 0.f;
+	guide.u = Rnd_FloatValue(seed);
+
 	float3 rayOrig, rayDir;
 	float lightEmitPdfW;
-	const float3 flux = Light_Emit(light,
+	const float3 flux = Light_Emit(light, &guide,
 			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 			tmpHitPoint, time, u0, u1, u2, u3, passThroughEvent,
 			&rayOrig, &rayDir, &lightEmitPdfW

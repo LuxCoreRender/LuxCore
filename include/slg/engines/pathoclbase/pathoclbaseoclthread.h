@@ -181,6 +181,7 @@ protected:
 	void InitLights();
 	void InitPhotonGI();
 	void InitLightTracing();
+	void InitLightTracingCasters();
 	void InitKernels();
 	void InitGPUTaskBuffer();
 	// Uploads renderEngine->taskConfig
@@ -308,6 +309,7 @@ protected:
 	luxrays::HardwareDeviceBuffer *lightPathCountsBuff;
 	luxrays::HardwareDeviceBuffer *emitLightsDistributionBuff;
 	luxrays::HardwareDeviceBuffer *lightFilterLUTsBuff;
+	luxrays::HardwareDeviceBuffer *lightCastersBuff;
 	std::unique_ptr<u_int[]> lightPathCounts;
 
 	u_int initKernelArgsCount;

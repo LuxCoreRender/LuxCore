@@ -59,6 +59,9 @@ public:
 	// The light paths traced by each GPU thread, 0 without GPU light tracing
 	// (see LightPathTask)
 	u_int lightTaskCount;
+	// The probability of the guided emission of the GPU light tracing (see
+	// LightEmitGuide)
+	float lightGuidedProb;
 
 	PathTracer pathTracer;
 
