@@ -942,3 +942,20 @@ T6.3, needs the same kind of cache).
 
 Next: merge the verified chain into one branch and build pyluxcore + the
 Blender addon, then T5.5.
+
+### 2026-10-27: merged chain, Blender 4.5 addon build
+
+- `gpu-optimization` now holds the whole verified chain (merge commit
+  `31fd565c1`): T5.4, T5.10, T5.7, T6.1, T6.2, T6.5, T7.5, T8.1. New task
+  branches start from `gpu-optimization` again.
+- Addon zip `D:\REPO\LuxCoreRepo\bench\addon\BlendLuxCoreDiginaat-2.11.1-blender45-gpuopt-31fd565c1.zip`:
+  the previous zip with `pyluxcore.pyd` (Python 3.11, `make.bat pyluxcore`)
+  swapped inside the pyluxcore wheel and its RECORD hash rewritten
+  (scratchpad script, same steps work for later builds). BlendLuxCore had no
+  changes since the last zip.
+- Smoke test with Python 3.11 on the unpacked wheels: CUDA + OpenCL devices
+  listed, LuxBall PATHOCL 16.7 M samples/sec over 8 s with a warm cache.
+  Calling the Python log handler during interpreter shutdown crashes
+  (`PyThreadState_Get ... GIL is released`) unless the session is deleted
+  and `SetLogHandler(None)` is called first: test script issue, Blender
+  does not finalize Python while a session lives.
