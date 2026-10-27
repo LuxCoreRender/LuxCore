@@ -36,6 +36,7 @@ public:
 	void GetPreprocessedData(float *emittedFactor, float *absolutePos, float *lightNormal,
 		float *screenX0, float *screenX1, float *screenY0, float *screenY1,
 		const luxrays::Transform **alignedLight2World, const luxrays::Transform **lightProjection) const;
+	float GetArea() const { return area; }
 
 	virtual LightSourceType GetType() const { return TYPE_PROJECTION; }
 	virtual float GetPower(SceneConstRef scene) const;

@@ -29,7 +29,6 @@ OPENCL_FORCE_INLINE float MetropolisSampler_GetSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
 		const uint index
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
 	__global MetropolisSample *samples = (__global MetropolisSample *)samplesBuff;
 	__global MetropolisSample *sample = &samples[gid];
 
@@ -108,7 +107,6 @@ OPENCL_FORCE_INLINE void MetropolisSampler_SplatSample(
 		SAMPLER_PARAM_DECL
 		FILM_PARAM_DECL
 		) {
-	const size_t gid = get_global_id(0);
 	__global MetropolisSample *samples = (__global MetropolisSample *)samplesBuff;
 	__global MetropolisSample *sample = &samples[gid];
 	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
@@ -239,7 +237,6 @@ OPENCL_FORCE_INLINE void MetropolisSampler_NextSample(
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
 	__global MetropolisSample *samples = (__global MetropolisSample *)samplesBuff;
 	__global MetropolisSample *sample = &samples[gid];
 
@@ -269,7 +266,6 @@ OPENCL_FORCE_INLINE bool MetropolisSampler_Init(
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
 	__global MetropolisSample *samples = (__global MetropolisSample *)samplesBuff;
 	__global MetropolisSample *sample = &samples[gid];
 

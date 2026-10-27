@@ -81,6 +81,10 @@ void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions
 		// Update Scene Textures and Materials
 		InitTextures();
 		InitMaterials();
+
+		// The scene part of the task configuration (default volume, shadow
+		// ray any hit) depends on the materials
+		UpdateGPUTaskConfiguration();
 	}
 
 	if (cscene->wasSceneObjectsCompiled) {

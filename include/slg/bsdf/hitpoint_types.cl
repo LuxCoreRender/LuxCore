@@ -18,9 +18,14 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+// HitPoint.flags
+#define HITPOINT_THROUGH_SHADOW_TRANSPARENCY 1
+// Set only by the light tracing kernels (see HitPoint_IsFromLight())
+#define HITPOINT_FROM_LIGHT 2
+
 typedef struct {
-	// The incoming direction. It is the eyeDir when fromLight = false and
-	// lightDir when fromLight = true
+	// The incoming direction. It is the eyeDir, or the lightDir with
+	// HITPOINT_FROM_LIGHT
 	Vector fixedDir;
 	Point p;
 	Normal geometryN;
@@ -42,8 +47,11 @@ typedef struct {
 	// BSDF initialization (while tracing the next path vertex ray)
 	float passThroughEvent;
 
-	// Transformation from local object to world reference frame
-	Transform localToWorld;
+	// Ray time: with meshIndex and triangleIndex, it gives the transformation
+	// from local object to world reference frame (see
+	// HitPoint_GetLocalToWorld()). The transformation itself (128 bytes) is
+	// not stored: it is rarely used after the HitPoint initialization.
+	float time;
 
 	// Interior and exterior volume (this includes volume priority system
 	// computation and scene default world volume)
@@ -54,6 +62,10 @@ typedef struct {
 
 	unsigned int objectID;
 
-	int intoObject, throughShadowTransparency;
+	int intoObject;
+	// HITPOINT_THROUGH_SHADOW_TRANSPARENCY | HITPOINT_FROM_LIGHT. One field for
+	// both: a larger HitPoint slows down the eye path kernels (DLSC -2% to -3%
+	// with a separate field)
+	int flags;
 } HitPoint;
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

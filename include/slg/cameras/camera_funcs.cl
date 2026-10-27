@@ -267,6 +267,121 @@ OPENCL_FORCE_INLINE void PerspectiveCamera_GenerateRay(
 			timeSample, dofSampleX, dofSampleY);
 }
 
+#if defined(PARAM_LIGHT_TRACING)
+
+//------------------------------------------------------------------------------
+// Perspective camera: connection of a light path vertex to the camera (as
+// PerspectiveCamera::SampleLens(), GetSamplePosition() and GetPDF())
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE bool Camera_SampleMotion(__global const Camera* restrict camera,
+		const float time, Matrix4x4 *m) {
+	if (camera->base.motionSystem.interpolatedTransformFirstIndex == NULL_INDEX)
+		return false;
+
+	MotionSystem_Sample(&camera->base.motionSystem, time, camera->base.interpolatedTransforms, m);
+	return true;
+}
+
+OPENCL_FORCE_INLINE float3 PerspectiveCamera_GetDir(__global const Camera* restrict camera,
+		const float time) {
+	const float3 dir = VLOAD3F(&camera->base.dir.x);
+
+	Matrix4x4 m;
+	if (Camera_SampleMotion(camera, time, &m))
+		return Matrix4x4_ApplyVector_Private(&m, dir);
+	else
+		return dir;
+}
+
+OPENCL_FORCE_INLINE float3 PerspectiveCamera_SampleLens(__global const Camera* restrict camera,
+		__global const float* restrict cameraBokehDistribution,
+		const float time, const float u1, const float u2) {
+	float lensU, lensV;
+	PerspectiveCamera_LocalSampleLens(&camera->persp, cameraBokehDistribution, u1, u2, &lensU, &lensV);
+
+	const float3 lensPoint = Transform_ApplyPoint(&camera->base.cameraToWorld, MAKE_FLOAT3(lensU, lensV, 0.f));
+
+	Matrix4x4 m;
+	if (Camera_SampleMotion(camera, time, &m))
+		return Matrix4x4_ApplyPoint_Private(&m, lensPoint);
+	else
+		return lensPoint;
+}
+
+// Returns false if the eye ray (from the lens point toward the scene) isn't
+// visible on the film. It can update the eye ray mint/maxt (clipping plane).
+OPENCL_FORCE_INLINE bool PerspectiveCamera_GetSamplePosition(__global const Camera* restrict camera,
+		__global Ray *eyeRay, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3,
+		float *filmX, float *filmY) {
+	const float3 rayOrig = VLOAD3F(&eyeRay->o.x);
+	const float3 rayDir = VLOAD3F(&eyeRay->d.x);
+	const float maxt = eyeRay->maxt;
+
+	Matrix4x4 m;
+	const bool hasMotion = Camera_SampleMotion(camera, eyeRay->time, &m);
+
+	float3 globalDir = VLOAD3F(&camera->base.dir.x);
+	if (hasMotion)
+		globalDir = Matrix4x4_ApplyVector_Private(&m, globalDir);
+	const float cosi = dot(rayDir, globalDir);
+
+	if ((cosi <= 0.f) || (!isinf(maxt) && ((maxt * cosi < camera->base.hither) ||
+			(maxt * cosi > camera->base.yon))))
+		return false;
+
+	const float lensRadius = camera->persp.projCamera.lensRadius;
+	float3 pO = rayOrig + ((lensRadius > 0.f) ?
+		(rayDir * (camera->persp.projCamera.focalDistance / cosi)) : rayDir);
+	if (hasMotion) {
+		Matrix4x4_Invert(&m);
+		pO = Matrix4x4_ApplyPoint_Private(&m, pO);
+	}
+	// The inverse of raster to world transformation
+	pO = Transform_InvApplyPoint(&camera->base.rasterToCamera,
+			Transform_InvApplyPoint(&camera->base.cameraToWorld, pO));
+
+	*filmX = pO.x;
+	*filmY = filmHeight - 1 - pO.y;
+
+	// Check if we are inside the image plane
+	if ((*filmX < filmSubRegion0) || (*filmX >= filmSubRegion1 + 1) ||
+			(*filmY < filmSubRegion2) || (*filmY >= filmSubRegion3 + 1))
+		return false;
+
+	// World arbitrary clipping plane support
+	if (camera->persp.projCamera.enableClippingPlane) {
+		const float3 clippingPlaneCenter = VLOAD3F(&camera->persp.projCamera.clippingPlaneCenter.x);
+		const float3 clippingPlaneNormal = VLOAD3F(&camera->persp.projCamera.clippingPlaneNormal.x);
+
+		// Check if the ray end point is on the not visible side of the plane
+		const float3 endPoint = rayOrig + maxt * rayDir;
+		if (dot(clippingPlaneNormal, endPoint - clippingPlaneCenter) <= 0.f)
+			return false;
+
+		// Update ray mint/maxt
+		Camera_ApplyArbitraryClippingPlane(eyeRay, clippingPlaneCenter, clippingPlaneNormal);
+	}
+
+	return true;
+}
+
+// The flux to radiance factor of PerspectiveCamera::GetPDF()
+OPENCL_FORCE_INLINE float PerspectiveCamera_GetFluxToRadianceFactor(__global const Camera* restrict camera,
+		const float3 eyeDir, const float eyeDistance, const float time) {
+	const float cosAtCamera = dot(eyeDir, PerspectiveCamera_GetDir(camera, time));
+	if (cosAtCamera <= 0.f)
+		return 0.f;
+
+	const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera * camera->persp.pixelArea);
+
+	return cameraPdfW / (eyeDistance * eyeDistance);
+}
+
+#endif
+
 //------------------------------------------------------------------------------
 // Orthographic camera
 //------------------------------------------------------------------------------

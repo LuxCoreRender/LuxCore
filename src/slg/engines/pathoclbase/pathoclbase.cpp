@@ -65,7 +65,11 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(RenderConfigRef rcfg,
 		const bool supportsNativeThreads) :	OCLRenderEngine(rcfg, supportsNativeThreads),
 		compiledScene(nullptr), oclSampler(nullptr),
 		oclPixelFilter(nullptr), photonGICache(nullptr), lightSamplerSharedData(nullptr) {
+	lightTaskCount = 0;
+	lightGuidedProb = 0.f;
 	writeKernelsToFile = false;
+	specializeKernels = true;
+	profileKernels = false;
 	compileOnly = false;
 
 	//--------------------------------------------------------------------------
@@ -180,9 +184,14 @@ PathOCLBaseRenderEngine::~PathOCLBaseRenderEngine() {
 	delete oclPixelFilter;
 }
 
+void PathOCLBaseRenderEngine::InitGPUTaskSceneConfiguration() {
+	taskConfig.scene.defaultVolumeIndex = compiledScene->defaultWorldVolumeIndex;
+	taskConfig.scene.shadowRaysAnyHit = compiledScene->IsShadowRayAnyHitExact();
+}
+
 void PathOCLBaseRenderEngine::InitGPUTaskConfiguration() {
 	// Scene configuration
-	taskConfig.scene.defaultVolumeIndex = compiledScene->defaultWorldVolumeIndex;
+	InitGPUTaskSceneConfiguration();
 
 	// Sampler configuration
 	taskConfig.sampler = *oclSampler;
@@ -330,6 +339,16 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	SLG_LOG("[PathOCLBaseRenderEngine] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
 
 	writeKernelsToFile = cfg.Get(Property("opencl.kernel.writetofile")(false)).Get<bool>();
+	specializeKernels = cfg.Get(Property("opencl.kernel.specialize.enable")(true)).Get<bool>();
+	profileKernels = cfg.Get(Property("opencl.kernel.profile.enable")(false)).Get<bool>();
+
+	// CUDA: cap on the registers used by each kernel thread (0 = compiler
+	// choice). A lower cap allows more resident warps per SM, at the cost of
+	// register spills. It does not change the computed results.
+	const u_int cudaMaxRegisters = cfg.Get(Property("cuda.kernel.maxregisters")(0u)).Get<u_int>();
+	additionalCUDAKernelOptions.clear();
+	if (cudaMaxRegisters > 0)
+		additionalCUDAKernelOptions.push_back("--maxrregcount=" + ToString(cudaMaxRegisters));
 
 	// Set by luxcore::KernelCacheFill() in order to compile the kernels
 	// without rendering anything
@@ -456,6 +475,9 @@ void PathOCLBaseRenderEngine::EndSceneEditLockLess(const EditActionList &editAct
 	if (lightSamplerSharedData)
 		lightSamplerSharedData->Reset();
 	compiledScene->Recompile(editActions);
+	// Materials and volumes can have changed (uploaded by the threads'
+	// EndSceneEdit())
+	InitGPUTaskSceneConfiguration();
 
 	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
 		renderOCLThreads[i]->intersectionDevice.PushThreadCurrentDevice();

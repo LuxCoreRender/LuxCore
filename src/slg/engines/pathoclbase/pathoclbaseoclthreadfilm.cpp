@@ -116,8 +116,10 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(FilmRef engineFlm,
 	film = Film::Create(threadFilmWidth, threadFilmHeight, threadFilmSubRegion);
 	film->CopyDynamicSettings(*engineFilm);
 	// Engine film may have RADIANCE_PER_SCREEN_NORMALIZED channel because of
-	// hybrid back/forward path tracing
-	film->RemoveChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+	// hybrid back/forward path tracing: the thread film needs it only with the
+	// GPU light tracing
+	if (renderThread->renderEngine->lightTaskCount == 0)
+		film->RemoveChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
 	film->Init();
 
 	//--------------------------------------------------------------------------
@@ -126,6 +128,9 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(FilmRef engineFlm,
 
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
 		renderThread->intersectionDevice.FreeBuffer(&channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]);
+	for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff.size(); ++i)
+		renderThread->intersectionDevice.FreeBuffer(&channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff[i]);
+	channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff.clear();
 
 	if (film->GetRadianceGroupCount() > 8)
 		throw runtime_error("PathOCL supports only up to 8 Radiance Groups");
@@ -139,6 +144,13 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(FilmRef engineFlm,
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
 		renderThread->intersectionDevice.AllocBuffer(&channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i], memTypeFlags,
 				nullptr, sizeof(float[4]) * filmPixelCount, "RADIANCE_PER_PIXEL_NORMALIZEDs[" + ToString(i) + "]");
+	}
+	if (film->HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED)) {
+		channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff.resize(film->GetRadianceGroupCount(), NULL);
+		for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff.size(); ++i) {
+			renderThread->intersectionDevice.AllocBuffer(&channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff[i], memTypeFlags,
+					nullptr, sizeof(float[3]) * filmPixelCount, "RADIANCE_PER_SCREEN_NORMALIZEDs[" + ToString(i) + "]");
+		}
 	}
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::ALPHA))
@@ -382,6 +394,9 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::FreeAllOCLBuffers() {
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
 		renderThread->intersectionDevice.FreeBuffer(&channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]);
 	channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.clear();
+	for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff.size(); ++i)
+		renderThread->intersectionDevice.FreeBuffer(&channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff[i]);
+	channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff.clear();
 	renderThread->intersectionDevice.FreeBuffer(&channel_ALPHA_Buff);
 	renderThread->intersectionDevice.FreeBuffer(&channel_DEPTH_Buff);
 	renderThread->intersectionDevice.FreeBuffer(&channel_POSITION_Buff);
@@ -558,6 +573,13 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::RecvFilm(HardwareIntersectionDevice
 				channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]->GetSize(),
 				film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixels());
 		}
+	}
+	for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff.size(); ++i) {
+		intersectionDevice.EnqueueReadBuffer(
+			channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff[i],
+			CL_FALSE,
+			channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff[i]->GetSize(),
+			film->channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixels());
 	}
 
 	if (channel_ALPHA_Buff) {
@@ -884,6 +906,13 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::SendFilm(HardwareIntersectionDevice
 				channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]->GetSize(),
 				film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixels());
 		}
+	}
+	for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff.size(); ++i) {
+		intersectionDevice.EnqueueWriteBuffer(
+			channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff[i],
+			CL_FALSE,
+			channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff[i]->GetSize(),
+			film->channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixels());
 	}
 
 	if (channel_ALPHA_Buff) {
@@ -1221,6 +1250,30 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::ClearFilm(
 	intersectionDevice.EnqueueKernel(filmClearKernel,
 			HardwareDeviceRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
 			HardwareDeviceRange(filmClearWorkGroupSize));
+
+	// The GPU light tracing RADIANCE_PER_SCREEN_NORMALIZED channel
+	HardwareDeviceKernelRPtr lightClearKernel = renderThread->lightTracingClearFilmKernel;
+	const size_t lightClearWorkGroupSize = renderThread->lightTracingClearFilmWorkGroupSize;
+	for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff.size(); ++i) {
+		intersectionDevice.SetKernelArg(lightClearKernel, 0, filmPixelCount);
+		intersectionDevice.SetKernelArg(lightClearKernel, 1, channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff[i]);
+		intersectionDevice.EnqueueKernel(lightClearKernel,
+				HardwareDeviceRange(RoundUp<u_int>(filmPixelCount * 3, lightClearWorkGroupSize)),
+				HardwareDeviceRange(lightClearWorkGroupSize));
+	}
+}
+
+u_int PathOCLBaseOCLRenderThread::ThreadFilm::SetLightTracingFilmKernelArgs(
+		HardwareIntersectionDeviceRef intersectionDevice,
+		HardwareDeviceKernelRPtr kernel, u_int argIndex) const {
+	for (u_int i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
+		if (i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff.size())
+			intersectionDevice.SetKernelArg(kernel, argIndex++, channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff[i]);
+		else
+			intersectionDevice.SetKernelArg(kernel, argIndex++, nullptr);
+	}
+
+	return argIndex;
 }
 
 #endif

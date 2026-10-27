@@ -47,6 +47,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// CONST_FLOAT
 		//----------------------------------------------------------------------
 		case CONST_FLOAT: {
+			TEXTURE_TYPE_GUARD(CONST_FLOAT);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = ConstFloatTexture_ConstEvaluateFloat(texture);
@@ -73,6 +74,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// CONST_FLOAT3
 		//----------------------------------------------------------------------
 		case CONST_FLOAT3: {
+			TEXTURE_TYPE_GUARD(CONST_FLOAT3);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = ConstFloat3Texture_ConstEvaluateFloat(texture);
@@ -99,6 +101,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// IMAGEMAP
 		//----------------------------------------------------------------------
 		case IMAGEMAP: {
+			TEXTURE_TYPE_GUARD(IMAGEMAP);
 			ImageMapTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -107,6 +110,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// SCALE_TEX
 		//----------------------------------------------------------------------
 		case SCALE_TEX: {
+			TEXTURE_TYPE_GUARD(SCALE_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex1, tex2;
@@ -151,6 +155,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// FRESNEL_APPROX_N
 		//----------------------------------------------------------------------
 		case FRESNEL_APPROX_N: {
+			TEXTURE_TYPE_GUARD(FRESNEL_APPROX_N);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex1;
@@ -190,6 +195,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// FRESNEL_APPROX_K
 		//----------------------------------------------------------------------
 		case FRESNEL_APPROX_K: {
+			TEXTURE_TYPE_GUARD(FRESNEL_APPROX_K);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex1;
@@ -229,6 +235,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// MIX_TEX
 		//----------------------------------------------------------------------
 		case MIX_TEX: {
+			TEXTURE_TYPE_GUARD(MIX_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float amt, tex1, tex2;
@@ -280,6 +287,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// ADD_TEX
 		//----------------------------------------------------------------------
 		case ADD_TEX: {
+			TEXTURE_TYPE_GUARD(ADD_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex1, tex2;
@@ -319,6 +327,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// SUBTRACT_TEX
 		//----------------------------------------------------------------------
 		case SUBTRACT_TEX: {
+			TEXTURE_TYPE_GUARD(SUBTRACT_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex1, tex2;
@@ -358,6 +367,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// HITPOINTCOLOR
 		//----------------------------------------------------------------------
 		case HITPOINTCOLOR:
+			TEXTURE_TYPE_GUARD(HITPOINTCOLOR);
 			HitPointColorTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -365,6 +375,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// HITPOINTALPHA
 		//----------------------------------------------------------------------
 		case HITPOINTALPHA:
+			TEXTURE_TYPE_GUARD(HITPOINTALPHA);
 			HitPointAlphaTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -372,6 +383,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// HITPOINTGREY
 		//----------------------------------------------------------------------
 		case HITPOINTGREY:
+			TEXTURE_TYPE_GUARD(HITPOINTGREY);
 			HitPointGreyTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -379,6 +391,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// HITPOINTVERTEXAOV
 		//----------------------------------------------------------------------
 		case HITPOINTVERTEXAOV:
+			TEXTURE_TYPE_GUARD(HITPOINTVERTEXAOV);
 			HitPointVertexAOVTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -386,6 +399,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// HITPOINTTRIANGLEAOV
 		//----------------------------------------------------------------------
 		case HITPOINTTRIANGLEAOV:
+			TEXTURE_TYPE_GUARD(HITPOINTTRIANGLEAOV);
 			HitPointTriangleAOVTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -393,6 +407,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// NORMALMAP_TEX
 		//----------------------------------------------------------------------
 		case NORMALMAP_TEX: {
+			TEXTURE_TYPE_GUARD(NORMALMAP_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = NormalMapTexture_ConstEvaluateFloat();
@@ -422,6 +437,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// BLACKBODY_TEX
 		//----------------------------------------------------------------------
 		case BLACKBODY_TEX: {
+			TEXTURE_TYPE_GUARD(BLACKBODY_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = BlackBodyTexture_ConstEvaluateFloat(VLOAD3F(texture->blackBody.rgb.c));
@@ -448,6 +464,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// IRREGULARDATA_TEX
 		//----------------------------------------------------------------------
 		case IRREGULARDATA_TEX: {
+			TEXTURE_TYPE_GUARD(IRREGULARDATA_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = IrregularDataTexture_ConstEvaluateFloat(VLOAD3F(texture->irregularData.rgb.c));
@@ -474,6 +491,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// DENSITYGRID_TEX
 		//----------------------------------------------------------------------
 		case DENSITYGRID_TEX: {
+			TEXTURE_TYPE_GUARD(DENSITYGRID_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = DensityGridTexture_ConstEvaluateFloat(hitPoint,
@@ -513,6 +531,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// ABS_TEX
 		//----------------------------------------------------------------------
 		case ABS_TEX:
+			TEXTURE_TYPE_GUARD(ABS_TEX);
 			AbsTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -520,6 +539,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// CLAMP_TEX
 		//----------------------------------------------------------------------
 		case CLAMP_TEX:
+			TEXTURE_TYPE_GUARD(CLAMP_TEX);
 			ClampTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -527,6 +547,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// BILERP_TEX
 		//----------------------------------------------------------------------
 		case BILERP_TEX: {
+			TEXTURE_TYPE_GUARD(BILERP_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex00, tex01, tex10, tex11;
@@ -575,6 +596,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// COLORDEPTH_TEX
 		//----------------------------------------------------------------------
 		case COLORDEPTH_TEX: {
+			TEXTURE_TYPE_GUARD(COLORDEPTH_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex1;
@@ -614,6 +636,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// HSV_TEX
 		//----------------------------------------------------------------------
 		case HSV_TEX: {
+			TEXTURE_TYPE_GUARD(HSV_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float3 tex1;
@@ -662,6 +685,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// DIVIDE_TEX
 		//----------------------------------------------------------------------
 		case DIVIDE_TEX: {
+			TEXTURE_TYPE_GUARD(DIVIDE_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex1, tex2;
@@ -703,6 +727,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// REMAP_TEX
 		//----------------------------------------------------------------------
 		case REMAP_TEX: {
+			TEXTURE_TYPE_GUARD(REMAP_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float valueTex, sourceMinTex, sourceMaxTex, targetMinTex, targetMaxTex;
@@ -753,6 +778,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// OBJECTID_TEX
 		//----------------------------------------------------------------------
 		case OBJECTID_TEX: {
+			TEXTURE_TYPE_GUARD(OBJECTID_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = ObjectIDTexture_ConstEvaluateFloat(hitPoint);
@@ -779,6 +805,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// OBJECTID_COLOR_TEX
 		//----------------------------------------------------------------------
 		case OBJECTID_COLOR_TEX: {
+			TEXTURE_TYPE_GUARD(OBJECTID_COLOR_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = ObjectIDColorTexture_ConstEvaluateFloat(hitPoint);
@@ -805,6 +832,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// OBJECTID_NORMALIZED_TEX
 		//----------------------------------------------------------------------
 		case OBJECTID_NORMALIZED_TEX: {
+			TEXTURE_TYPE_GUARD(OBJECTID_NORMALIZED_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = ObjectIDNormalizedTexture_ConstEvaluateFloat(hitPoint);
@@ -831,6 +859,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// DOT_PRODUCT_TEX
 		//----------------------------------------------------------------------
 		case DOT_PRODUCT_TEX: {
+			TEXTURE_TYPE_GUARD(DOT_PRODUCT_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float3 tex1, tex2;
@@ -872,6 +901,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// POWER_TEX
 		//----------------------------------------------------------------------
 		case POWER_TEX: {
+			TEXTURE_TYPE_GUARD(POWER_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex1, tex2;
@@ -913,6 +943,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// LESS_THAN_TEX
 		//----------------------------------------------------------------------
 		case LESS_THAN_TEX: {
+			TEXTURE_TYPE_GUARD(LESS_THAN_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex1, tex2;
@@ -954,6 +985,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// GREATER_THAN_TEX
 		//----------------------------------------------------------------------
 		case GREATER_THAN_TEX: {
+			TEXTURE_TYPE_GUARD(GREATER_THAN_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex1, tex2;
@@ -995,6 +1027,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// ROUNDING_TEX
 		//----------------------------------------------------------------------
 		case ROUNDING_TEX: {
+			TEXTURE_TYPE_GUARD(ROUNDING_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex1, tex2;
@@ -1036,6 +1069,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// MODULO_TEX
 		//----------------------------------------------------------------------
 		case MODULO_TEX: {
+			TEXTURE_TYPE_GUARD(MODULO_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex1, tex2;
@@ -1077,6 +1111,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// SHADING_NORMAL_TEX
 		//----------------------------------------------------------------------
 		case SHADING_NORMAL_TEX:
+			TEXTURE_TYPE_GUARD(SHADING_NORMAL_TEX);
 			ShadingNormalTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -1084,6 +1119,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// POSITION_TEX
 		//----------------------------------------------------------------------
 		case POSITION_TEX: {
+			TEXTURE_TYPE_GUARD(POSITION_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = PositionTexture_ConstEvaluateFloat(hitPoint);
@@ -1117,6 +1153,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// SPLIT_FLOAT3
 		//----------------------------------------------------------------------
 		case SPLIT_FLOAT3: {
+			TEXTURE_TYPE_GUARD(SPLIT_FLOAT3);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float3 tex1;
@@ -1158,6 +1195,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// MAKE_FLOAT3
 		//----------------------------------------------------------------------
 		case MAKE_FLOAT3: {
+			TEXTURE_TYPE_GUARD(MAKE_FLOAT3);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex1, tex2, tex3;
@@ -1203,6 +1241,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// BRIGHT_CONTRAST_TEX
 		//----------------------------------------------------------------------
 		case BRIGHT_CONTRAST_TEX: {
+			TEXTURE_TYPE_GUARD(BRIGHT_CONTRAST_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex1, brightnessTex, contrastTex;
@@ -1249,6 +1288,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// BLENDER_BLEND
 		//----------------------------------------------------------------------
 		case BLENDER_BLEND:
+			TEXTURE_TYPE_GUARD(BLENDER_BLEND);
 			BlenderBlendTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -1256,6 +1296,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// BLENDER_CLOUDS
 		//----------------------------------------------------------------------
 		case BLENDER_CLOUDS:
+			TEXTURE_TYPE_GUARD(BLENDER_CLOUDS);
 			BlenderCloudsTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -1263,6 +1304,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// BLENDER_DISTORTED_NOISE
 		//----------------------------------------------------------------------
 		case BLENDER_DISTORTED_NOISE:
+			TEXTURE_TYPE_GUARD(BLENDER_DISTORTED_NOISE);
 			BlenderDistortedNoiseTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -1270,6 +1312,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// BLENDER_MAGIC
 		//----------------------------------------------------------------------
 		case BLENDER_MAGIC:
+			TEXTURE_TYPE_GUARD(BLENDER_MAGIC);
 			BlenderMagicTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -1277,6 +1320,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// BLENDER_MARBLE
 		//----------------------------------------------------------------------
 		case BLENDER_MARBLE:
+			TEXTURE_TYPE_GUARD(BLENDER_MARBLE);
 			BlenderMarbleTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -1284,6 +1328,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// BLENDER_MUSGRAVE
 		//----------------------------------------------------------------------
 		case BLENDER_MUSGRAVE:
+			TEXTURE_TYPE_GUARD(BLENDER_MUSGRAVE);
 			BlenderMusgraveTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -1291,6 +1336,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// BLENDER_NOISE
 		//----------------------------------------------------------------------
 		case BLENDER_NOISE:
+			TEXTURE_TYPE_GUARD(BLENDER_NOISE);
 			BlenderNoiseTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -1298,6 +1344,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// BLENDER_STUCCI
 		//----------------------------------------------------------------------
 		case BLENDER_STUCCI:
+			TEXTURE_TYPE_GUARD(BLENDER_STUCCI);
 			BlenderStucciTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -1305,6 +1352,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// BLENDER_WOOD
 		//----------------------------------------------------------------------
 		case BLENDER_WOOD:
+			TEXTURE_TYPE_GUARD(BLENDER_WOOD);
 			BlenderWoodTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -1312,6 +1360,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// BLENDER_VORONOI
 		//----------------------------------------------------------------------
 		case BLENDER_VORONOI:
+			TEXTURE_TYPE_GUARD(BLENDER_VORONOI);
 			BlenderVoronoiTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -1319,6 +1368,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// CHECKERBOARD2D
 		//----------------------------------------------------------------------
 		case CHECKERBOARD2D: {
+			TEXTURE_TYPE_GUARD(CHECKERBOARD2D);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex1, tex2;
@@ -1364,6 +1414,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// CHECKERBOARD3D
 		//----------------------------------------------------------------------
 		case CHECKERBOARD3D: {
+			TEXTURE_TYPE_GUARD(CHECKERBOARD3D);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex1, tex2;
@@ -1409,6 +1460,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// CLOUD_TEX
 		//----------------------------------------------------------------------
 		case CLOUD_TEX: {
+			TEXTURE_TYPE_GUARD(CLOUD_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = CloudTexture_ConstEvaluateFloat(hitPoint,
@@ -1458,6 +1510,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// FBM_TEX
 		//----------------------------------------------------------------------
 		case FBM_TEX: {
+			TEXTURE_TYPE_GUARD(FBM_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = FBMTexture_ConstEvaluateFloat(hitPoint,
@@ -1497,6 +1550,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// MARBLE
 		//----------------------------------------------------------------------
 		case MARBLE: {
+			TEXTURE_TYPE_GUARD(MARBLE);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = MarbleTexture_ConstEvaluateFloat(hitPoint,
@@ -1538,6 +1592,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// DOTS
 		//----------------------------------------------------------------------
 		case DOTS: {
+			TEXTURE_TYPE_GUARD(DOTS);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex1, tex2;
@@ -1583,6 +1638,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// BRICK
 		//----------------------------------------------------------------------
 		case BRICK:
+			TEXTURE_TYPE_GUARD(BRICK);
 			BrickTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -1590,6 +1646,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// WINDY
 		//----------------------------------------------------------------------
 		case WINDY: {
+			TEXTURE_TYPE_GUARD(WINDY);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = WindyTexture_ConstEvaluateFloat(hitPoint,
@@ -1627,6 +1684,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// WRINKLED
 		//----------------------------------------------------------------------
 		case WRINKLED: {
+			TEXTURE_TYPE_GUARD(WRINKLED);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = WrinkledTexture_ConstEvaluateFloat(hitPoint,
@@ -1666,6 +1724,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// UV_TEX
 		//----------------------------------------------------------------------
 		case UV_TEX: {
+			TEXTURE_TYPE_GUARD(UV_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = UVTexture_ConstEvaluateFloat(hitPoint,
@@ -1703,6 +1762,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// BAND_TEX
 		//----------------------------------------------------------------------
 		case BAND_TEX: {
+			TEXTURE_TYPE_GUARD(BAND_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex1;
@@ -1748,6 +1808,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// WIREFRAME_TEX
 		//----------------------------------------------------------------------
 		case WIREFRAME_TEX: {
+			TEXTURE_TYPE_GUARD(WIREFRAME_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex1, tex2;
@@ -1795,6 +1856,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// TRIPLANAR_TEX
 		//----------------------------------------------------------------------
 		case TRIPLANAR_TEX:
+			TEXTURE_TYPE_GUARD(TRIPLANAR_TEX);
 			TriplanarTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -1802,6 +1864,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// DISTORT_TEX
 		//----------------------------------------------------------------------
 		case DISTORT_TEX:
+			TEXTURE_TYPE_GUARD(DISTORT_TEX);
 			DistortTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -1809,6 +1872,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// BOMBING_TEX
 		//----------------------------------------------------------------------
 		case BOMBING_TEX:
+			TEXTURE_TYPE_GUARD(BOMBING_TEX);
 			BombingTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
@@ -1816,6 +1880,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// FRESNELCOLOR_TEX
 		//----------------------------------------------------------------------
 		case FRESNELCOLOR_TEX: {
+			TEXTURE_TYPE_GUARD(FRESNELCOLOR_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = FresnelColorTexture_ConstEvaluateFloat();
@@ -1842,6 +1907,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// FRESNELCONST_TEX
 		//----------------------------------------------------------------------
 		case FRESNELCONST_TEX: {
+			TEXTURE_TYPE_GUARD(FRESNELCONST_TEX);
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = FresnelColorTexture_ConstEvaluateFloat();
@@ -1868,6 +1934,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// RANDOM_TEX
 		//----------------------------------------------------------------------
 		case RANDOM_TEX:
+			TEXTURE_TYPE_GUARD(RANDOM_TEX);
 			RandomTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;

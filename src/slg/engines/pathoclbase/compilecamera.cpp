@@ -54,6 +54,7 @@ void CompiledScene::CompileCamera() {
 	camera.base.hither = sceneCamera.clipHither;
 	camera.base.shutterOpen = sceneCamera.shutterOpen;
 	camera.base.shutterClose = sceneCamera.shutterClose;
+	ASSIGN_VECTOR(camera.base.dir, sceneCamera.GetDir());
 	camera.base.volumeIndex = sceneCamera.HasVolume() ?
 		scene.GetMaterials().GetMaterialIndex(sceneCamera.GetVolume()) : NULL_INDEX;
 
@@ -104,6 +105,10 @@ void CompiledScene::CompileCamera() {
 
 			memcpy(camera.base.rasterToCamera.m.m, perspCamera.GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
 			memcpy(camera.base.cameraToWorld.m.m, perspCamera.GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
+			// The inverse transformations are used by the light tracing
+			// (PerspectiveCamera_GetSamplePosition())
+			memcpy(camera.base.rasterToCamera.mInv.m, perspCamera.GetRasterToCamera().mInv.m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.cameraToWorld.mInv.m, perspCamera.GetCameraToWorld().mInv.m, 4 * 4 * sizeof(float));
 
 			camera.persp.projCamera.lensRadius = perspCamera.lensRadius;
 			camera.persp.projCamera.focalDistance = perspCamera.focalDistance;
@@ -112,6 +117,7 @@ void CompiledScene::CompileCamera() {
 			camera.persp.screenOffsetY = perspCamera.screenOffsetY;
 
 			camera.persp.enableOculusRiftBarrel = perspCamera.enableOculusRiftBarrel;
+			camera.persp.pixelArea = perspCamera.GetPixelArea();
 			if (perspCamera.enableClippingPlane) {
 				camera.persp.projCamera.enableClippingPlane = true;
 				ASSIGN_VECTOR(camera.persp.projCamera.clippingPlaneCenter, perspCamera.clippingPlaneCenter);

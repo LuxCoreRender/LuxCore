@@ -25,6 +25,7 @@
 #include "luxrays/devices/cudadevice.h"
 #include "luxrays/kernels/kernels.h"
 #include <chrono>
+#include <cstring>
 
 using namespace std;
 using namespace luxrays;
@@ -384,6 +385,25 @@ u_int CUDADevice::GetKernelWorkGroupSize(HardwareDeviceKernelRPtr kernel) {
 	return 32;
 }
 
+u_int CUDADevice::GetKernelOccupancyWorkGroupSize(HardwareDeviceKernelRPtr kernel) {
+	assert (kernel);
+	assert (!kernel->IsNull());
+
+	auto& cudaDeviceKernel = dynamic_cast<CUDADeviceKernelRef>(*kernel);
+
+	int minGridSize, blockSize;
+	CHECK_CUDA_ERROR(cuOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize,
+			cudaDeviceKernel.cudaKernel, nullptr, 0, 0));
+
+	// Round down to a power of 2 so it divides the global sizes (task count
+	// is a multiple of 8192)
+	u_int size = 32;
+	while (size * 2 <= (u_int)blockSize)
+		size *= 2;
+
+	return size;
+}
+
 void CUDADevice::SetKernelArg(HardwareDeviceKernelRPtr kernel,
 		const u_int index, const size_t size, const void *arg) {
 	assert (kernel);
@@ -491,9 +511,25 @@ void CUDADevice::EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
 	assert (cudaDeviceBuff);
 
 	if (blocking) {
+		// As in an in-order queue, the non-blocking reads queued before are
+		// complete, and copied before this one, when it returns
+		if (!pendingReads.empty() || !markers.empty())
+			FinishQueue();
+
 		CHECK_CUDA_ERROR(cuMemcpyDtoH(ptr, cudaDeviceBuff->cudaBuff, size));
 	} else {
-		CHECK_CUDA_ERROR(cuMemcpyDtoHAsync(ptr, cudaDeviceBuff->cudaBuff, size, 0));
+		// An asynchronous copy to pageable memory returns only when the device
+		// has run all the queued work: copy to pinned memory and from there to
+		// ptr in FinishQueue() or WaitMarker()
+		if (!cudaDeviceBuff->pinnedBuff &&
+				(cuMemAllocHost(&cudaDeviceBuff->pinnedBuff, cudaDeviceBuff->GetSize()) != CUDA_SUCCESS))
+			cudaDeviceBuff->pinnedBuff = nullptr;
+
+		if (cudaDeviceBuff->pinnedBuff) {
+			CHECK_CUDA_ERROR(cuMemcpyDtoHAsync(cudaDeviceBuff->pinnedBuff, cudaDeviceBuff->cudaBuff, size, 0));
+			pendingReads.push_back({ cudaDeviceBuff->pinnedBuff, ptr, size });
+		} else
+			CHECK_CUDA_ERROR(cuMemcpyDtoHAsync(ptr, cudaDeviceBuff->cudaBuff, size, 0));
 	}
 }
 
@@ -515,8 +551,49 @@ void CUDADevice::EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
 void CUDADevice::FlushQueue() {
 }
 
+void CUDADevice::CopyPinnedReads(vector<PinnedRead> &reads) {
+	for (auto const &read : reads)
+		memcpy(read.dst, read.src, read.size);
+	reads.clear();
+}
+
 void CUDADevice::FinishQueue() {
 	CHECK_CUDA_ERROR(cuStreamSynchronize(0));
+
+	for (auto &marker : markers) {
+		CopyPinnedReads(marker.reads);
+		freeMarkerEvents.push_back(marker.event);
+	}
+	markers.clear();
+	CopyPinnedReads(pendingReads);
+}
+
+void CUDADevice::EnqueueMarker() {
+	CUevent event;
+	if (freeMarkerEvents.empty()) {
+		// A blocking sync event: the thread waiting for it does not spin
+		CHECK_CUDA_ERROR(cuEventCreate(&event, CU_EVENT_BLOCKING_SYNC | CU_EVENT_DISABLE_TIMING));
+	} else {
+		event = freeMarkerEvents.back();
+		freeMarkerEvents.pop_back();
+	}
+	CHECK_CUDA_ERROR(cuEventRecord(event, 0));
+
+	markers.push_back({ event, std::move(pendingReads) });
+	pendingReads.clear();
+}
+
+void CUDADevice::WaitMarker() {
+	if (markers.empty()) {
+		FinishQueue();
+		return;
+	}
+
+	QueueMarker &marker = markers.front();
+	CHECK_CUDA_ERROR(cuEventSynchronize(marker.event));
+	CopyPinnedReads(marker.reads);
+	freeMarkerEvents.push_back(marker.event);
+	markers.pop_front();
 }
 
 //------------------------------------------------------------------------------
@@ -610,6 +687,8 @@ void CUDADevice::FreeBuffer(HardwareDeviceBuffer **buff) {
 			FreeMemory(cudaDeviceBuff->GetSize());
 
 			CHECK_CUDA_ERROR(cuMemFree(cudaDeviceBuff->cudaBuff));
+			if (cudaDeviceBuff->pinnedBuff)
+				CHECK_CUDA_ERROR(cuMemFreeHost(cudaDeviceBuff->pinnedBuff));
 		}
 
 		delete *buff;

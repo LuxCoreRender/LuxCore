@@ -24,6 +24,82 @@
 
 //#define DEBUG_PRINTF_KERNEL_NAME 1
 
+// Declares a pointer to one of the GPUTask temporaries (tmpBsdf, tmpHitPoint,
+// tmpPathDepthInfo), used only inside one micro-kernel. On CUDA it points to
+// a kernel local: local memory is interleaved per thread, so the accesses of
+// a warp are coalesced, while the GPUTask array of structs is not. OpenCL
+// __global pointers can't point to private memory, so OpenCL keeps the buffer.
+#if defined(LUXRAYS_CUDA_DEVICE)
+#define GPUTASK_TMP(type, name) type name##Local; __global type *name = &name##Local
+#else
+#define GPUTASK_TMP(type, name) __global type *name = &tasks[gid].name
+#endif
+
+//------------------------------------------------------------------------------
+// The work of MK_NEXT_SAMPLE and MK_GENERATE_CAMERA_RAY, shared by their
+// kernels and by MK_SPLAT_SAMPLE. Defined before the first kernel: the
+// OpenCL split compile (SplitMicroKernelSources()) gives each kernel program
+// only the source before the first __kernel and the kernel itself.
+//------------------------------------------------------------------------------
+
+// Returns the next state of the path
+OPENCL_FORCE_INLINE PathState NextSample(
+		__constant const GPUTaskConfiguration* restrict taskConfig,
+		__global float *filmNoise,
+		__global float *filmUserImportance,
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3,
+		__global Ray *ray
+		SAMPLER_PARAM_DECL) {
+	Sampler_NextSample(taskConfig,
+			filmNoise,
+			filmUserImportance,
+			filmWidth, filmHeight,
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3
+			SAMPLER_PARAM);
+
+	// Generate a new path and camera ray only it is not TILEPATHOCL
+#if !defined(RENDER_ENGINE_TILEPATHOCL) && !defined(RENDER_ENGINE_RTPATHOCL)
+	return MK_GENERATE_CAMERA_RAY;
+#else
+	// Mark the ray like like one to NOT trace
+	ray->flags = RAY_FLAGS_MASKED;
+	return MK_DONE;
+#endif
+}
+
+#if !defined(RENDER_ENGINE_TILEPATHOCL) && !defined(RENDER_ENGINE_RTPATHOCL)
+// The caller sets the state to MK_RT_NEXT_VERTEX
+OPENCL_FORCE_INLINE void GenerateCameraRay(
+		__constant const GPUTaskConfiguration* restrict taskConfig,
+		__global GPUTaskDirectLight *taskDirectLight,
+		__global GPUTaskState *taskState,
+		__global const Camera* restrict camera,
+		__global const float* restrict cameraBokehDistribution,
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3,
+		__global float *pixelFilterDistribution,
+		__global Ray *ray,
+		__global EyePathInfo *pathInfo
+		SAMPLER_PARAM_DECL) {
+	// Re-initialize the volume information
+	PathVolumeInfo_Init(&pathInfo->volume);
+
+	GenerateEyePath(taskConfig,
+			taskDirectLight, taskState,
+			camera,
+			cameraBokehDistribution,
+			filmWidth, filmHeight,
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
+			pixelFilterDistribution,
+			ray,
+			pathInfo
+			SAMPLER_PARAM);
+}
+#endif
+
 //------------------------------------------------------------------------------
 // Evaluation of the Path finite state machine.
 //
@@ -34,15 +110,15 @@
 __kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	PATH_QUEUE_GET_GID(PATH_QUEUE_RT_NEXT_VERTEX);
 	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
 
-	// This has to be done by the first kernel to run after RT kernel
+	// Count the ray traced for this path (MK_RT_DL counts the shadow rays)
 	sampleResult->rayCount += 1;
 
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[gid];
-	PathState pathState = taskState->state;
+	PathState pathState = pathStates[gid];
 #if defined(DEBUG_PRINTF_KERNEL_NAME)
 	if (gid == 0)
 		printf("Kernel: AdvancePaths_MK_RT_NEXT_VERTEX(state = %d)\n", pathState);
@@ -72,12 +148,13 @@ __kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 	const float passThroughEvent = Rnd_FloatValue(&seedPassThroughEvent);
 	taskState->seedPassThroughEvent = seedPassThroughEvent;
 
+	GPUTASK_TMP(HitPoint, tmpHitPoint);
 	int throughShadowTransparency = taskState->throughShadowTransparency;
 	const bool continueToTrace = Scene_Intersect(taskConfig,
 			EYE_RAY | ((pathInfo->depth.depth == 0) ? CAMERA_RAY : INDIRECT_RAY),
 			&throughShadowTransparency,
 			&pathInfo->volume,
-			&tasks[gid].tmpHitPoint,
+			tmpHitPoint,
 			passThroughEvent,
 			&rays[gid], &rayHits[gid], &taskState->bsdf,
 			&connectionThroughput, VLOAD3F(taskState->throughput.c),
@@ -91,7 +168,7 @@ __kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 	// If continueToTrace, there is nothing to do, just keep the same state
 	if (!continueToTrace) {
 		if (rayHits[gid].meshIndex == NULL_INDEX)
-			taskState->state = MK_HIT_NOTHING;
+			PATH_STATE_SET(MK_HIT_NOTHING);
 		else {
 			const BSDFEvent eventTypes = BSDF_GetEventTypes(&taskState->bsdf
 					MATERIALS_PARAM);
@@ -99,7 +176,7 @@ __kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 			sampleResult->lastPathVertex = PathDepthInfo_IsLastPathVertex(&pathInfo->depth, 
 					&taskConfig->pathTracer.maxPathDepth, eventTypes);
 
-			taskState->state = MK_HIT_OBJECT;
+			PATH_STATE_SET(MK_HIT_OBJECT);
 		}
 	}
 }
@@ -114,11 +191,11 @@ __kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 __kernel void AdvancePaths_MK_HIT_NOTHING(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	PATH_QUEUE_GET_GID(PATH_QUEUE_HIT_NOTHING);
 
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[gid];
-	PathState pathState = taskState->state;
+	PathState pathState = pathStates[gid];
 #if defined(DEBUG_PRINTF_KERNEL_NAME)
 	if (gid == 0)
 		printf("Kernel: AdvancePaths_MK_HIT_NOTHING(state = %d)\n", pathState);
@@ -191,7 +268,7 @@ __kernel void AdvancePaths_MK_HIT_NOTHING(
 		sampleResult->alpha = 0.f;
 	}
 
-	taskState->state = MK_SPLAT_SAMPLE;
+	PATH_STATE_SET(MK_SPLAT_SAMPLE);
 }
 
 //------------------------------------------------------------------------------
@@ -204,11 +281,11 @@ __kernel void AdvancePaths_MK_HIT_NOTHING(
 __kernel void AdvancePaths_MK_HIT_OBJECT(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	PATH_QUEUE_GET_GID(PATH_QUEUE_HIT_OBJECT);
 
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[gid];
-	PathState pathState = taskState->state;
+	PathState pathState = pathStates[gid];
 #if defined(DEBUG_PRINTF_KERNEL_NAME)
 	if (gid == 0)
 		printf("Kernel: AdvancePaths_MK_HIT_OBJECT(state = %d)\n", pathState);
@@ -269,7 +346,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 		const float3 radiance = VLOAD3F(&taskState->throughput.c[0]) * BSDF_GetBakeMapValue(bsdf MATERIALS_PARAM);
 		VADD3F(sampleResult->radiancePerPixelNormalized[0].c, radiance);
 
-		taskState->state = MK_SPLAT_SAMPLE;
+		PATH_STATE_SET(MK_SPLAT_SAMPLE);
 		return;
 	} else if (BSDF_HasBakeMap(bsdf, LIGHTMAP MATERIALS_PARAM)) {
 		const float3 radiance = VLOAD3F(&taskState->throughput.c[0]) *
@@ -277,7 +354,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 				BSDF_GetBakeMapValue(bsdf MATERIALS_PARAM);
 		VADD3F(sampleResult->radiancePerPixelNormalized[0].c, radiance);
 
-		taskState->state = MK_SPLAT_SAMPLE;
+		PATH_STATE_SET(MK_SPLAT_SAMPLE);
 		return;
 	}
 
@@ -329,7 +406,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 							VADD3F(sampleResult->radiancePerPixelNormalized[i].c, VLOAD3F(radiance[i].c));
 					}
 				}
-				taskState->state = MK_SPLAT_SAMPLE;
+				PATH_STATE_SET(MK_SPLAT_SAMPLE);
 				return;
 			}
 			case PGIC_DEBUG_SHOWCAUSTIC: {
@@ -343,7 +420,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 							&sampleResult->radiancePerPixelNormalized[0]
 							MATERIALS_PARAM);
 				}
-				taskState->state = MK_SPLAT_SAMPLE;
+				PATH_STATE_SET(MK_SPLAT_SAMPLE);
 				return;
 			}
 			case PGIC_DEBUG_SHOWINDIRECTPATHMIX: {
@@ -364,7 +441,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 						VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 1.f), sampleResult->radiancePerPixelNormalized[0].c);
 						taskState->photonGIShowIndirectPathMixUsed = true;
 
-						taskState->state = MK_SPLAT_SAMPLE;
+						PATH_STATE_SET(MK_SPLAT_SAMPLE);
 						return;
 					}
 
@@ -417,7 +494,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 							}
 
 							// I can terminate the path, all done
-							taskState->state = MK_SPLAT_SAMPLE;
+							PATH_STATE_SET(MK_SPLAT_SAMPLE);
 							return;
 						}
 					}
@@ -436,8 +513,8 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 	//
 	// I handle as a special case when the path vertex is both the first
 	// and the last: I do direct light sampling without MIS.
-	taskState->state = (sampleResult->lastPathVertex && !sampleResult->firstPathVertex) ?
-		MK_SPLAT_SAMPLE : MK_DL_ILLUMINATE;
+	PATH_STATE_SET((sampleResult->lastPathVertex && !sampleResult->firstPathVertex) ?
+		MK_SPLAT_SAMPLE : MK_DL_ILLUMINATE);
 }
 
 //------------------------------------------------------------------------------
@@ -450,12 +527,15 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 __kernel void AdvancePaths_MK_RT_DL(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	PATH_QUEUE_GET_GID(PATH_QUEUE_RT_DL);
+
+	// Count the shadow ray traced for this path
+	sampleResultsBuff[gid].rayCount += 1;
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskState *taskState = &tasksState[gid];
-	PathState pathState = taskState->state;
+	PathState pathState = pathStates[gid];
 #if defined(DEBUG_PRINTF_KERNEL_NAME)
 	if (gid == 0)
 		printf("Kernel: AdvancePaths_MK_RT_DL(state = %d)\n", pathState);
@@ -486,15 +566,17 @@ __kernel void AdvancePaths_MK_RT_DL(
 	const float passThroughEvent = Rnd_FloatValue(&seedPassThroughEvent);
 	taskDirectLight->seedPassThroughEvent = seedPassThroughEvent;
 
+	GPUTASK_TMP(HitPoint, tmpHitPoint);
+	GPUTASK_TMP(BSDF, tmpBsdf);
 	int throughShadowTransparency = taskDirectLight->throughShadowTransparency;
 	const bool continueToTrace =
 		Scene_Intersect(taskConfig,
 			EYE_RAY | SHADOW_RAY,
 			&throughShadowTransparency,
 			&directLightVolInfos[gid],
-			&task->tmpHitPoint,
+			tmpHitPoint,
 			passThroughEvent,
-			&rays[gid], &rayHits[gid], &task->tmpBsdf,
+			&rays[gid], &rayHits[gid], tmpBsdf,
 			&connectionThroughput, WHITE,
 			NULL,
 			true
@@ -548,7 +630,7 @@ __kernel void AdvancePaths_MK_RT_DL(
 			pathState = MK_GENERATE_NEXT_VERTEX_RAY;
 
 		// Save the state
-		taskState->state = pathState;
+		PATH_STATE_SET(pathState);
 	}
 }
 
@@ -562,12 +644,12 @@ __kernel void AdvancePaths_MK_RT_DL(
 __kernel void AdvancePaths_MK_DL_ILLUMINATE(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	PATH_QUEUE_GET_GID(PATH_QUEUE_DL_ILLUMINATE);
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskState *taskState = &tasksState[gid];
-	PathState pathState = taskState->state;
+	PathState pathState = pathStates[gid];
 #if defined(DEBUG_PRINTF_KERNEL_NAME)
 	if (gid == 0)
 		printf("Kernel: AdvancePaths_MK_DL_ILLUMINATE(state = %d)\n", pathState);
@@ -605,13 +687,14 @@ __kernel void AdvancePaths_MK_DL_ILLUMINATE(
 	// It will set eventually to true if the light is visible
 	taskDirectLight->directLightResult = NOT_VISIBLE;
 
+	GPUTASK_TMP(HitPoint, tmpHitPoint);
 	if (!BSDF_IsDelta(bsdf
 			MATERIALS_PARAM) &&
 			DirectLight_Illuminate(
 				bsdf,
 				&rays[gid],
 				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-				&task->tmpHitPoint,
+				tmpHitPoint,
 				rays[gid].time,
 				Sampler_GetSample(taskConfig, sampleOffset + IDX_DIRECTLIGHT_X SAMPLER_PARAM),
 				Sampler_GetSample(taskConfig, sampleOffset + IDX_DIRECTLIGHT_Y SAMPLER_PARAM),
@@ -620,11 +703,11 @@ __kernel void AdvancePaths_MK_DL_ILLUMINATE(
 				&taskDirectLight->illumInfo
 				LIGHTS_PARAM)) {
 		// I have now to evaluate the BSDF
-		taskState->state = MK_DL_SAMPLE_BSDF;
+		PATH_STATE_SET(MK_DL_SAMPLE_BSDF);
 	} else {
 		// No shadow ray to trace, move to the next vertex ray
 		// however, I have to Check if this is the last path vertex
-		taskState->state = (sampleResult->lastPathVertex) ? MK_SPLAT_SAMPLE : MK_GENERATE_NEXT_VERTEX_RAY;
+		PATH_STATE_SET((sampleResult->lastPathVertex) ? MK_SPLAT_SAMPLE : MK_GENERATE_NEXT_VERTEX_RAY);
 	}
 
 	//--------------------------------------------------------------------------
@@ -643,11 +726,11 @@ __kernel void AdvancePaths_MK_DL_ILLUMINATE(
 __kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	PATH_QUEUE_GET_GID(PATH_QUEUE_DL_SAMPLE_BSDF);
 
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[gid];
-	PathState pathState = taskState->state;
+	PathState pathState = pathStates[gid];
 #if defined(DEBUG_PRINTF_KERNEL_NAME)
 	if (gid == 0)
 		printf("Kernel: AdvancePaths_MK_DL_SAMPLE_BSDF(state = %d)\n", pathState);
@@ -674,12 +757,13 @@ __kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 	// End of variables setup
 	//--------------------------------------------------------------------------
 
+	GPUTASK_TMP(PathDepthInfo, tmpPathDepthInfo);
 	if (DirectLight_BSDFSampling(
 			taskConfig,
 			&tasksDirectLight[gid].illumInfo,
 			rays[gid].time, sampleResult->lastPathVertex,
 			pathInfo,
-			&task->tmpPathDepthInfo,
+			tmpPathDepthInfo,
 			&taskState->bsdf,
 			VLOAD3F(&rays[gid].d.x)
 			LIGHTS_PARAM)) {
@@ -704,12 +788,17 @@ __kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 		// shadow ray
 		directLightVolInfos[gid] = pathInfo->volume;
 
+		// Without transparency and volumes any hit shadows the light: the
+		// closest one is not needed
+		if (scene->shadowRaysAnyHit)
+			rays[gid].flags |= RAY_FLAGS_ANY_HIT;
+
 		// I have to trace the shadow ray
-		taskState->state = MK_RT_DL;
+		PATH_STATE_SET(MK_RT_DL);
 	} else {
 		// No shadow ray to trace, move to the next vertex ray
 		// however, I have to check if this is the last path vertex
-		taskState->state = (sampleResult->lastPathVertex) ? MK_SPLAT_SAMPLE : MK_GENERATE_NEXT_VERTEX_RAY;
+		PATH_STATE_SET((sampleResult->lastPathVertex) ? MK_SPLAT_SAMPLE : MK_GENERATE_NEXT_VERTEX_RAY);
 	}
 }
 
@@ -723,12 +812,12 @@ __kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	PATH_QUEUE_GET_GID(PATH_QUEUE_GENERATE_NEXT_VERTEX_RAY);
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskState *taskState = &tasksState[gid];
-	PathState pathState = taskState->state;
+	PathState pathState = pathStates[gid];
 #if defined(DEBUG_PRINTF_KERNEL_NAME)
 	if (gid == 0)
 		printf("Kernel: AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(state = %d)\n", pathState);
@@ -863,7 +952,7 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 		pathState = MK_SPLAT_SAMPLE;
 
 	// Save the state
-	taskState->state = pathState;
+	PATH_STATE_SET(pathState);
 
 	//--------------------------------------------------------------------------
 
@@ -875,18 +964,23 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 // Evaluation of the Path finite state machine.
 //
 // From: MK_SPLAT_SAMPLE
-// To: MK_NEXT_SAMPLE
+// To: MK_RT_NEXT_VERTEX (PATHOCL) or MK_DONE (TILEPATHOCL, RTPATHOCL)
+//
+// The path always goes on with MK_NEXT_SAMPLE and MK_GENERATE_CAMERA_RAY
+// right after the splat, so they run here too: same code and order for the
+// path, without two kernel launches, queue scans and the reloads of the
+// sample state.
 //------------------------------------------------------------------------------
 
 __kernel void AdvancePaths_MK_SPLAT_SAMPLE(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	PATH_QUEUE_GET_GID(PATH_QUEUE_SPLAT_SAMPLE);
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskState *taskState = &tasksState[gid];
-	PathState pathState = taskState->state;
+	PathState pathState = pathStates[gid];
 #if defined(DEBUG_PRINTF_KERNEL_NAME)
 	if (gid == 0)
 		printf("Kernel: AdvancePaths_MK_SPLAT_SAMPLE(state = %d)\n", pathState);
@@ -935,7 +1029,7 @@ __kernel void AdvancePaths_MK_SPLAT_SAMPLE(
 	filmRadianceGroupScale[7] = MAKE_FLOAT3(filmRadianceGroupScale7_R, filmRadianceGroupScale7_G, filmRadianceGroupScale7_B);
 
 	if (sampleResult->isHoldout) {
-		SampleResult_ClearRadiance(sampleResult);
+		SampleResult_ClearRadiance(&taskConfig->film, sampleResult);
 		VSTORE3F(BLACK, sampleResult->albedo.c);
 	}
 
@@ -964,8 +1058,34 @@ __kernel void AdvancePaths_MK_SPLAT_SAMPLE(
 			FILM_PARAM);
 	taskStats[gid].sampleCount += 1;
 
-	// Save the state
-	taskState->state = MK_NEXT_SAMPLE;
+	//--------------------------------------------------------------------------
+	// MK_NEXT_SAMPLE and MK_GENERATE_CAMERA_RAY
+	//--------------------------------------------------------------------------
+
+	__global Ray *ray = &rays[gid];
+	const PathState nextState = NextSample(taskConfig,
+			filmNoise,
+			filmUserImportance,
+			filmWidth, filmHeight,
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
+			ray
+			SAMPLER_PARAM);
+
+#if !defined(RENDER_ENGINE_TILEPATHOCL) && !defined(RENDER_ENGINE_RTPATHOCL)
+	GenerateCameraRay(taskConfig,
+			&tasksDirectLight[gid], taskState,
+			camera,
+			cameraBokehDistribution,
+			filmWidth, filmHeight,
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
+			pixelFilterDistribution,
+			ray,
+			&eyePathInfos[gid]
+			SAMPLER_PARAM);
+	PATH_STATE_SET(MK_RT_NEXT_VERTEX);
+#else
+	PATH_STATE_SET(nextState);
+#endif
 
 	//--------------------------------------------------------------------------
 
@@ -978,17 +1098,20 @@ __kernel void AdvancePaths_MK_SPLAT_SAMPLE(
 //
 // From: MK_NEXT_SAMPLE
 // To: MK_GENERATE_CAMERA_RAY
+//
+// Note: MK_SPLAT_SAMPLE does this work itself, nothing sets MK_NEXT_SAMPLE
+// at the moment.
 //------------------------------------------------------------------------------
 
 __kernel void AdvancePaths_MK_NEXT_SAMPLE(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	PATH_QUEUE_GET_GID(PATH_QUEUE_NEXT_SAMPLE);
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskState *taskState = &tasksState[gid];
-	PathState pathState = taskState->state;
+	PathState pathState = pathStates[gid];
 #if defined(DEBUG_PRINTF_KERNEL_NAME)
 	if (gid == 0)
 		printf("Kernel: AdvancePaths_MK_NEXT_SAMPLE(state = %d)\n", pathState);
@@ -1011,23 +1134,13 @@ __kernel void AdvancePaths_MK_NEXT_SAMPLE(
 	// End of variables setup
 	//--------------------------------------------------------------------------
 
-	Sampler_NextSample(taskConfig,
+	PATH_STATE_SET(NextSample(taskConfig,
 			filmNoise,
 			filmUserImportance,
 			filmWidth, filmHeight,
-			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3
-			SAMPLER_PARAM);
-
-	// Save the state
-
-	// Generate a new path and camera ray only it is not TILEPATHOCL
-#if !defined(RENDER_ENGINE_TILEPATHOCL) && !defined(RENDER_ENGINE_RTPATHOCL)
-	taskState->state = MK_GENERATE_CAMERA_RAY;
-#else
-	taskState->state = MK_DONE;
-	// Mark the ray like like one to NOT trace
-	rays[gid].flags = RAY_FLAGS_MASKED;
-#endif
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
+			&rays[gid]
+			SAMPLER_PARAM));
 
 	//--------------------------------------------------------------------------
 
@@ -1040,6 +1153,9 @@ __kernel void AdvancePaths_MK_NEXT_SAMPLE(
 //
 // From: MK_GENERATE_CAMERA_RAY
 // To: MK_RT_NEXT_VERTEX
+//
+// Note: MK_SPLAT_SAMPLE does this work itself, only Init sets
+// MK_GENERATE_CAMERA_RAY (for the samples Sampler_Init() rejects).
 //------------------------------------------------------------------------------
 
 __kernel void AdvancePaths_MK_GENERATE_CAMERA_RAY(
@@ -1048,12 +1164,12 @@ __kernel void AdvancePaths_MK_GENERATE_CAMERA_RAY(
 	// Generate a new path and camera ray only it is not TILEPATHOCL: path regeneration
 	// is not used in this case
 #if !defined(RENDER_ENGINE_TILEPATHOCL) && !defined(RENDER_ENGINE_RTPATHOCL)
-	const size_t gid = get_global_id(0);
+	PATH_QUEUE_GET_GID(PATH_QUEUE_GENERATE_CAMERA_RAY);
 
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskState *taskState = &tasksState[gid];
-	PathState pathState = taskState->state;
+	PathState pathState = pathStates[gid];
 #if defined(DEBUG_PRINTF_KERNEL_NAME)
 	if (gid == 0)
 		printf("Kernel: AdvancePaths_MK_GENERATE_CAMERA_RAY(state = %d)\n", pathState);
@@ -1072,33 +1188,330 @@ __kernel void AdvancePaths_MK_GENERATE_CAMERA_RAY(
 	// This trick is required by SAMPLER_PARAM macro
 	Seed *seed = &seedValue;
 
-	__global Ray *ray = &rays[gid];
-	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
-	
 	//--------------------------------------------------------------------------
 	// End of variables setup
 	//--------------------------------------------------------------------------
 
-	// Re-initialize the volume information
-	PathVolumeInfo_Init(&pathInfo->volume);
-
-	GenerateEyePath(taskConfig,
+	GenerateCameraRay(taskConfig,
 			&tasksDirectLight[gid], taskState,
 			camera,
 			cameraBokehDistribution,
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
 			pixelFilterDistribution,
-			ray,
-			pathInfo
+			&rays[gid],
+			&eyePathInfos[gid]
 			SAMPLER_PARAM);
-	// taskState->state is set to RT_NEXT_VERTEX inside GenerateEyePath()
+	PATH_STATE_SET(MK_RT_NEXT_VERTEX);
 
 	//--------------------------------------------------------------------------
 
 	// Save the seed
 	task->seed = seedValue;
 
+#endif
+}
+
+//------------------------------------------------------------------------------
+// Light tracing: advances each light path by one ray (see LightPathTask),
+// after the rays of the light tasks have been traced. Mirrors
+// PathTracer::RenderLightSample() and PathTracer::ConnectToEye() with the
+// hybrid back/forward path tracing: only the caustic connections are traced
+// and splatted, a light path is done as soon as no caustic connection can
+// follow.
+//
+// Note: the code is inside the kernel body because the OpenCL source split
+// (SplitMicroKernelSources()) cuts the source at each kernel.
+//------------------------------------------------------------------------------
+
+__kernel void AdvanceLightPaths(
+		KERNEL_ARGS
+		KERNEL_ARGS_LIGHT_TRACING
+		) {
+#if defined(PARAM_LIGHT_TRACING)
+	const size_t gid = get_global_id(0);
+	if (gid >= lightTaskCount)
+		return;
+
+	//--------------------------------------------------------------------------
+	// Start of variables setup
+	//--------------------------------------------------------------------------
+
+	__global LightPathTask *task = &lightTasks[gid];
+	__global Ray *ray = &rays[eyeTaskCount + gid];
+	__global RayHit *rayHit = &rayHits[eyeTaskCount + gid];
+	__constant const Scene* restrict scene = &taskConfig->scene;
+
+	// Initialize image maps page pointer table
+	INIT_IMAGEMAPS_PAGES
+
+	__global float *filmScreenRadianceGroup[FILM_MAX_RADIANCE_GROUP_COUNT];
+	filmScreenRadianceGroup[0] = filmScreenRadianceGroup0;
+	filmScreenRadianceGroup[1] = filmScreenRadianceGroup1;
+	filmScreenRadianceGroup[2] = filmScreenRadianceGroup2;
+	filmScreenRadianceGroup[3] = filmScreenRadianceGroup3;
+	filmScreenRadianceGroup[4] = filmScreenRadianceGroup4;
+	filmScreenRadianceGroup[5] = filmScreenRadianceGroup5;
+	filmScreenRadianceGroup[6] = filmScreenRadianceGroup6;
+	filmScreenRadianceGroup[7] = filmScreenRadianceGroup7;
+
+	// lightTaskCount <= taskCount, so the OpenCL GPUTask temporaries exist
+	GPUTASK_TMP(BSDF, tmpBsdf);
+	GPUTASK_TMP(HitPoint, tmpHitPoint);
+
+	const float glossinessThreshold = taskConfig->pathTracer.hybridBackForward.glossinessThreshold;
+
+	//--------------------------------------------------------------------------
+	// End of variables setup
+	//--------------------------------------------------------------------------
+
+	Seed seedValue = task->seed;
+	LightPathState state = task->state;
+	bool pathDone = false;
+
+	if (state == LT_RT_EYE_CONNECTION) {
+		//----------------------------------------------------------------------
+		// The connection of a light path vertex to the camera
+		//----------------------------------------------------------------------
+
+		float3 connectionThroughput;
+		int throughShadowTransparency = false;
+		const bool continueToTrace = Scene_Intersect(taskConfig,
+				LIGHT_RAY | CAMERA_RAY,
+				&throughShadowTransparency,
+				&task->connectionVolume,
+				tmpHitPoint,
+				Rnd_FloatValue(&seedValue),
+				ray, rayHit, tmpBsdf,
+				&connectionThroughput, WHITE,
+				NULL,
+				false
+				MATERIALS_PARAM);
+		const float3 radiance = VLOAD3F(task->connectionRadiance.c) * connectionThroughput;
+
+		if (continueToTrace)
+			VSTORE3F(radiance, task->connectionRadiance.c);
+		else {
+			if (rayHit->meshIndex == NULL_INDEX) {
+				// Nothing was hit, the light path vertex is visible
+				__global float *filmChannel = (task->lightID < FILM_MAX_RADIANCE_GROUP_COUNT) ?
+					filmScreenRadianceGroup[task->lightID] : NULL;
+				if (filmChannel)
+					LightTracing_SplatSample(lightFilterLUTs, filmChannel,
+							filmWidth,
+							filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
+							task->connectionFilmX, task->connectionFilmY, radiance);
+			}
+
+			if (task->hasNextVertexRay) {
+				Ray_Init2(ray, VLOAD3F(&task->nextVertexRayOrig.x), VLOAD3F(&task->nextVertexRayDir.x), task->time);
+				state = LT_RT_NEXT_VERTEX;
+			} else
+				pathDone = true;
+		}
+	} else if (state == LT_RT_NEXT_VERTEX) {
+		//----------------------------------------------------------------------
+		// The next light path vertex
+		//----------------------------------------------------------------------
+
+		float3 flux = VLOAD3F(task->flux.c);
+
+		float3 connectionThroughput;
+		int throughShadowTransparency = false;
+		const bool continueToTrace = Scene_Intersect(taskConfig,
+				LIGHT_RAY | INDIRECT_RAY,
+				&throughShadowTransparency,
+				&task->volume,
+				tmpHitPoint,
+				Rnd_FloatValue(&seedValue),
+				ray, rayHit, tmpBsdf,
+				&connectionThroughput, flux,
+				NULL,
+				false
+				MATERIALS_PARAM);
+		flux *= connectionThroughput;
+
+		if (continueToTrace)
+			VSTORE3F(flux, task->flux.c);
+		else if (rayHit->meshIndex == NULL_INDEX) {
+			// Ray lost in space...
+			pathDone = true;
+		} else if (!Spectrum_IsBlack(BSDF_GetPassThroughShadowTransparency(tmpBsdf MATERIALS_PARAM)) &&
+				!mats[tmpBsdf->materialIndex].passThroughShadowTransparencyOverride) {
+			// Something with a not black shadow transparency: direct light
+			// sampling takes care of this kind of paths
+			pathDone = true;
+		} else {
+			// Something was hit
+			tmpBsdf->hitPoint.flags |= HITPOINT_FROM_LIGHT;
+
+			//------------------------------------------------------------------
+			// Try to connect the light path vertex with the eye. Only caustic
+			// connections (LightPathInfo::IsCausticPath()): the eye paths
+			// render the others.
+			//------------------------------------------------------------------
+
+			// The camera type is checked at the engine start only, a scene edit
+			// can change it
+			bool hasConnection = false;
+			if ((camera->type == PERSPECTIVE) &&
+					task->isNearlyS && (task->depth.depth > 0) &&
+					!((tmpBsdf->sceneObjectIndex != NULL_INDEX) && sceneObjs[tmpBsdf->sceneObjectIndex].cameraInvisible) &&
+					!BSDF_IsDelta(tmpBsdf MATERIALS_PARAM)) {
+				const float3 lensPoint = VLOAD3F(&task->lensPoint.x);
+				float3 eyeDir = VLOAD3F(&tmpBsdf->hitPoint.p.x) - lensPoint;
+				const float eyeDistance = length(eyeDir);
+				eyeDir /= eyeDistance;
+
+				// The eye ray, in the light task ray (it is overwritten below)
+				VSTORE3F(lensPoint, &ray->o.x);
+				VSTORE3F(eyeDir, &ray->d.x);
+				ray->mint = 0.f;
+				ray->maxt = eyeDistance;
+				ray->time = task->time;
+
+				float filmX, filmY;
+				if (PerspectiveCamera_GetSamplePosition(camera, ray, filmHeight,
+						filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
+						&filmX, &filmY)) {
+					BSDFEvent event;
+					float bsdfPdfW;
+					const float3 bsdfEval = BSDF_Evaluate(tmpBsdf, -eyeDir, &event, &bsdfPdfW
+							MATERIALS_PARAM);
+					const float fluxToRadianceFactor = PerspectiveCamera_GetFluxToRadianceFactor(camera,
+							eyeDir, eyeDistance, task->time);
+
+					if (!Spectrum_IsBlack(bsdfEval) && (fluxToRadianceFactor > 0.f) &&
+							!LightTracing_IsNearlySpecular(event,
+								BSDF_GetGlossiness(tmpBsdf MATERIALS_PARAM), glossinessThreshold)) {
+						VSTORE3F(flux * fluxToRadianceFactor * bsdfEval, task->connectionRadiance.c);
+						task->connectionFilmX = filmX;
+						task->connectionFilmY = filmY;
+						// The connection starts with the volume information of
+						// the light path
+						task->connectionVolume = task->volume;
+
+						// The ray goes from the vertex to the lens point, so
+						// PathVolumeInfo is right
+						const float eyeRayMint = ray->mint;
+						const float eyeRayMaxt = ray->maxt;
+						Ray_Init4(ray, BSDF_GetRayOrigin(tmpBsdf, -eyeDir), -eyeDir,
+								eyeDistance - eyeRayMaxt, eyeDistance - eyeRayMint,
+								task->time);
+
+						hasConnection = true;
+					}
+				}
+			}
+
+			//------------------------------------------------------------------
+			// Build the next vertex path ray
+			//------------------------------------------------------------------
+
+			// A caustic connection can follow only if this vertex is nearly
+			// specular too
+			bool continuePath = (task->depth.depth + 1 < taskConfig->pathTracer.maxPathDepth.depth) &&
+					((task->depth.depth == 0) || task->isNearlyS);
+			if (continuePath) {
+				const BSDFEvent eventTypes = BSDF_GetEventTypes(tmpBsdf MATERIALS_PARAM);
+				continuePath = LightTracing_IsNearlySpecular(eventTypes,
+						BSDF_GetGlossiness(tmpBsdf MATERIALS_PARAM), glossinessThreshold);
+			}
+
+			if (continuePath) {
+				const float u0 = Rnd_FloatValue(&seedValue);
+				const float u1 = Rnd_FloatValue(&seedValue);
+				float3 sampledDir;
+				float bsdfPdfW, cosSampledDir;
+				BSDFEvent event;
+				float3 bsdfSample = BSDF_Sample(tmpBsdf, u0, u1,
+						&sampledDir, &bsdfPdfW, &cosSampledDir, &event
+						MATERIALS_PARAM);
+
+				if (Spectrum_IsBlack(bsdfSample))
+					continuePath = false;
+				else {
+					// LightPathInfo::AddVertex()
+					PathDepthInfo_IncDepths(&task->depth, event);
+					PathVolumeInfo_Update(&task->volume, event, tmpBsdf MATERIALS_PARAM);
+					const bool isNewVertexNearlySpecular = LightTracing_IsNearlySpecular(event,
+							BSDF_GetGlossiness(tmpBsdf MATERIALS_PARAM), glossinessThreshold);
+					task->isNearlyS = ((task->depth.depth == 1) || task->isNearlyS) && isNewVertexNearlySpecular;
+					task->lastBSDFEvent = event;
+
+					// If it isn't anymore a (nearly) specular path, I can stop
+					continuePath = task->isNearlyS;
+				}
+
+				// Russian Roulette
+				if (continuePath && !(task->lastBSDFEvent & SPECULAR) &&
+						(PathDepthInfo_GetRRDepth(&task->depth) >= taskConfig->pathTracer.rrDepth)) {
+					const float rrProb = RussianRouletteProb(taskConfig->pathTracer.rrImportanceCap, bsdfSample);
+					if (rrProb < Rnd_FloatValue(&seedValue))
+						continuePath = false;
+					else
+						bsdfSample /= rrProb;
+				}
+
+				if (continuePath) {
+					flux *= bsdfSample;
+
+					VSTORE3F(BSDF_GetRayOrigin(tmpBsdf, sampledDir), &task->nextVertexRayOrig.x);
+					VSTORE3F(sampledDir, &task->nextVertexRayDir.x);
+				}
+			}
+
+			VSTORE3F(flux, task->flux.c);
+			task->hasNextVertexRay = continuePath;
+
+			if (hasConnection)
+				state = LT_RT_EYE_CONNECTION;
+			else if (continuePath) {
+				Ray_Init2(ray, VLOAD3F(&task->nextVertexRayOrig.x), VLOAD3F(&task->nextVertexRayDir.x), task->time);
+				state = LT_RT_NEXT_VERTEX;
+			} else
+				pathDone = true;
+		}
+	} else
+		pathDone = true;
+
+	if (pathDone) {
+		//----------------------------------------------------------------------
+		// Start a new light path. A light path is counted when it is done,
+		// failed emissions too.
+		//----------------------------------------------------------------------
+
+		uint pathCount = lightPathCounts[gid];
+		if (state != LT_GENERATE)
+			++pathCount;
+
+		state = LT_GENERATE;
+		// A few attempts, so a light task rarely stays idle for an iteration
+		for (uint i = 0; i < 4; ++i) {
+			if (LightTracing_GenerateLightPath(taskConfig, task, &seedValue,
+					ray, tmpHitPoint,
+					camera, cameraBokehDistribution,
+					emitLightsDistribution,
+					lightCasters, lightCasterCount, lightGuidedProb,
+					worldCenterX, worldCenterY, worldCenterZ, worldRadius
+					LIGHTS_PARAM)) {
+				state = LT_RT_NEXT_VERTEX;
+				break;
+			}
+
+			++pathCount;
+		}
+
+		if (state == LT_GENERATE) {
+			// Mark the ray like like one to NOT trace
+			ray->flags = RAY_FLAGS_MASKED;
+		}
+
+		lightPathCounts[gid] = pathCount;
+	}
+
+	task->seed = seedValue;
+	task->state = state;
 #endif
 }
 

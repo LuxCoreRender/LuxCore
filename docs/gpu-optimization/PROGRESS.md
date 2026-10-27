@@ -363,3 +363,582 @@ kernel). A/B = 3 runs of 20 s per scene, median M samples/sec.
 - Next: branch `gpu-opt/ridiculous` from `gpu-opt/combined`. Lossless work
   first (T5.5, T5.4, T5.6, T5.7); lossy options later, only behind config
   properties that default to off (user decision 2026-10-26).
+
+### 2026-10-26: T5.4, T5.10, T5.7 (on `gpu-opt/ridiculous`)
+
+Kernel profile = `kprof.py` as above (ms of kernel time per M samples, one
+30 s run per build after a warm-up run). `gpu-opt/ridiculous` =
+`gpu-opt/combined` + these three tasks.
+
+- T5.4 (`gpu-opt/T5.4-hitpoint-no-transform`): `HitPoint` no longer stores
+  `localToWorld` (128 B per path). The local 3D texture mappings and the
+  wireframe texture recompute it with `ExtMesh_GetLocal2World()` from
+  `meshIndex`, `triangleIndex` and the new `HitPoint.time`. LuxBall kernel
+  65.6 -> 61.4, `MK_RT_NEXT_VERTEX` 10.7 -> 8.3. Image check passes on all
+  5 scenes. A/B vs T5.9b (M samples/sec):
+
+  | Scene | T5.9b | T5.4 | change |
+  |---|---|---|---|
+  | LuxBall | 15.63 | 16.71 | +6.9% |
+  | DLSC | 18.99 | 19.98 | +5.2% |
+  | LuxCore2.1Benchmark | 10.96 | 11.68 | +6.6% |
+  | DanishMood | 6.29 | 7.80 | +24.0% (noisy) |
+  | LynxSpider | 10.31 | 10.49 | +1.7% |
+
+- T5.10 (`gpu-opt/T5.10-fuse-path-tail`): `MK_SPLAT_SAMPLE` also does the
+  `MK_NEXT_SAMPLE` and `MK_GENERATE_CAMERA_RAY` steps. LuxBall splat + next
+  sample + camera ray + queues 14.7 -> 11.8. Image check passes on all 5
+  scenes. The A/B vs T5.4 is missing: the first one overlapped a kernel
+  profile run (numbers unusable), the user cancelled the rerun.
+- T5.7 (`gpu-opt/T5.7-material-sort`): the queues of `MK_HIT_OBJECT`,
+  `MK_DL_SAMPLE_BSDF` and `MK_GENERATE_NEXT_VERTEX_RAY` can be built by a
+  counting sort on `bsdf.materialIndex` (`CountPathsByMaterial`,
+  `ScanPathsByMaterial`, `QueuePathsByMaterial`; the count pass stores the
+  key, so the queue pass reads a path order array). `MK_GENERATE_NEXT_VERTEX_RAY`
+  is no longer pushed in `PATH_STATE_SET()`.
+- Always sorting: LynxSpider 89.2 -> 69.1 (`DL_SAMPLE_BSDF` 16.9 -> 3.6,
+  `GENERATE_NEXT_VERTEX_RAY` 17.2 -> 10.6), but LuxBall 58.5 -> 70.4
+  (`DL_ILLUMINATE` 5.5 -> 10.0, `DL_SAMPLE_BSDF` 6.1 -> 9.0). A warp then
+  takes its paths from a much wider range of path indices: the locality the
+  T5.9 scans gave is lost. Material count does not predict the winner
+  (LuxBall 9, LynxSpider 23 materials).
+- So the order is calibrated per state at run time: iterations 16-47 after
+  each render thread start alternate sorted and path order, time queue +
+  micro-kernel with `FinishQueue()` and `std::chrono::steady_clock`, and keep
+  the faster one (logged as `Material sort <state>: ...`). `WallClockTime()`
+  is `GetTickCount()` on Windows (15.6 ms steps): fine for the kernel profile
+  totals, useless for timing one launch. `MK_DL_ILLUMINATE` (only
+  `BSDF_IsDelta()` + light sampling) lost with the sort on all 5 scenes and
+  is never sorted.
+- Calibration choices (sorted / path order) and kernel totals, T5.10 vs T5.7:
+
+  | Scene | HIT_OBJECT | DL_SAMPLE_BSDF | GENERATE_NEXT_VERTEX_RAY | T5.10 | T5.7 | change |
+  |---|---|---|---|---|---|---|
+  | LuxBall | path | path | path | 57.9 | 56.2 | -2.9% (noise) |
+  | DLSC | path | sorted | path | 49.1 | 48.2 | -1.9% (noise) |
+  | LuxCore2.1Benchmark | sorted | sorted | sorted | 46.8 | 46.2 | -1.4% (noise) |
+  | DanishMood | sorted | sorted | sorted | 45.7 | 46.4 | +1.6% (noise) |
+  | LynxSpider | sorted | sorted | sorted | 88.8 | 69.4 | -21.9% |
+
+  No A/B in M samples/sec (the user skipped it). Image check passes on all
+  5 scenes (RMSE 0.004-0.043 vs noise floors 0.021-0.19).
+
+- Image check caveat found on the way: LuxCore2.1Benchmark and DanishMood
+  use the PhotonGI indirect cache, built on the CPU before the GPU render.
+  Its result varies per run, and the whole image moves with it: the mean
+  differs from `main` by -1.7% to +5.3% between builds and up to 1.2%
+  between two runs of the same build and seed. With
+  `-D path.photongi.indirect.enabled 0`, T5.7 vs `main` is -0.000%
+  (LuxCore2.1Benchmark) and -0.096% (DanishMood), seed spread about 0.02%:
+  the GPU code is unbiased. Variance clamping is not the cause: DLSC and
+  LynxSpider clamp too and stay within 0.25%. Use that override when a
+  mean difference on those two scenes needs explaining.
+- Next: T5.5 (registers), T5.6 (fuse the BSDF kernels; with T5.7 the three
+  kernels may use different orders, so fusing now needs one order for all).
+
+### 2026-10-26: GPU-first roadmap, T5.5 baseline, T6.1 started
+
+- The user set the direction: this fork is a GPU-first, unbiased renderer.
+  `PLAN.md` has the roadmap (Phases 6-9) with the list of what a GPU render
+  still does on the CPU, and the T6.1 design.
+- The user reported noisy caustics and chose GPU light tracing (unbiased)
+  over speeding up the PhotonGI caustic cache (blurs). In Blender both
+  "Add Light Tracing" and "Use Caustic Cache" are off by default, so by
+  default caustics come only from GPU path tracing.
+- T5.5 baseline, offline compile of the current kernels (kernel dump from
+  `-D opencl.kernel.writetofile 1`, NVRTC 12.9 + ptxas sm_120, script
+  `nvrtc_regs.py` in the session scratchpad): LuxBall with only 3 material
+  and 3 texture types compiled in still uses 255 / 254 / 255 / 242 / 242 /
+  253 registers in RT_NEXT_VERTEX / HIT_OBJECT / RT_DL / DL_ILLUMINATE /
+  DL_SAMPLE_BSDF / GENERATE_NEXT_VERTEX_RAY. The offline numbers match the
+  cached PTX within 3 registers. Kernel dumps: `bench\kdump\*-T5.7.cl`.
+- NVRTC 13 (asked by the user, not tested): LuxCore's loader tries
+  `nvrtc64_130_0.dll` before `nvrtc64_120_0.dll` (`deps/cuew/src/cuew.cpp:625`),
+  so it can be tested by copying the DLLs into a bin copy. The driver JIT
+  (CUDA 13.5) makes the final SASS, so expect a small effect.
+
+### 2026-10-26: T6.1 GPU light tracing, work in progress (branch `gpu-opt/T6.1-gpu-light-tracing`)
+
+The user asked to implement first and run fewer A/B benchmarks: build the
+feature end to end, check it with image and bias checks, measure at the end.
+
+State: device code written, nothing built or run yet. All new kernel code is
+under `#if defined(PARAM_LIGHT_TRACING)`, a define not set yet, so the eye
+path kernels compile as before. The structs changed for all kernels (fields
+added at the end, no image change expected): `HitPoint.fromLight`,
+`CameraBase.dir`, `PerspectiveCamera.pixelArea`,
+`ProjectionLightParam.lightProjectionInv` / `area`.
+
+Done (device side):
+
+- Adjoint BSDF. Convention: GPU materials keep computing the eye path value;
+  `BSDF_Evaluate()` swaps eye/light directions with `fromLight` and applies
+  the CPU shading normal factor; `BSDF_Sample()` multiplies by
+  `|cos fixedDir / cos sampledDir|` (local frame) and the CPU geometry
+  normal factor. For reciprocal BSDFs this equals the CPU `fromLight`
+  branches (checked: matte, roughmatte, matte/roughmatte translucent,
+  velvet, metal2, glossy2, glossycoating, glossytranslucent, carpaint,
+  disney, mix, twosided). Refractive leaves take their own branch with
+  `HitPoint_IsFromLight()`: glass (no eta^2, Fresnel of the incoming
+  direction), archglass (Fresnel side), roughglass (Fresnel of
+  `cosThetaOH`). Differences from CPU, on purpose: no adjoint factors for
+  volumes (CPU `BSDF::Sample()` applies the geometry factor to volumes too,
+  looks like a CPU bug); cloth gets the cosine factor (CPU cloth `fromLight`
+  sample has none, also looks like a CPU bug).
+- Perspective camera: `PerspectiveCamera_SampleLens()`,
+  `PerspectiveCamera_GetSamplePosition()` (clipping plane, motion blur),
+  `PerspectiveCamera_GetFluxToRadianceFactor()` in `camera_funcs.cl`.
+  Other camera types: GPU light tracing off, the CPU native threads keep
+  doing it (as today).
+- `Light_Emit()` for all 14 light types in `light_funcs.cl`. Emission maps
+  (map point, map sphere, triangle lights with IES/image map) are sampled
+  uniformly over the sphere: the CPU samples their distributions, which the
+  GPU doesn't have (same expected value, more noise for such lights).
+
+Design of the remaining parts (decided, from the code):
+
+- Light task (`LightPathTask` in `pathoclbase_datatypes.cl`): state
+  (GENERATE, RT_NEXT_VERTEX, RT_EYE_CONNECTION), seed, light ID, time, lens
+  point, flux, depth, volume, `isNearlyS`, `lastBSDFEvent`, stored next
+  vertex ray, pending eye connection (radiance, film x/y, volume), finished
+  path count. One ray in flight per light task, in the eye path rays buffer
+  after the `taskCount` eye rays, so the existing OptiX launch traces both
+  (`raysBuff` / `hitsBuff` sized `taskCount + lightTaskCount`). Idle slots
+  get a ray with mint = maxt = 0.
+- Kernel `AdvanceLightPaths` in a new `pathoclbase_kernels_lighttracing.cl`,
+  mirroring `PathTracer::RenderLightSample()` / `ConnectToEye()`: connect a
+  vertex to the camera only if the connection is caustic
+  (`isNearlyS && depth >= 1 && !IsNearlySpecular(eval event)`, not delta,
+  not camera invisible), trace the connection with `LIGHT_RAY | CAMERA_RAY`,
+  then continue with the stored next vertex ray. Stop the path as soon as
+  `isNearlyS` is false (no caustic vertex can follow). Russian roulette and
+  max depth as the CPU. Random sampler (Tauswothe seed per light task).
+  A path is counted when it ends (also failed emissions).
+- Temporaries (BSDF, HitPoint): kernel locals on CUDA, `tasks[gid].tmp*`
+  on OpenCL, so `lightTaskCount <= taskCount`.
+- Light picking: a GPU copy of the emit light strategy distribution
+  (`GetEmitLightStrategy()`, LOG_POWER by default), compiled next to
+  `lightsDistribution`.
+- Film: the thread film keeps `RADIANCE_PER_SCREEN_NORMALIZED` (today
+  removed in `ThreadFilm::Init()`), one float3 buffer per radiance group,
+  atomic splats with the filter LUTs of `FilmSampleSplatter` (built on the
+  host with `FilterLUTs(filter, max(4, max(xWidth, yWidth) + 1))`, queried
+  at the cell centers, uploaded as data + offset/width/height). Recv/Send
+  and clear like the other channels. Render loop:
+  `SetSampleCount(eye, eye, lightPathCount)`.
+- Light task count: start with taskCount / 2, to tune after it works.
+
+Still to check in the code: GPU equivalents of `BSDF::IsCameraInvisible()`
+(`sceneObjs[meshIndex].cameraInvisible`) and of the CPU pass-through
+shadow transparency override test in `RenderLightSample()`.
+
+### 2026-10-26: T6.1 GPU light tracing, done (branch `gpu-opt/T6.1-gpu-light-tracing`)
+
+With `path.hybridbackforward.enable` on, PATHOCL GPU threads now trace light
+paths for the caustics (before: only the CPU native threads did, with
+Metropolis). New property `path.hybridbackforward.gpulighttracing.enable`
+(default true; acts only with hybrid on and a perspective camera, otherwise
+the engine logs it and only the native threads trace light paths, as
+before). Without hybrid nothing changes: the light tracing code is under
+`PARAM_LIGHT_TRACING`, set only when the light task count is not 0.
+
+What was built (on top of the device code of the WIP entry above):
+
+- `AdvanceLightPaths` (end of `pathoclbase_kernels_micro.cl`, body under
+  `#if defined(PARAM_LIGHT_TRACING)` because the OpenCL split compile cuts
+  the source at each `__kernel`), `InitLightPaths` and
+  `LightTracing_ClearFilm` plus helpers (`LightTracing_GenerateLightPath`,
+  `LightTracing_SplatSample`, `LightTracing_IsNearlySpecular`) at the end of
+  `pathoclbase_funcs.cl`. Same decisions as `PathTracer::RenderLightSample()`
+  / `ConnectToEye()`: stop on a miss and on a not black shadow transparency
+  without override (`pathtracer.cpp:875`); caustic connection only
+  (`isNearlyS && depth > 0`, not camera invisible, not delta, eval event not
+  nearly specular); the path stops at once when the vertex can't be nearly
+  specular (the CPU traces one more vertex there only to "stabilize"
+  Metropolis, those samples are dropped by `addonlycaustics`).
+- Light tasks: `LightPathTask` (203 bytes), state machine GENERATE /
+  RT_NEXT_VERTEX / RT_EYE_CONNECTION, one ray each after the eye rays in
+  `raysBuff` / `hitsBuff`, so the one OptiX launch traces both. Idle slots
+  are masked rays. A path is counted when it ends (failed emissions too);
+  counts per task in `lightPathCountsBuff`, summed on the host into
+  `Film::SetSampleCount(eye, eye, lightPathCount)`.
+- Light picking: GPU copy of the emit light strategy distribution
+  (`emitLightsDistribution`, from `DistributionLightStrategy` or
+  `LightStrategyDLSCache`).
+- Film: the GPU thread film keeps `RADIANCE_PER_SCREEN_NORMALIZED` (one
+  float3 buffer per radiance group); atomic splats with the
+  `FilmSampleSplatter` filter LUTs (built on the host by
+  `CompileLightFilterLUTs()` in `pathocl.cpp`). Note: the CPU splatter
+  misaligns its LUT at the right edge of the film sub-region, the GPU
+  indexes it as intended.
+- `Material.passThroughShadowTransparencyOverride` added to the GPU
+  material struct. `HitPoint.fromLight` of the WIP entry is now a bit of
+  `HitPoint.flags` (see the speed section below).
+- Light task count = task count (1M on the RTX 5070). Memory: +208 MB
+  `LightPathTask`, +68 MB rays/hits.
+
+Bug found on the way: `CompileCamera()` copied only `.m` of the perspective
+camera transforms, `mInv` stayed zero, so `PerspectiveCamera_GetSamplePosition()`
+returned NaN film positions (splats in the top-left corner, values up to
+1e12). Now `mInv` of `rasterToCamera` / `cameraToWorld` is copied too. The
+eye paths don't use `mInv`, so no image change.
+
+Verification (`run.sh`-style runs: PATHOCL, SOBOL, seed 1, CUDA only,
+images in `D:\REPO\LuxCoreRepo\bench\T6.1`; "light part" = image mean minus
+the hybrid run without any light tracing):
+
+- Eye-only renders unchanged (no hybrid): LuxBall / DLSC RMSE vs T5.7c
+  0.0037 / 0.024, noise floors 0.0168 / 0.132. DLSC mean over 5 seeds
+  +0.031% +- 0.037% (1 sigma): the kernel change acts like a new Sobol
+  realization (pixel assignment depends on kernel order since T5.7), not a
+  bias.
+- 2-glasses (point light, glasses, 60 s): GPU light part / CPU light part
+  1.014 (seed 1), 0.987 (seed 2). Seed spread of the light part: CPU
+  Metropolis 2.3%, GPU 0.4%. GPU light tracing plus 12 CPU native threads
+  (Blender "use native CPU": both write the light channel, counts add up):
+  0.996 of GPU only. Task count change (taskCount / 2 to taskCount): 0.998.
+- 2-glasses noise, caustic tiles (50x50 tiles where the 600 s reference
+  has > 10% of the max light part), two seeds, 60 s:
+  eye paths only 6.7e-5; CPU light tracing (12 native threads, Metropolis,
+  plus the GPU eye paths) 3.51e-4; GPU light tracing, GPU only:
+  3.40e-4 with taskCount / 2, 2.53e-4 with taskCount (-28% vs CPU, with
+  the CPU idle). Eye spp at 60 s: 454 / 514 without light tracing, 461 /
+  471 with it (taskCount).
+- Profile (2-glasses, taskCount / 2, `opencl.kernel.profile.enable`):
+  `LIGHT_TRACING` 8% of kernel time. With temporary counters: 2.1e8 light
+  paths in 15 s, 1.3e5 caustic connections (0.06%): most light paths hit
+  the table first and end. This is the T6.2 lever.
+- OrangeJuice: no light traced caustics at all, on CPU or GPU: every glass
+  material has a not black `transparency.shadow`, so light paths stop there
+  (`pathtracer.cpp:875`). GPU light part -0.0002, CPU light only
+  (`path.hybridbackforward.partition 0`) -0.0011, image mean 1.649: noise.
+  Careful: with the default partition 0.8 (eye:light sample ratio) the
+  native threads also trace eye paths, and in OrangeJuice CPU eye paths are
+  brighter than GPU eye paths on the jug rim, handle and table, without
+  hybrid too (+0.020 image mean with 12 native threads, centre 125x125 tile
+  +0.62). Pre-existing CPU/GPU eye path difference, not T6.1: open.
+- Prism: unusable for this check, the GPU eye paths already miss the direct
+  volumetric beam (pre-existing).
+
+Known differences from the CPU light tracing:
+
+- Random sampler (Tausworthe per light task), not Metropolis: unbiased, no
+  adaptivity; its mean has a smaller seed spread at 60 s (see above).
+- Light samples are not added to the BCD denoiser statistics.
+- No volume adjoint factors (see the WIP entry).
+- Emission maps sampled uniformly over the sphere (see the WIP entry).
+- Camera type checked at engine start; after a scene edit to a non
+  perspective camera the kernel stops connecting (no caustics until
+  restart).
+- OpenCL (non-CUDA) path not tested: light tasks use the `GPUTask`
+  temporaries with the same index (hence lightTaskCount <= taskCount).
+- RTPATHOCL / TILEPATHOCL (Blender viewport) don't use it.
+
+Default (no hybrid) speed, `bench.py speed` (median of 3, M samples/sec):
+
+| Build | LuxBall | DLSC |
+|---|---|---|
+| T5.7c (base) | 17.39 / 18.17 (two sessions) | 21.18 / 20.99 (two sessions) |
+| T6.1 with a separate `HitPoint.fromLight` int | 17.54 | 20.57 / 20.58 (two sessions) |
+| T6.1 with `fromLight` removed (experiment) | | 21.05 |
+| T6.1 final (`HitPoint.flags`) | 18.15 | 21.10 |
+
+The separate `fromLight` field grew `HitPoint` by 4 bytes (GPUTaskState
+264 to 268 bytes per task) and slowed every eye path kernel by about 1.5%
+(material sort calibration timings) even with no light tracing code
+compiled in. Fix: `throughShadowTransparency` and `fromLight` share one
+`HitPoint.flags` int (`HITPOINT_THROUGH_SHADOW_TRANSPARENCY`,
+`HITPOINT_FROM_LIGHT`, read through `HitPoint_IsThroughShadowTransparency()`
+/ `HitPoint_IsFromLight()`), so the HitPoint layout equals the base one.
+The other struct additions (`Material` +4 bytes, `CameraBase.dir`,
+`PerspectiveCamera.pixelArea`, `ProjectionLightParam`) cost nothing
+measurable. The first LuxBall base number (17.39) was GPU clock drift: the
+same base binary gave 18.17 later.
+
+Image check after the fix (`bench.py image`, 256 spp, vs `T6.1-base-img`):
+LuxBall RMSE 0.0030 (noise floor 0.0168), DLSC 0.0125 (0.132), mean
++0.000% / +0.031% (seed spread -0.005% / +0.029%): pass. 2-glasses light
+part after the fix: 0.9987 of the run before it.
+
+Next: T6.2 (light path efficiency). Open from this task: the OrangeJuice
+CPU/GPU eye path difference above; a pyluxcore build for Blender with this
+branch.
+
+### 2026-10-27: T6.2 guided light emission (branch `gpu-opt/T6.2-light-path-efficiency`)
+
+The GPU light tracer splats only caustic connections, so a light path is
+useful only if its first vertex is on a "caster", an object whose material
+can be nearly specular. T6.2 emits most light paths toward the casters.
+
+- Casters: `CompiledScene::CompileLightTracingCasters()` (compilelights.cpp),
+  objects whose material has SPECULAR events or GLOSSY with glossiness <=
+  `path.hybridbackforward.glossinessthreshold` (the same per material
+  constants the kernel tests, so the set is exact), minus NULL materials
+  (always pass-through) and materials with a not black shadow transparency
+  and no override (light paths stop there). World bounding boxes,
+  clustered to at most 32 bounding spheres (median split of the largest).
+  Recompiled on geometry and material edits, uploaded as
+  `lightCastersBuff`.
+- Emission (`LightEmitGuide` in `light_funcs.cl`): with probability
+  `path.hybridbackforward.gpulighttracing.guidedprob` (default 0.9, 0
+  disables) the second half of the emission is sampled toward a caster:
+  lights with a position (point, map point, spot, sphere, map sphere,
+  triangle) sample the direction uniformly in the cone toward a caster
+  sphere, picked by solid angle; environment lights (constant, infinite,
+  sky2, sun, distant, sharp distant) sample the ray origin on the emission
+  disk uniformly in the shadow of a caster sphere, picked by area. The pdf
+  is the mixture of the light pdf and the guided pdf (number of cones /
+  shadows holding the sample over their total), so the estimate is
+  unbiased for any caster set. Cones use 1 - cos and a sine test to stay
+  accurate for small cones; the sampled cone always counts itself.
+  Not guided: projection, laser, triangle lights with emission theta 0.
+  The constant infinite light now samples a direction plus a disk origin
+  (same distribution as its former 2 sphere points).
+- No change without hybrid: all the code is under `PARAM_LIGHT_TRACING`.
+
+Test setup warning: `opencl.native.threads.count` must be 0 for GPU-only
+hybrid runs. Without it luxcoreconsole starts CPU native threads that trace
+eye paths and Metropolis light paths too (the first T6.2 checks were
+useless because of this).
+
+Verification: light-only images from a temporary debug build (eye
+radiance cleared before `Sampler_SplatSample()`, not committed), 2-glasses
+and 9 variants with other lights (scenes generated into
+`bench\T6.2\scenes`; env variants without the walls and ceiling),
+PATHOCL, SOBOL, GPU only, 40 s per run, images in `bench\T6.2`:
+
+| Light | mean guided / plain | caustic tile noise plain | guided | eye spp plain / guided |
+|---|---|---|---|---|
+| point | 1.0001 | 2.97e-4 | 2.94e-5 | 369 / 346 |
+| spot (aimed at glasses) | 1.0004 | 0.0838 | 0.0381 | 493 / 476 |
+| sphere | 0.9984 | | | 375 / 335 |
+| mesh (bulb, triangle lights) | 0.9988 | 1.80 | 0.221 | 562 / 503 |
+| mesh, emission theta 30 | 1.0005 | | | 567 / 500 |
+| sun | 0.9999 | 0.379 | 0.0245 | 686 / 684 |
+| sky2 | 1.0019 | 1.65 | 0.0732 | 760 / 797 |
+| constant infinite | 1.0049 | 0.217 | 0.0110 | 775 / 800 |
+| distant (theta 2) | 1.0011 | | | 701 / 691 |
+| sharp distant | 1.0017 | | | 700 / 687 |
+
+Noise = RMSE between seeds 1 and 2 / sqrt(2) over the 50x50 tiles with
+more than 10% of the max tile light; the brightest tiles agree within
+noise for every light. Full images (eye + light, GPU only) agree too:
+2-glasses light part (image minus the eye-only run) plain 1.5456e-4 /
+1.5403e-4, guided 1.5431e-4 / 1.5431e-4 (two seeds), T6.1 600 s reference
+1.5467e-4. guidedprob 0.99: noise within 1% of 0.9 (point, sky2), so 0.9
+stays: it bounds the damage if a caster were ever missed.
+
+Cost: guided light paths are longer, so the light kernel takes a larger
+share of each iteration (eye spp column). LuxCore2.1Benchmark (sun +
+sky2, only archglass casters: their transmission is pass-through, so no
+caustic at all, light part 0 with plain and guided): eye spp 678 plain,
+586 / 583 guided. Moved to T6.5 (light/eye work balance).
+
+Default (no hybrid) image check, `bench.py image` 256 spp vs
+`T6.1-base-img`: LuxBall RMSE 0.0025 (noise floor 0.0168), DLSC 0.0249
+(0.132), mean +0.002% / +0.073%: pass (eye kernels compile from the same
+preprocessed code as T6.1).
+
+Next: T6.5 (work balance), then T7.1 + T7.2 per the roadmap order.
+
+### 2026-10-27: T6.5 light tracing duty cycle (branch `gpu-opt/T6.5-light-eye-balance`)
+
+Branched from `gpu-opt/T6.2-light-path-efficiency`. The GPU render loop
+(`pathoclopenclthread.cpp`) now runs the light kernel, and traces the light
+rays, only every `lightPeriod` iterations. The light rays follow the eye
+rays in the ray buffer, so on the other iterations only `taskCount` rays
+are traced and the light rays wait, untouched, for the next light
+iteration. After each film read, once 8 x lightTaskCount light paths have
+been counted since the last check, the loop sums the light tracing
+(RADIANCE_PER_SCREEN_NORMALIZED) channels: no new energy sets the period
+to 16, new energy sets it back to 1. The light channels are normalized by
+the light path count, so the period changes the noise, not the image.
+Only host code changed; the kernels are the T6.2 ones.
+
+Speed (GPU only, 40 s, warm kernel cache, eye spp):
+
+| Scene | no GPU light tracing | T6.2 | T6.5 |
+|---|---|---|---|
+| LuxCore2.1Benchmark (photongi off) | 857 | 599 | 838 |
+| 2-glasses | | 297 | 300 |
+
+LuxCore2.1Benchmark switches to period 16 at 1.1 s (the first window,
+1.4e7 light paths). 2-glasses never leaves period 1.
+
+Measuring pitfall: `batch.halttime` includes the kernel compile. The
+first T6.5 runs with a cold cache lost 21-27 s of 40 to it (392 spp
+instead of 857). The T6.2 table runs had warm caches; only
+`lo_bench_g0` (the odd 211 spp) did not.
+
+Check of the skipped iterations: a debug build with the period forced to
+16 and the eye radiance cleared (light-only, not committed,
+`bench\bin-T6.5-p16lo`) vs the T6.2 light-only 2-glasses images: light
+mean ratio 0.9937 / 0.9948 (seeds 1 / 2) at 40 s, 0.9988 / 0.9988 at
+160 s, every bright tile the same. The gap falls as 1/time, so it is not
+the duty cycle: it is the count of light paths at the end (T6.6). A path
+is counted when it is done, and the paths still in flight are more often
+the long caustic ones, so the light part reads low by about
+Cov(contribution, length) / (mean length x mean contribution x paths per
+task). With 16x fewer paths the gap is 16x larger. At the normal period
+it is about -0.03% of the light part at 40 s on 2-glasses (the T6.2
+light-only reference itself). In normal use the period is 16 only while
+the light paths add nothing, so T6.5 does not make it larger.
+
+Next: T7.1 + T7.2 per the roadmap order (T6.6 is low priority).
+
+### 2026-10-27: T7.1 / T7.2 measured; T7.5 asynchronous render loop (branch `gpu-opt/T7.5-async-render-loop`)
+
+Branched from `gpu-opt/T6.5-light-eye-balance` (same render loop file).
+
+T7.1 / T7.2 first: a temporary build timed `RenderEngine::UpdateFilm()`
+(host merge of the thread films, then `Film::RunTests()`) and the render
+thread film transfers. GPU only, 30 s, one film update per second:
+
+| Scene | film | merge / update | RunTests / update | film transfer, % of kernel time |
+|---|---|---|---|---|
+| LuxBall | 800x800 | 2.5 ms | 22 ms | 1.0% |
+| DLSC | 864x640 | ~0 ms | 41 ms | 0.9% |
+| 2-glasses | 1024x1024 | 1.4 ms | 18 ms | 0.8% |
+| LuxCore2.1Benchmark | 789x1071 | 6.4 ms | 28 ms | 1.0% |
+
+The merge and the tests run on the session thread beside the GPU, so
+moving them to the GPU cannot raise samples/sec: T7.1 and T7.2 are
+deferred. The real host cost was the render thread itself: one full core
+for the whole render. The CUDA context is created with
+`CU_CTX_SCHED_YIELD`, so `FinishQueue()` after each batch of iterations
+spins. `CU_CTX_SCHED_BLOCKING_SYNC` alone cut the process CPU time
+(2-glasses 33.9 s to 3.9 s in 30 s), but the GPU then idles while the
+woken thread queues the next batch: LuxBall 18.03 to 17.75 M samples/sec
+(-1.6%, speed protocol), DLSC 20.87 to 20.97. Not kept.
+
+T7.5 instead:
+
+- `HardwareDevice::EnqueueMarker()` / `WaitMarker()`. CUDA: an event with
+  `CU_EVENT_BLOCKING_SYNC`, so the waiting thread sleeps; the context stays
+  `CU_CTX_SCHED_YIELD`. OpenCL: flush / finish (the old behavior, not
+  tested).
+- CUDA non-blocking `EnqueueReadBuffer()` goes through pinned memory (one
+  allocation of the buffer size per buffer, at the first read): an async
+  copy to pageable memory blocks until the device has run all the queued
+  work. The copy to the destination runs in `WaitMarker()` /
+  `FinishQueue()`, the point where an OpenCL non-blocking read is
+  complete too. A blocking read finishes the queue first, so the reads
+  stay in queue order. Falls back to the old copy if pinned memory can not
+  be allocated.
+- `PathOCLOpenCLRenderThread::RenderThreadImpl()` keeps one batch queued
+  ahead: it queues batch k, then waits for batch k-1. Film reads are queued
+  between two batches with their own marker and completed (sample counts,
+  T6.5 light window) after the next batch is queued. Pause, the PhotonGI
+  cache update and the end of the render drain the queue; the last film
+  read is synchronous as before.
+- The 1% film transfer budget now charges each read the time of the
+  second read, measured once with nothing else queued.
+
+Windows pitfalls found on the way: `WallClockTime()` is `GetTickCount()`,
+10-16 ms resolution (the loop now uses `std::chrono::steady_clock`). On
+WDDM a marker can complete for the host only together with the next batch
+(a film read marker waited 92-192 ms): the first version charged that wait
+to the transfer budget and read the film only every ~10-20 s, which also
+delayed noise estimation and made samples/sec look 10% higher on
+2-glasses. Fixed by the measured read time above.
+
+Results (bins `bench\bin-T7.1-base` = T6.5, `bench\bin-T7.1`):
+
+| Scene (GPU only) | render thread CPU, base | T7.5 |
+|---|---|---|
+| LuxBall | 100% of a core | 4% |
+| DLSC | 101% | 5% |
+| 2-glasses | 100% | 3% |
+| 2-glasses hybrid | 99% | 3% |
+
+(process CPU over seconds 6-26 of a 30 s render, `batch.haltspp 0`; the
+rest of the process CPU is the scene load and, for LuxBall, the CPU OIDN
+of its output pipeline at the end.)
+
+- Speed protocol, back to back: LuxBall 17.88 base, 17.94 T7.5 (+0.3%). DLSC
+  20.87 (base, earlier) vs 21.02 (+0.7%). Equal within noise; the film
+  copies no longer stop the GPU, but they cost under 1% before.
+- Image check 256 spp vs `T6.1-base-img`: LuxBall RMSE 0.00224 (floor
+  0.0168), DLSC 0.0141 (0.132), mean -0.001% / +0.041%: pass.
+- Film update cadence with the scene settings (30 s, noise estimations
+  base / T7.5): LuxBall 16 / 15, DLSC 23 / 28, 2-glasses 5 / 6.
+- 2-glasses hybrid, 40 s: brightest 50x50 tiles T7.5 / base 0.999-1.000,
+  the same as between two T7.5 seeds (light path counts and the light
+  channels are read at the same queue point).
+
+Open: TILEPATHOCL and RTPATHOCL keep their own loops with `FinishQueue()`.
+The NOISE / CONVERGENCE / USER_IMPORTANCE channels are still written from
+pageable memory at each film read (CUDA may synchronize such copies; no
+CPU or speed effect was measured).
+
+Next: T8.1 + T8.2 per the roadmap order.
+
+### 2026-10-27: T8.1 kernel compile time (branch `gpu-opt/T8.1-kernel-compile`)
+
+Branched from `gpu-opt/T7.5-async-render-loop`.
+
+Where a cold compile goes (LuxBall, specialized kernels, fresh LuxCore
+cache, `CUDA_CACHE_DISABLE=1`): 13.9 s = NVRTC source to PTX 5.4 s + driver
+PTX to SASS JIT at module load 8.4 s (one thread). Warm (LuxCore PTX cache +
+driver JIT cache): 20 ms.
+
+Measuring pitfall: NVRTC 12.9 caches its own results in the driver
+ComputeCache (`%APPDATA%\NVIDIA\ComputeCache`), keyed after preprocessing
+(an unused `-D` still hits). For cold numbers set `CUDA_CACHE_DISABLE=1`
+or change the source.
+
+Tried and rejected:
+
+- NVRTC straight to CUBIN (`--gpu-architecture=sm_120`, `nvrtcGetCUBIN`),
+  so ptxas runs inside NVRTC with `--split-compile=0`: cold 10.0 s, warm
+  28 ms. Interleaved A/B (3 x 60 s, `bench\T8.1-ab.txt`): LuxBall 18.00 /
+  18.00, DLSC 21.11 / 20.83 (-1.3%, runs 21.04-21.12 vs 20.80-20.93),
+  LuxCore2.1Benchmark 20.04 / 19.96. Without split the CUBIN compile takes
+  15.0 s, slower than today. Split thread counts 4-12 are equal within
+  noise, and the SASS changes with the split count. Rejected: a 4 s saving
+  once per feature set does not pay for 1.3% on every render.
+- One NVRTC program per micro-kernel, compiled in parallel (12 threads,
+  CUBIN): 8.7 s with `--split-compile=1` per program, 35 s with `0`
+  (oversubscription). Each program parses the whole 1.3 MB source again
+  (~1 s, measured with the non micro-kernels only).
+
+ptxas per kernel (offline, CUDA 12.8 ptxas, ~0.35 s of it parsing): the 7
+heavy kernels take ~1.2 s each (DL_ILLUMINATE, RT_NEXT_VERTEX, RT_DL,
+HIT_OBJECT, GENERATE_NEXT_VERTEX_RAY, SPLAT_SAMPLE, DL_SAMPLE_BSDF), the
+rest ~0.05-0.2 s. Less code per kernel (T5.5) is what shortens the compile.
+
+Kept, bug fixes:
+
+- OpenCL split compile broken since T5.10: `NextSample()` and
+  `GenerateCameraRay()` sat between two kernels, so the split programs of
+  MK_SPLAT_SAMPLE, MK_NEXT_SAMPLE and MK_GENERATE_CAMERA_RAY did not see
+  them. With `-D opencl.devices.select 10` (the NVIDIA OpenCL device) the
+  T7.5 build fails with `PathOCL kernel AdvancePaths_MK_SPLAT_SAMPLE OpenCL
+  program compilation error`; moved above the first kernel, LuxBall renders
+  on OpenCL (kernel compile 21 s).
+- `cudaKernelPersistentCache::CompilePTX()` retried a corrupt cache file by
+  calling itself while holding `cacheMutex`: with a cache file damaged on
+  purpose the T7.5 build stops with `RUNTIME ERROR: resource deadlock would
+  occur`; now it removes the file and compiles (tested, renders).
+- `ForcedCompilePTX()` leaked the `nvrtcProgram` on a compile error.
+
+Image check 256 spp vs `T6.1-base-img`: LuxBall RMSE 0.00147 (floor
+0.0168), DLSC 0.00513 (0.132), mean +0.000% / -0.002%: pass.
+
+Not done: rendering with a generic kernel while the specialized one
+compiles (large); prebuilt caches (feature sets are combinatorial with the
+specialization).
+
+### 2026-10-27: research pass and new order
+
+The user asked for a web research pass (university and NVIDIA papers) and
+set the direction: a good, fast, stable renderer, no tasks that take
+weeks, keep path guiding. Findings and links are in `PLAN.md`
+"References"; new tasks T4.2 (MIS compensation for env lights), T4.3
+(Owen-scrambled Sobol), T9.4 (CUDA Graphs), T9.5 (light tree); T6.3 path
+guiding scoped to a GPU-native hash grid. Rejected for now: ray
+reordering and NEE++ (ray tracing is 1.6% of the GPU time), EARS (after
+T6.3, needs the same kind of cache).
+
+Next: merge the verified chain into one branch and build pyluxcore + the
+Blender addon, then T5.5.

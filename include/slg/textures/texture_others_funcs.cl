@@ -562,9 +562,11 @@ OPENCL_FORCE_INLINE bool WireFrameTexture_Evaluate(__global const HitPoint *hitP
 	float3 v2 = VLOAD3F(&iVertices[vi2].x);
 	if (meshDesc->type != TYPE_EXT_TRIANGLE) {
 		// Transform to global coordinates
-		v0 = Transform_ApplyPoint(&hitPoint->localToWorld, v0);
-		v1 = Transform_ApplyPoint(&hitPoint->localToWorld, v1);
-		v2 = Transform_ApplyPoint(&hitPoint->localToWorld, v2);
+		Transform localToWorld;
+		HitPoint_GetLocalToWorld(hitPoint, &localToWorld EXTMESH_PARAM);
+		v0 = Transform_ApplyPoint_Private(&localToWorld, v0);
+		v1 = Transform_ApplyPoint_Private(&localToWorld, v1);
+		v2 = Transform_ApplyPoint_Private(&localToWorld, v2);
 	}
 	
 	const float e0 = length(v1 - v0);

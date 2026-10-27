@@ -334,6 +334,8 @@ public:
 			const bool blocking, const size_t size, const void *ptr) override;
 	virtual void FlushQueue() override;
 	virtual void FinishQueue() override;
+	virtual void EnqueueMarker() override;
+	virtual void WaitMarker() override;
 
 	//--------------------------------------------------------------------------
 	// Memory management for hardware (aka GPU) only applications

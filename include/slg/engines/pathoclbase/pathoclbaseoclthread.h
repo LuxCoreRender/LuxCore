@@ -82,6 +82,12 @@ public:
 		void ClearFilm(luxrays::HardwareIntersectionDeviceRef intersectionDevice,
 			luxrays::HardwareDeviceKernelRPtr filmClearKernel,
 			const size_t filmClearWorkGroupSize);
+		// Sets the film RADIANCE_PER_SCREEN_NORMALIZED kernel arguments of the
+		// light tracing (see KERNEL_ARGS_LIGHT_TRACING)
+		u_int SetLightTracingFilmKernelArgs(
+			luxrays::HardwareIntersectionDeviceRef intersectionDevice,
+			luxrays::HardwareDeviceKernelRPtr kernel,
+			u_int argIndex) const;
 		void RecvFilm(luxrays::HardwareIntersectionDeviceRef intersectionDevice);
 		void SendFilm(luxrays::HardwareIntersectionDeviceRef intersectionDevice);
 
@@ -90,6 +96,8 @@ public:
 
 		// Film buffers
 		std::vector<luxrays::HardwareDeviceBuffer *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff;
+		// Only with the GPU light tracing
+		std::vector<luxrays::HardwareDeviceBuffer *> channel_RADIANCE_PER_SCREEN_NORMALIZEDs_Buff;
 		luxrays::HardwareDeviceBuffer *channel_ALPHA_Buff;
 		luxrays::HardwareDeviceBuffer *channel_DEPTH_Buff;
 		luxrays::HardwareDeviceBuffer *channel_POSITION_Buff;
@@ -165,19 +173,29 @@ protected:
 	void InitImageMaps();
 	void InitTextures();
 	void InitMaterials();
+	// True when the kernels keep the material and texture evaluation stacks
+	// in CUDA local memory (see evalstack_funcs.cl), sized at compile time
+	// for the scene: the global stack buffers are then not used.
+	bool UseLocalEvalStacks() const;
 	void InitSceneObjects();
 	void InitLights();
 	void InitPhotonGI();
+	void InitLightTracing();
+	void InitLightTracingCasters();
 	void InitKernels();
 	void InitGPUTaskBuffer();
+	// Uploads renderEngine->taskConfig
+	void UpdateGPUTaskConfiguration();
 	void InitSamplerSharedDataBuffer();
 	void InitSamplesBuffer();
 	void InitSampleDataBuffer();
 	void InitSampleResultsBuffer();
 
 	void SetInitKernelArgs(const u_int filmIndex);
-	void SetAdvancePathsKernelArgs(luxrays::HardwareDeviceKernelRPtr advancePathsKernel, const u_int filmIndex);
+	// Returns the index of the next argument
+	u_int SetAdvancePathsKernelArgs(luxrays::HardwareDeviceKernelRPtr advancePathsKernel, const u_int filmIndex);
 	void SetAllAdvancePathsKernelArgs(const u_int filmIndex);
+	void SetLightTracingKernelArgs(const u_int filmIndex);
 	void SetKernelArgs();
 
 
@@ -187,7 +205,21 @@ protected:
 		const std::string &name
 	);
 
+	void EnqueueInitKernel();
+	void EnqueueQueuePathsKernels(const slg::ocl::pathoclbase::PathState state,
+			const bool sortByMaterial);
+	bool IsMaterialSortState(const slg::ocl::pathoclbase::PathState state) const;
+	void UpdateMaterialSortCalibration();
 	void EnqueueAdvancePathsKernel();
+	// GPU light tracing (renderEngine->lightTaskCount > 0)
+	void EnqueueInitLightPathsKernel();
+	void EnqueueAdvanceLightPathsKernel();
+	// With opencl.kernel.profile.enable, waits for the queue and returns the
+	// time; EndKernelProfile() waits again and adds the elapsed time to
+	// kernelProfileTimes[index]. Both do nothing when profiling is off.
+	double BeginKernelProfile();
+	void EndKernelProfile(const u_int index, const double startTime);
+	void LogKernelProfile() const;
 
 	static luxrays::oclKernelCache *AllocKernelCache(const std::string &type);
 	static void GetKernelParamters(std::vector<std::string> &params,
@@ -256,6 +288,14 @@ protected:
 	luxrays::HardwareDeviceBuffer *tasksBuff;
 	luxrays::HardwareDeviceBuffer *tasksDirectLightBuff;
 	luxrays::HardwareDeviceBuffer *tasksStateBuff;
+	luxrays::HardwareDeviceBuffer *pathStatesBuff;
+	luxrays::HardwareDeviceBuffer *pathQueuesBuff;
+	luxrays::HardwareDeviceBuffer *pathQueueCountsBuff;
+	// Material sorted queues: materialsCount + 1 counters each, and the
+	// material of each path (taskCount entries)
+	luxrays::HardwareDeviceBuffer *materialQueueCountsBuff;
+	luxrays::HardwareDeviceBuffer *materialQueueCursorsBuff;
+	luxrays::HardwareDeviceBuffer *pathMaterialKeysBuff;
 	luxrays::HardwareDeviceBuffer *samplerSharedDataBuff;
 	luxrays::HardwareDeviceBuffer *samplesBuff;
 	luxrays::HardwareDeviceBuffer *sampleDataBuff;
@@ -264,6 +304,13 @@ protected:
 	luxrays::HardwareDeviceBuffer *eyePathInfosBuff;
 	luxrays::HardwareDeviceBuffer *directLightVolInfosBuff;
 	luxrays::HardwareDeviceBuffer *pixelFilterBuff;
+	// GPU light tracing buffers
+	luxrays::HardwareDeviceBuffer *lightTasksBuff;
+	luxrays::HardwareDeviceBuffer *lightPathCountsBuff;
+	luxrays::HardwareDeviceBuffer *emitLightsDistributionBuff;
+	luxrays::HardwareDeviceBuffer *lightFilterLUTsBuff;
+	luxrays::HardwareDeviceBuffer *lightCastersBuff;
+	std::unique_ptr<u_int[]> lightPathCounts;
 
 	u_int initKernelArgsCount;
 	std::string kernelsParameters;
@@ -275,6 +322,33 @@ protected:
 	// OpenCL kernels
 	luxrays::HardwareDeviceKernelUPtr initSeedKernel;
 	luxrays::HardwareDeviceKernelUPtr initKernel;
+	luxrays::HardwareDeviceKernelUPtr resetPathQueuesKernel;
+	size_t resetPathQueuesWorkGroupSize;
+	luxrays::HardwareDeviceKernelUPtr queuePathsKernel;
+	size_t queuePathsWorkGroupSize;
+	luxrays::HardwareDeviceKernelUPtr countPathsByMaterialKernel;
+	size_t countPathsByMaterialWorkGroupSize;
+	luxrays::HardwareDeviceKernelUPtr scanPathsByMaterialKernel;
+	size_t scanPathsByMaterialWorkGroupSize;
+	luxrays::HardwareDeviceKernelUPtr queuePathsByMaterialKernel;
+	size_t queuePathsByMaterialWorkGroupSize;
+	// Only Init can leave paths in MK_GENERATE_CAMERA_RAY (the samples
+	// Sampler_Init() rejects) and nothing sets MK_NEXT_SAMPLE: MK_SPLAT_SAMPLE
+	// does their work. So their queues and kernels run only in the first
+	// iteration after Init.
+	bool initPathsPending;
+	// Queueing the paths of the BSDF micro-kernels grouped by material
+	// (IsMaterialSortState()) wins when the materials diverge (LynxSpider) and
+	// loses when path order memory locality matters more (LuxBall). Both
+	// orders give the same image, so after MATERIAL_SORT_WARMUP iterations
+	// the next MATERIAL_SORT_CALIBRATION iterations alternate them, time
+	// queue + micro-kernel of each state and keep the faster order.
+	static const u_int MATERIAL_SORT_WARMUP = 16;
+	static const u_int MATERIAL_SORT_CALIBRATION = 32;
+	u_int materialSortIteration;
+	// Seconds, indexed by PathState and by sorted (1) or path order (0)
+	double materialSortTimes[slg::ocl::pathoclbase::MK_DONE][2];
+	bool materialSortEnabled[slg::ocl::pathoclbase::MK_DONE];
 	size_t initWorkGroupSize;
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_RT_NEXT_VERTEX;
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_HIT_NOTHING;
@@ -286,7 +360,23 @@ protected:
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_SPLAT_SAMPLE;
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_NEXT_SAMPLE;
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_GENERATE_CAMERA_RAY;
-	size_t advancePathsWorkGroupSize;
+	// GPU light tracing kernels
+	luxrays::HardwareDeviceKernelUPtr initLightPathsKernel;
+	size_t initLightPathsWorkGroupSize;
+	luxrays::HardwareDeviceKernelUPtr lightTracingClearFilmKernel;
+	size_t lightTracingClearFilmWorkGroupSize;
+	luxrays::HardwareDeviceKernelUPtr advanceLightPathsKernel;
+	size_t advanceLightPathsWorkGroupSize;
+	// Indexed by the PathState of the micro-kernel
+	size_t advancePathsWorkGroupSizes[slg::ocl::pathoclbase::MK_DONE];
+
+	// Profiling slots: one per micro-kernel (indexed by PathState), then
+	// the ray trace and the queue reset
+	static const u_int KERNEL_PROFILE_TRACE = slg::ocl::pathoclbase::MK_DONE;
+	static const u_int KERNEL_PROFILE_PATH_QUEUES = slg::ocl::pathoclbase::MK_DONE + 1;
+	static const u_int KERNEL_PROFILE_LIGHT_TRACING = slg::ocl::pathoclbase::MK_DONE + 2;
+	static const u_int KERNEL_PROFILE_COUNT = slg::ocl::pathoclbase::MK_DONE + 3;
+	double kernelProfileTimes[KERNEL_PROFILE_COUNT] = {};
 
 	std::unique_ptr<slg::ocl::pathoclbase::GPUTaskStats[]> gpuTaskStats;
 

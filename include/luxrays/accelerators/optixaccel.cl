@@ -135,7 +135,9 @@ extern "C" __global__ void __raygen__OptixAccel() {
             ray->maxt,
             ray->time,
             OptixVisibilityMask(1),
-            0,
+            // OPTIX_RAY_FLAG_DISABLE_ANYHIT (there is no any-hit program) and
+            // OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT for RAY_FLAGS_ANY_HIT rays
+            1 | ((ray->flags & RAY_FLAGS_ANY_HIT) ? 4 : 0),
             0, 1, 0);
 }
 

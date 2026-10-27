@@ -106,6 +106,12 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	tasksBuff = nullptr;
 	tasksDirectLightBuff = nullptr;
 	tasksStateBuff = nullptr;
+	pathStatesBuff = nullptr;
+	pathQueuesBuff = nullptr;
+	pathQueueCountsBuff = nullptr;
+	materialQueueCountsBuff = nullptr;
+	materialQueueCursorsBuff = nullptr;
+	pathMaterialKeysBuff = nullptr;
 	samplerSharedDataBuff = nullptr;
 	samplesBuff = nullptr;
 	sampleDataBuff = nullptr;
@@ -114,10 +120,21 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	eyePathInfosBuff = nullptr;
 	directLightVolInfosBuff = nullptr;
 	pixelFilterBuff = nullptr;
+	lightTasksBuff = nullptr;
+	lightPathCountsBuff = nullptr;
+	emitLightsDistributionBuff = nullptr;
+	lightFilterLUTsBuff = nullptr;
+	lightCastersBuff = nullptr;
 
 	// OpenCL kernels
 	initSeedKernel = nullptr;
 	initKernel = nullptr;
+	resetPathQueuesKernel = nullptr;
+	queuePathsKernel = nullptr;
+	countPathsByMaterialKernel = nullptr;
+	scanPathsByMaterialKernel = nullptr;
+	queuePathsByMaterialKernel = nullptr;
+	initPathsPending = true;
 	advancePathsKernel_MK_RT_NEXT_VERTEX = nullptr;
 	advancePathsKernel_MK_HIT_NOTHING = nullptr;
 	advancePathsKernel_MK_HIT_OBJECT = nullptr;
@@ -128,6 +145,9 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	advancePathsKernel_MK_SPLAT_SAMPLE = nullptr;
 	advancePathsKernel_MK_NEXT_SAMPLE = nullptr;
 	advancePathsKernel_MK_GENERATE_CAMERA_RAY = nullptr;
+	initLightPathsKernel = nullptr;
+	lightTracingClearFilmKernel = nullptr;
+	advanceLightPathsKernel = nullptr;
 
 	initKernelArgsCount  = 0;
 
@@ -174,6 +194,8 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	intersectionDevice.FreeBuffer(&materialsBuff);
 	intersectionDevice.FreeBuffer(&materialEvalOpsBuff);
 	intersectionDevice.FreeBuffer(&materialEvalStackBuff);
+	intersectionDevice.FreeBuffer(&materialQueueCountsBuff);
+	intersectionDevice.FreeBuffer(&materialQueueCursorsBuff);
 	intersectionDevice.FreeBuffer(&texturesBuff);
 	intersectionDevice.FreeBuffer(&textureEvalOpsBuff);
 	intersectionDevice.FreeBuffer(&textureEvalStackBuff);
@@ -222,6 +244,10 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	intersectionDevice.FreeBuffer(&tasksBuff);
 	intersectionDevice.FreeBuffer(&tasksDirectLightBuff);
 	intersectionDevice.FreeBuffer(&tasksStateBuff);
+	intersectionDevice.FreeBuffer(&pathStatesBuff);
+	intersectionDevice.FreeBuffer(&pathQueuesBuff);
+	intersectionDevice.FreeBuffer(&pathQueueCountsBuff);
+	intersectionDevice.FreeBuffer(&pathMaterialKeysBuff);
 	intersectionDevice.FreeBuffer(&samplerSharedDataBuff);
 	intersectionDevice.FreeBuffer(&samplesBuff);
 	intersectionDevice.FreeBuffer(&sampleDataBuff);
@@ -230,6 +256,11 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	intersectionDevice.FreeBuffer(&eyePathInfosBuff);
 	intersectionDevice.FreeBuffer(&directLightVolInfosBuff);
 	intersectionDevice.FreeBuffer(&pixelFilterBuff);
+	intersectionDevice.FreeBuffer(&lightTasksBuff);
+	intersectionDevice.FreeBuffer(&lightPathCountsBuff);
+	intersectionDevice.FreeBuffer(&emitLightsDistributionBuff);
+	intersectionDevice.FreeBuffer(&lightFilterLUTsBuff);
+	intersectionDevice.FreeBuffer(&lightCastersBuff);
 
 	started = false;
 
@@ -239,6 +270,14 @@ void PathOCLBaseOCLRenderThread::Stop() {
 
 void PathOCLBaseOCLRenderThread::StartRenderThread() {
 	threadDone = false;
+
+	// The scene may have changed: calibrate the material sort again
+	materialSortIteration = 0;
+	for (u_int i = 0; i < slg::ocl::pathoclbase::MK_DONE; ++i) {
+		materialSortTimes[i][0] = 0.0;
+		materialSortTimes[i][1] = 0.0;
+		materialSortEnabled[i] = false;
+	}
 
 	// Create the thread for the rendering
 	renderThread = std::make_unique<luxrays::JThread>(
@@ -288,6 +327,10 @@ void PathOCLBaseOCLRenderThread::EndSceneEdit(const EditActionList &editActions)
 		// Update Scene Textures and Materials
 		InitTextures();
 		InitMaterials();
+
+		// The scene part of the task configuration (default volume, shadow
+		// ray any hit) depends on the materials
+		UpdateGPUTaskConfiguration();
 	}
 
 	if (cscene->wasSceneObjectsCompiled) {
@@ -303,6 +346,11 @@ void PathOCLBaseOCLRenderThread::EndSceneEdit(const EditActionList &editActions)
 	if (cscene->wasPhotonGICompiled) {
 		// Update PhotonGI cache
 		InitPhotonGI();
+	}
+
+	if (cscene->wasGeometryCompiled || cscene->wasSceneObjectsCompiled) {
+		// Update the light tracing casters
+		InitLightTracingCasters();
 	}
 
 	//--------------------------------------------------------------------------

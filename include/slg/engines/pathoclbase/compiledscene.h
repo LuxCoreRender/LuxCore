@@ -47,6 +47,11 @@ public:
 	void Recompile(const EditActionList &editActions);
 	void RecompilePhotonGI() { CompilePhotonGI(); }
 
+	// True if a shadow ray is blocked by any surface it hits: no material can
+	// let it pass (transparency, shadow transparency, NULL or ARCHGLASS
+	// materials) and there are no volumes
+	bool IsShadowRayAnyHitExact() const;
+
 	static void CompileFilm(const Film &film, slg::ocl::Film &oclFilm);
 
 	static std::tuple<std::vector<float>, size_t>
@@ -92,6 +97,14 @@ public:
 	u_int lightsDistributionSize;
 	std::vector<float> infiniteLightSourcesDistribution;
 	u_int infiniteLightSourcesDistributionSize;
+	// The emit light strategy, used by the light tracing
+	std::vector<float> emitLightsDistribution;
+	u_int emitLightsDistributionSize;
+	// The bounding spheres (center x, y, z, radius) of the objects where a
+	// light path can have a nearly specular vertex, for the guided emission
+	// of the light tracing (see LightEmitGuide). Empty without the hybrid
+	// back/forward path tracing.
+	std::vector<float> lightTracingCasters;
 	// DLSC related data
 	std::vector<slg::ocl::DLSCacheEntry> dlscAllEntries;
 	std::vector<float> dlscDistributions; 
@@ -178,6 +191,7 @@ private:
 	void CompileDLSC(const LightStrategyDLSCache& dlscLightStrategy);
 	void CompileELVC(EnvLightVisibilityCacheRPtr visibilityMapCache);
 	void CompileLightStrategy();
+	void CompileLightTracingCasters();
 
 	void CompilePhotonGI();
 	void CompilePathTracer();

@@ -56,4 +56,35 @@ OPENCL_FORCE_INLINE bool Transform_SwapsHandedness(__global const Transform* res
 		(trans->m.m[1][0] * trans->m.m[2][1] - trans->m.m[1][1] * trans->m.m[2][0])));
 	return det < 0.f;
 }
+
+//------------------------------------------------------------------------------
+// Private memory versions (same arithmetic as the __global ones)
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE void Transform_Init_Private(Transform *trans) {
+	Matrix4x4_Identity(&trans->m);
+	Matrix4x4_Identity(&trans->mInv);
+}
+
+OPENCL_FORCE_INLINE float3 Transform_ApplyPoint_Private(const Transform *trans, const float3 point) {
+	return Matrix4x4_ApplyPoint_Private(&trans->m, point);
+}
+
+OPENCL_FORCE_INLINE float3 Transform_ApplyVector_Private(const Transform *trans, const float3 vector) {
+	return Matrix4x4_ApplyVector_Private(&trans->m, vector);
+}
+
+OPENCL_FORCE_INLINE float3 Transform_ApplyNormal_Private(const Transform *trans, const float3 normal) {
+	return Matrix4x4_ApplyNormal_Private(&trans->mInv, normal);
+}
+
+OPENCL_FORCE_INLINE bool Transform_SwapsHandedness_Private(const Transform *trans) {
+	const float det = ((trans->m.m[0][0] *
+		(trans->m.m[1][1] * trans->m.m[2][2] - trans->m.m[1][2] * trans->m.m[2][1])) -
+		(trans->m.m[0][1] *
+		(trans->m.m[1][0] * trans->m.m[2][2] - trans->m.m[1][2] * trans->m.m[2][0])) +
+		(trans->m.m[0][2] *
+		(trans->m.m[1][0] * trans->m.m[2][1] - trans->m.m[1][1] * trans->m.m[2][0])));
+	return det < 0.f;
+}
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

@@ -87,17 +87,17 @@ OPENCL_FORCE_INLINE float3 ArchGlassMaterial_EvalSpecularTransmission(__global c
 	const float costheta = CosTheta(localFixedDir);
 	const bool entering = (costheta > 0.f);
 	float ce;
-//	if (!hitPoint.fromLight) {
+	if (!HitPoint_IsFromLight(hitPoint)) {
 		if (entering)
 			ce = 0.f;
 		else
 			ce = FresnelCauchy_Evaluate(ntc, -costheta);
-//	} else {
-//		if (entering)
-//			ce = FresnelTexture::CauchyEvaluate(ntc, costheta);
-//		else
-//			ce = 0.f;
-//	}
+	} else {
+		if (entering)
+			ce = FresnelCauchy_Evaluate(ntc, costheta);
+		else
+			ce = 0.f;
+	}
 	const float factor = 1.f - ce;
 	const float result = (1.f + factor * factor) * ce;
 

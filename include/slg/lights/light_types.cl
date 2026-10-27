@@ -78,6 +78,9 @@ typedef struct {
 	Matrix4x4 lightProjection;
 	float screenX0, screenX1, screenY0, screenY1;
 	unsigned int imageMapIndex;
+	// Used by the light tracing
+	Matrix4x4 lightProjectionInv;
+	float area;
 } ProjectionLightParam;
 
 typedef struct {

@@ -56,6 +56,12 @@ public:
 
 	size_t maxMemPageSize;
 	u_int taskCount;
+	// The light paths traced by each GPU thread, 0 without GPU light tracing
+	// (see LightPathTask)
+	u_int lightTaskCount;
+	// The probability of the guided emission of the GPU light tracing (see
+	// LightEmitGuide)
+	float lightGuidedProb;
 
 	PathTracer pathTracer;
 
@@ -68,6 +74,7 @@ protected:
 	}
 
 	virtual void InitGPUTaskConfiguration();
+	void InitGPUTaskSceneConfiguration();
 	void InitPixelFilterDistribution();
 
 	virtual void InitFilm();
@@ -90,11 +97,19 @@ protected:
 	
 	std::vector<std::string> additionalOpenCLKernelOptions, additionalCUDAKernelOptions;
 	bool writeKernelsToFile;
+	// Compile only the material and texture types used by the scene
+	bool specializeKernels;
+	// Wait for each GPU kernel and log the time spent in each one (slow,
+	// for measurements only)
+	bool profileKernels;
 	bool compileOnly;
 
 	// Pixel filter related variables
 	std::vector<float> pixelFilterDistribution;
 	u_int pixelFilterDistributionSize;
+	// The FilterLUTs of the pixel filter for the light tracing splats (see
+	// LightTracing_SplatSample())
+	std::vector<float> lightFilterLUTs;
 
 	slg::ocl::Sampler *oclSampler;
 	slg::ocl::Filter *oclPixelFilter;

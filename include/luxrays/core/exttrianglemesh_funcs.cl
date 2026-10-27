@@ -19,7 +19,7 @@
  ***************************************************************************/
 
 OPENCL_FORCE_INLINE float3 ExtMesh_GetGeometryNormal(
-		__global const Transform* restrict localToWorld,
+		const Transform *localToWorld,
 		const uint meshIndex, const uint triangleIndex
 		EXTMESH_PARAM_DECL) {
 	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
@@ -36,13 +36,13 @@ OPENCL_FORCE_INLINE float3 ExtMesh_GetGeometryNormal(
 		}
 		case TYPE_EXT_TRIANGLE_INSTANCE: {
 			// Transform to global coordinates
-			geometryN = (meshDesc->instance.transSwapsHandedness ? -1.f : 1.f) * normalize(Transform_ApplyNormal(localToWorld, geometryN));
+			geometryN = (meshDesc->instance.transSwapsHandedness ? -1.f : 1.f) * normalize(Transform_ApplyNormal_Private(localToWorld, geometryN));
 			break;
 		}
 		case TYPE_EXT_TRIANGLE_MOTION: {
-			const bool swapsHandedness = Transform_SwapsHandedness(localToWorld); 
+			const bool swapsHandedness = Transform_SwapsHandedness_Private(localToWorld); 
 			// Transform to global coordinates
-			geometryN = (swapsHandedness ? -1.f : 1.f) * normalize(Transform_ApplyNormal(localToWorld, geometryN));
+			geometryN = (swapsHandedness ? -1.f : 1.f) * normalize(Transform_ApplyNormal_Private(localToWorld, geometryN));
 			break;
 		}
 	}
@@ -51,7 +51,7 @@ OPENCL_FORCE_INLINE float3 ExtMesh_GetGeometryNormal(
 }
 
 OPENCL_FORCE_INLINE float3 ExtMesh_GetInterpolateNormal(
-		__global const Transform* restrict localToWorld,
+		const Transform *localToWorld,
 		const uint meshIndex, const uint triangleIndex,
 		const float b1, const float b2
 		EXTMESH_PARAM_DECL) {
@@ -77,13 +77,13 @@ OPENCL_FORCE_INLINE float3 ExtMesh_GetInterpolateNormal(
 			}
 			case TYPE_EXT_TRIANGLE_INSTANCE: {
 				// Transform to global coordinates
-				interpolatedN = (meshDesc->instance.transSwapsHandedness ? -1.f : 1.f) * normalize(Transform_ApplyNormal(localToWorld, interpolatedN));
+				interpolatedN = (meshDesc->instance.transSwapsHandedness ? -1.f : 1.f) * normalize(Transform_ApplyNormal_Private(localToWorld, interpolatedN));
 				break;
 			}
 			case TYPE_EXT_TRIANGLE_MOTION: {
-				const bool swapsHandedness = Transform_SwapsHandedness(localToWorld); 
+				const bool swapsHandedness = Transform_SwapsHandedness_Private(localToWorld); 
 				// Transform to global coordinates
-				interpolatedN = (swapsHandedness ? -1.f : 1.f) * normalize(Transform_ApplyNormal(localToWorld, interpolatedN));
+				interpolatedN = (swapsHandedness ? -1.f : 1.f) * normalize(Transform_ApplyNormal_Private(localToWorld, interpolatedN));
 				break;
 			}
 		}
@@ -195,7 +195,7 @@ OPENCL_FORCE_INLINE float ExtMesh_GetTriAOV(
 }
 
 OPENCL_FORCE_INLINE void ExtMesh_GetDifferentials(
-		__global const Transform* restrict localToWorld,
+		const Transform *localToWorld,
 		const uint meshIndex,
 		const uint triangleIndex,
 		float3 shadeNormal,
@@ -254,8 +254,8 @@ OPENCL_FORCE_INLINE void ExtMesh_GetDifferentials(
 		// dp1 and dp2 are already in world coordinates for TYPE_EXT_TRIANGLE
 		if (meshDesc->type != TYPE_EXT_TRIANGLE) {
 			// Transform to global coordinates
-			dp1 = Transform_ApplyVector(localToWorld, dp1);
-			dp2 = Transform_ApplyVector(localToWorld, dp2);
+			dp1 = Transform_ApplyVector_Private(localToWorld, dp1);
+			dp2 = Transform_ApplyVector_Private(localToWorld, dp2);
 		}
 
 		//------------------------------------------------------------------
@@ -287,8 +287,8 @@ OPENCL_FORCE_INLINE void ExtMesh_GetDifferentials(
 			// dndu and dndv are already in world coordinates for TYPE_EXT_TRIANGLE
 			if (meshDesc->type != TYPE_EXT_TRIANGLE) {
 				// Transform to global coordinates
-				*dndu = Transform_ApplyNormal(localToWorld, *dndu);
-				*dndv = Transform_ApplyNormal(localToWorld, *dndv);
+				*dndu = Transform_ApplyNormal_Private(localToWorld, *dndu);
+				*dndv = Transform_ApplyNormal_Private(localToWorld, *dndv);
 			}
 		} else {
 			*dndu = ZERO;
@@ -298,7 +298,7 @@ OPENCL_FORCE_INLINE void ExtMesh_GetDifferentials(
 }
 
 OPENCL_FORCE_INLINE void ExtMesh_Sample(
-		__global const Transform* restrict localToWorld,
+		const Transform *localToWorld,
 		const uint meshIndex, const uint triangleIndex,
 		const float u0, const float u1,
 		float3 *samplePoint, float *b0, float *b1, float *b2
@@ -319,13 +319,13 @@ OPENCL_FORCE_INLINE void ExtMesh_Sample(
 	// samplePoint is already in world coordinates for TYPE_EXT_TRIANGLE
 	if (meshDesc->type != TYPE_EXT_TRIANGLE) {
 		// Transform to global coordinates
-		*samplePoint = Transform_ApplyPoint(localToWorld, *samplePoint);
+		*samplePoint = Transform_ApplyPoint_Private(localToWorld, *samplePoint);
 	}
 }
 
 OPENCL_FORCE_INLINE void ExtMesh_GetLocal2World(const float time,
 		const uint meshIndex, const uint triangleIndex,
-		__global Transform *local2World
+		Transform *local2World
 		EXTMESH_PARAM_DECL) {
 	// Initialized world to local object space transformation
 	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];

@@ -19,6 +19,9 @@
 #ifndef _LUXRAYS_CUDADEVICE_H
 #define	_LUXRAYS_CUDADEVICE_H
 
+#include <deque>
+#include <vector>
+
 #include "luxrays/core/hardwaredevice.h"
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/cuda.h"
@@ -128,7 +131,7 @@ protected:
 
 class CUDADeviceBuffer : public HardwareDeviceBuffer {
 public:
-	CUDADeviceBuffer() : cudaBuff(0) { }
+	CUDADeviceBuffer() : cudaBuff(0), pinnedBuff(nullptr) { }
 	virtual ~CUDADeviceBuffer() {
 	}
 
@@ -155,6 +158,9 @@ public:
 
 protected:
 	CUdeviceptr cudaBuff;
+	// Pinned host memory of the buffer size used by the non-blocking reads,
+	// allocated by the first one
+	mutable void *pinnedBuff;
 };
 
 //------------------------------------------------------------------------------
@@ -192,6 +198,7 @@ public:
 		const std::string &kernelName
 	) override;
 	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernelRPtr kernel) override;
+	virtual u_int GetKernelOccupancyWorkGroupSize(HardwareDeviceKernelRPtr kernel) override;
 	virtual void SetKernelArg(HardwareDeviceKernelRPtr kernel,
 			const u_int index, const size_t size, const void *arg) override;
 
@@ -204,6 +211,8 @@ public:
 			const bool blocking, const size_t size, const void *ptr) override;
 	virtual void FlushQueue() override;
 	virtual void FinishQueue() override;
+	virtual void EnqueueMarker() override;
+	virtual void WaitMarker() override;
 
 	//--------------------------------------------------------------------------
 	// Memory management for hardware (aka GPU) only applications
@@ -238,6 +247,20 @@ protected:
 	void AllocBuffer(CUdeviceptr *buff,
 			const void *src, const size_t size, const std::string &desc = "");
 
+	// A non-blocking read lands in pinned memory and is copied to its
+	// destination once the device has executed it
+	struct PinnedRead {
+		const void *src;
+		void *dst;
+		size_t size;
+	};
+	struct QueueMarker {
+		CUevent event;
+		std::vector<PinnedRead> reads;
+	};
+
+	static void CopyPinnedReads(std::vector<PinnedRead> &reads);
+
 	CUDADeviceDescriptionConstRef deviceDesc;
 	CUcontext cudaContext;
 	std::vector<CUmodule> loadedModules;
@@ -245,6 +268,11 @@ protected:
 	std::unique_ptr<luxrays::cudaKernelPersistentCache> kernelCache;
 
 	OptixDeviceContext optixContext;
+
+	// The reads queued after the last marker
+	std::vector<PinnedRead> pendingReads;
+	std::deque<QueueMarker> markers;
+	std::vector<CUevent> freeMarkerEvents;
 };
 
 }

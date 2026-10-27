@@ -267,13 +267,10 @@ OPENCL_FORCE_INLINE void RoughGlassMaterial_Sample(__global const Material* rest
 		const float G = SchlickDistribution_G(roughness, fixedDir, sampledDir);
 		float factor = (d / specPdf) * G * fabs(cosThetaOH) / threshold;
 
-		//if (!hitPoint.fromLight) {
-			const float F = FresnelCauchy_Evaluate(ntc, cosThetaIH);
-			result = (factor / coso) * kt * (1.f - F);
-		//} else {
-		//	const Spectrum F = FresnelCauchy_Evaluate(ntc, cosThetaOH);
-		//	result = (factor / cosi) * kt * (Spectrum(1.f) - F);
-		//}
+		// With fromLight, BSDF_Sample() applies the coso / cosi factor
+		const float F = FresnelCauchy_Evaluate(ntc,
+				HitPoint_IsFromLight(hitPoint) ? cosThetaOH : cosThetaIH);
+		result = (factor / coso) * kt * (1.f - F);
 
 		pdfW *= threshold;
 		event = GLOSSY | TRANSMIT;

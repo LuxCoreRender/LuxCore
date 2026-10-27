@@ -18,14 +18,41 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#define HitPoint_IsThroughShadowTransparency(hitPoint) (((hitPoint)->flags & HITPOINT_THROUGH_SHADOW_TRANSPARENCY) != 0)
+
+// True for the hit points of light paths (adjoint BSDF evaluation). Only the
+// light tracing kernels (PARAM_LIGHT_TRACING) set HITPOINT_FROM_LIGHT: the
+// code reading it is removed from the other kernels.
+#if defined(PARAM_LIGHT_TRACING)
+#define HitPoint_IsFromLight(hitPoint) (((hitPoint)->flags & HITPOINT_FROM_LIGHT) != 0)
+#else
+#define HitPoint_IsFromLight(hitPoint) false
+#endif
+
+// The transformation from local object to world reference frame of the
+// hit point: the one computed in BSDF_Init() (same function and inputs, so
+// the same values). Points without a mesh (volume scatter points, default
+// hit points) use the identity.
+OPENCL_FORCE_INLINE void HitPoint_GetLocalToWorld(__global const HitPoint *hitPoint,
+		Transform *localToWorld
+		EXTMESH_PARAM_DECL) {
+	if (hitPoint->meshIndex == NULL_INDEX)
+		Transform_Init_Private(localToWorld);
+	else
+		ExtMesh_GetLocal2World(hitPoint->time, hitPoint->meshIndex, hitPoint->triangleIndex,
+				localToWorld EXTMESH_PARAM);
+}
+
 // Used when hitting a surface
 OPENCL_FORCE_INLINE void HitPoint_Init(__global HitPoint *hitPoint, const bool throughShadowTransp,
 		const uint meshIndex, const uint triIndex,
 		const float3 pnt, const float3 fixedDir,
 		const float b1, const float b2,
-		const float passThroughEvnt
+		const float passThroughEvnt,
+		const Transform *localToWorld, const float time
 		MATERIALS_PARAM_DECL) {
-	hitPoint->throughShadowTransparency = throughShadowTransp;
+	hitPoint->flags = throughShadowTransp ? HITPOINT_THROUGH_SHADOW_TRANSPARENCY : 0;
+	hitPoint->time = time;
 	hitPoint->passThroughEvent = passThroughEvnt;
 
 	VSTORE3F(pnt, &hitPoint->p.x);
@@ -34,9 +61,9 @@ OPENCL_FORCE_INLINE void HitPoint_Init(__global HitPoint *hitPoint, const bool t
 	hitPoint->objectID = sceneObjs[meshIndex].objectID;
 
 	// Interpolate face normal
-	const float3 geometryN = ExtMesh_GetGeometryNormal(&hitPoint->localToWorld, meshIndex, triIndex EXTMESH_PARAM);
+	const float3 geometryN = ExtMesh_GetGeometryNormal(localToWorld, meshIndex, triIndex EXTMESH_PARAM);
 	VSTORE3F(geometryN,  &hitPoint->geometryN.x);
-	const float3 interpolatedN = ExtMesh_GetInterpolateNormal(&hitPoint->localToWorld, meshIndex, triIndex, b1, b2 EXTMESH_PARAM);
+	const float3 interpolatedN = ExtMesh_GetInterpolateNormal(localToWorld, meshIndex, triIndex, b1, b2 EXTMESH_PARAM);
 	VSTORE3F(interpolatedN,  &hitPoint->interpolatedN.x);
 	const float3 shadeN = interpolatedN;
 	VSTORE3F(shadeN,  &hitPoint->shadeN.x);
@@ -55,7 +82,7 @@ OPENCL_FORCE_INLINE void HitPoint_Init(__global HitPoint *hitPoint, const bool t
 	// Compute geometry differentials
 	float3 dndu, dndv, dpdu, dpdv;
 	ExtMesh_GetDifferentials(
-			&hitPoint->localToWorld,
+			localToWorld,
 			meshIndex,
 			triIndex,
 			shadeN, 0,
@@ -72,7 +99,7 @@ OPENCL_FORCE_INLINE void HitPoint_Init(__global HitPoint *hitPoint, const bool t
 OPENCL_FORCE_INLINE void HitPoint_InitDefault(__global HitPoint *hitPoint) {
 	hitPoint->meshIndex = NULL_INDEX;
 
-	hitPoint->throughShadowTransparency = false;
+	hitPoint->flags = 0;
 	hitPoint->passThroughEvent = 0.f;
 
 	VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 0.f), &hitPoint->p.x);
@@ -93,7 +120,7 @@ OPENCL_FORCE_INLINE void HitPoint_InitDefault(__global HitPoint *hitPoint) {
 	VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 0.f), &hitPoint->dndu.x);
 	VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 0.f), &hitPoint->dndv.x);
 
-	Transform_Init(&hitPoint->localToWorld);
+	hitPoint->time = 0.f;
 
 	hitPoint->interiorVolumeIndex = NULL_INDEX;
 	hitPoint->exteriorVolumeIndex = NULL_INDEX;

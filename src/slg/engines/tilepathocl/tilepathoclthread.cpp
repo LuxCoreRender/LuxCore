@@ -111,8 +111,7 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 	UpdateSamplerData(tileWork, sharedData);
 
 	// Initialize the tasks buffer
-	intersectionDevice.EnqueueKernel(initKernel,
-			HardwareDeviceRange(engine->taskCount), HardwareDeviceRange(initWorkGroupSize));
+	EnqueueInitKernel();
 
 	// There are 2 rays to trace for each path vertex (the last vertex traces only one ray)
 	const u_int worstCaseIterationCount = (engine->pathTracer.maxPathDepth.depth == 1) ? 2 : (engine->pathTracer.maxPathDepth.depth * 2 - 1);

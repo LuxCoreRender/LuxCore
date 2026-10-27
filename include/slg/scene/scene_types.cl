@@ -39,6 +39,9 @@ typedef int SceneRayType;
 
 typedef struct {
 	unsigned int defaultVolumeIndex;
+	// No material with transparency or volume and no default volume: a
+	// shadow ray is blocked by any hit (see RAY_FLAGS_ANY_HIT)
+	unsigned int shadowRaysAnyHit;
 } Scene;
 
 #if defined(SLG_OPENCL_KERNEL)

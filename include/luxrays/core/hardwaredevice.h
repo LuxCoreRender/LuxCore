@@ -193,6 +193,11 @@ public:
 		const std::string &kernelName
 	) = 0;
 	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernelRPtr kernel) = 0;
+	// The work group size with the highest occupancy for the kernel, if the
+	// device can compute it, otherwise GetKernelWorkGroupSize()
+	virtual u_int GetKernelOccupancyWorkGroupSize(HardwareDeviceKernelRPtr kernel) {
+		return GetKernelWorkGroupSize(kernel);
+	}
 
 	virtual void SetKernelArg(HardwareDeviceKernelRPtr kernel,
 			const u_int index, const size_t size, const void *arg) = 0;
@@ -214,6 +219,13 @@ public:
 			const bool blocking, const size_t size, const void *ptr) = 0;
 	virtual void FlushQueue() = 0;
 	virtual void FinishQueue() = 0;
+	// Queue markers. EnqueueMarker() adds a marker after the work queued so
+	// far. WaitMarker() blocks the calling thread, without spinning where the
+	// device allows it, until the device has executed the oldest marker not
+	// waited for yet: the non-blocking reads queued before it are then
+	// complete. FinishQueue() completes all the markers.
+	virtual void EnqueueMarker() = 0;
+	virtual void WaitMarker() = 0;
 
 	//--------------------------------------------------------------------------
 	// Memory management for hardware (aka GPU) only applications

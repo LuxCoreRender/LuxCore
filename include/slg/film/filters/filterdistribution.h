@@ -95,6 +95,11 @@ public:
 		return luts[ix + iy * lutsSize].get();
 	}
 
+	// The number of LUTs along each axis, and the LUT of GetLUT() index
+	// ix + iy * GetSize() (used to copy the LUTs to the GPU)
+	size_t GetSize() const { return lutsSize; }
+	const FilterLUT &GetLUTByIndex(const size_t index) const { return *luts[index]; }
+
 private:
 	size_t lutsSize;
 	float step;

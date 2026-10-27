@@ -71,23 +71,15 @@ static std::string GetCuda10Architecture() {
 // cudaKernelCache
 //------------------------------------------------------------------------------
 
-bool cudaKernelCache::ForcedCompilePTX(
-	const std::vector<std::string> &kernelsParameters, const std::string &kernelSource,
-	const std::string &programName, std::unique_ptr<char[]> * ptx, std::size_t *ptxSize, std::string *error
-) {
-	if (error)
-		*error = "";
-
-	nvrtcProgram prog;
-	CHECK_NVRTC_ERROR(nvrtcCreateProgram(&prog, kernelSource.c_str(), programName.c_str(), 0, nullptr, nullptr));
-
-	std::vector<const char *> cudaOpts;
+// NVRTC options always used, in addition to the kernel parameters. They are
+// part of the persistent cache key, so changing them invalidates the cache.
+static std::vector<std::string> GetNVRTCBuiltInOptions() {
+	std::vector<std::string> cudaOpts;
 	cudaOpts.push_back("--device-as-default-execution-space");
 	//cudaOpts.push_back("--disable-warnings");
 
         // Set target architecture, based on current device's capability
-        std::string targetArch = "--gpu-architecture=compute_" + GetCuda10Architecture();
-        cudaOpts.push_back(targetArch.c_str());
+        cudaOpts.push_back("--gpu-architecture=compute_" + GetCuda10Architecture());
 
 	// To display warning numbers
 	cudaOpts.push_back("-Xcudafe");
@@ -105,8 +97,8 @@ bool cudaKernelCache::ForcedCompilePTX(
 	cudaOpts.push_back("-Xcudafe");
 	cudaOpts.push_back("--diag_suppress=68");
 
-	// Accelerate compilation
-	cudaOpts.push_back("--Ofast-compile=min"); // Requires nvrtc 12.9+
+	// Accelerate compilation. --Ofast-compile is not used because it trades
+	// kernel performance for compile time and kernels are cached anyway.
 	cudaOpts.push_back("--split-compile=0");
 
 	// Enable debug info
@@ -114,6 +106,24 @@ bool cudaKernelCache::ForcedCompilePTX(
 	// Enable only debug line info
 	//cudaOpts.push_back("--generate-line-info");
 
+	return cudaOpts;
+}
+
+bool cudaKernelCache::ForcedCompilePTX(
+	const std::vector<std::string> &kernelsParameters, const std::string &kernelSource,
+	const std::string &programName, std::unique_ptr<char[]> * ptx, std::size_t *ptxSize, std::string *error
+) {
+	if (error)
+		*error = "";
+
+	nvrtcProgram prog;
+	CHECK_NVRTC_ERROR(nvrtcCreateProgram(&prog, kernelSource.c_str(), programName.c_str(), 0, nullptr, nullptr));
+
+	const std::vector<std::string> builtInOpts = GetNVRTCBuiltInOptions();
+
+	std::vector<const char *> cudaOpts;
+	for	(auto const &p : builtInOpts)
+		cudaOpts.push_back(p.c_str());
 	for	(auto const &p : kernelsParameters)
 		cudaOpts.push_back(p.c_str());
 
@@ -132,8 +142,10 @@ bool cudaKernelCache::ForcedCompilePTX(
 
 	*error = std::string(log.get());
 
-	if (compilationResult != NVRTC_SUCCESS)
+	if (compilationResult != NVRTC_SUCCESS) {
+		CHECK_NVRTC_ERROR(nvrtcDestroyProgram(&prog));
 		return false;
+	}
 
 	// Obtain PTX from the program.
 	CHECK_NVRTC_ERROR(nvrtcGetPTXSize(prog, ptxSize));
@@ -181,10 +193,17 @@ bool cudaKernelPersistentCache::CompilePTX(const std::vector<std::string> &kerne
 	if (error)
 		*error = "";
 
-	// Check if the kernel is available in the cache
+	// Check if the kernel is available in the cache. The key includes the
+	// NVRTC version and built-in options because both change the PTX.
+
+	int nvrtcMajor, nvrtcMinor;
+	CHECK_NVRTC_ERROR(nvrtcVersion(&nvrtcMajor, &nvrtcMinor));
+	std::vector<std::string> keyOpts = GetNVRTCBuiltInOptions();
+	keyOpts.push_back("nvrtc-" + std::to_string(nvrtcMajor) + "." + std::to_string(nvrtcMinor));
+	keyOpts.insert(keyOpts.end(), kernelsParameters.begin(), kernelsParameters.end());
 
 	const std::string kernelName =
-			oclKernelPersistentCache::HashString(oclKernelPersistentCache::ToOptsString(kernelsParameters))
+			oclKernelPersistentCache::HashString(oclKernelPersistentCache::ToOptsString(keyOpts))
 			+ "-" +
 			oclKernelPersistentCache::HashString(kernelSource) +
                         "_compute_" + GetCuda10Architecture() + ".ptx";
@@ -226,20 +245,16 @@ bool cudaKernelPersistentCache::CompilePTX(const std::vector<std::string> &kerne
 				file.close();
 
 				// Check the binary hash
-				if (hashBin != oclKernelPersistentCache::HashBin(ptx->get(), *ptxSize)) {
-					// Something wrong in the file, remove the file and retry
-					std::filesystem::remove(filePath);
-					return CompilePTX(kernelsParameters, kernelSource, programName, ptx, ptxSize, cached, error);
-				} else {
+				if (hashBin == oclKernelPersistentCache::HashBin(ptx->get(), *ptxSize)) {
 					*cached = true;
 
 					return true;
 				}
-			} else {
-				// Something wrong in the file, remove the file and retry
-				std::filesystem::remove(filePath);
-				return CompilePTX(kernelsParameters, kernelSource, programName, ptx, ptxSize, cached, error);
 			}
+
+			// Something wrong in the file, remove the file and compile the source
+			// again (not with a recursive call: cacheMutex is held here)
+			std::filesystem::remove(filePath);
 		}
 	}
 

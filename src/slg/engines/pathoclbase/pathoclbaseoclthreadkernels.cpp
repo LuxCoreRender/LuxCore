@@ -20,6 +20,7 @@
 #include <limits>
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#include <chrono>
 #include <mutex>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -62,7 +63,7 @@ PathOCLBaseOCLRenderThread::CompileKernel(
 		workGroupSize = device.GetDeviceDesc().GetForceWorkGroupSize();
 	}
 	else {
-		workGroupSize = device.GetKernelWorkGroupSize(kernel);
+		workGroupSize = device.GetKernelOccupancyWorkGroupSize(kernel);
 		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] "
 				<< name << " workgroup size: " << workGroupSize);
 	}
@@ -89,6 +90,26 @@ void PathOCLBaseOCLRenderThread::GetKernelParamters(
 			params.push_back("-D LUXCORE_GENERIC_OPENCL");
 	}
 	catch (std::bad_cast&) {}
+}
+
+// Kernel specialization: the masks of the material and texture types used
+// by the scene (see MATERIAL_TYPE_ENABLED and TEXTURE_TYPE_ENABLED). The
+// code of the other types is removed from the kernels.
+static void GetSceneTypesKernelParameters(vector<string> &params, const CompiledScene &cscene) {
+	static_assert(slg::ocl::HETEROGENEOUS_VOL < 32, "material types don't fit PARAM_MATERIAL_TYPES_MASK");
+	static_assert(slg::ocl::FRESNELCONST_TEX < 3 * 32, "texture types don't fit PARAM_TEXTURE_TYPES_MASK0-2");
+
+	u_int materialTypesMask = 0;
+	for (const auto &mat : cscene.mats)
+		materialTypesMask |= 1u << mat.type;
+
+	u_int textureTypesMask[3] = { 0, 0, 0 };
+	for (const auto &tex : cscene.texs)
+		textureTypesMask[tex.type >> 5] |= 1u << (tex.type & 31);
+
+	params.push_back("-D PARAM_MATERIAL_TYPES_MASK=" + ToString(materialTypesMask) + "u");
+	for (u_int i = 0; i < 3; ++i)
+		params.push_back("-D PARAM_TEXTURE_TYPES_MASK" + ToString(i) + "=" + ToString(textureTypesMask[i]) + "u");
 }
 
 string PathOCLBaseOCLRenderThread::GetKernelSources() {
@@ -120,6 +141,15 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	GetKernelParamters(kernelsParameters, intersectionDevice,
 			RenderEngine::RenderEngineType2String(renderEngine->GetType()),
 			MachineEpsilon::GetMin(), MachineEpsilon::GetMax());
+	if (renderEngine->specializeKernels)
+		GetSceneTypesKernelParameters(kernelsParameters, *renderEngine->compiledScene);
+	if (UseLocalEvalStacks()) {
+		const CompiledScene &cscene = *renderEngine->compiledScene;
+		kernelsParameters.push_back("-D PARAM_MATERIAL_EVAL_STACK_SIZE=" + ToString(Max(cscene.maxMaterialEvalStackSize, 1u)));
+		kernelsParameters.push_back("-D PARAM_TEXTURE_EVAL_STACK_SIZE=" + ToString(Max(cscene.maxTextureEvalStackSize, 1u)));
+	}
+	if (renderEngine->lightTaskCount > 0)
+		kernelsParameters.push_back("-D PARAM_LIGHT_TRACING");
 
 	const string kernelSource = GetKernelSources();
 	const string microKernelSource = slg::ocl::KernelSource_pathoclbase_kernels_micro;
@@ -247,6 +277,11 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		{filmClearKernel, filmClearWorkGroupSize, "Film_Clear"},
 		{initSeedKernel, initWorkGroupSize, "InitSeed"},
 		{initKernel, initWorkGroupSize, "Init"},
+		{resetPathQueuesKernel, resetPathQueuesWorkGroupSize, "ResetPathQueues"},
+		{queuePathsKernel, queuePathsWorkGroupSize, "QueuePaths"},
+		{countPathsByMaterialKernel, countPathsByMaterialWorkGroupSize, "CountPathsByMaterial"},
+		{scanPathsByMaterialKernel, scanPathsByMaterialWorkGroupSize, "ScanPathsByMaterial"},
+		{queuePathsByMaterialKernel, queuePathsByMaterialWorkGroupSize, "QueuePathsByMaterial"},
 	};
 
 	for (auto& [kernel, workGroupSize, name] : kernels) {
@@ -255,23 +290,21 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 
 
 	// AdvancePaths kernel (Micro-Kernels)
-	std::tuple<HardwareDeviceKernelUPtr&, const char *>
+	std::tuple<HardwareDeviceKernelUPtr&, slg::ocl::pathoclbase::PathState, const char *>
 	microKernels[] = {
-		{advancePathsKernel_MK_RT_NEXT_VERTEX, "AdvancePaths_MK_RT_NEXT_VERTEX"},
-		{advancePathsKernel_MK_HIT_NOTHING, "AdvancePaths_MK_HIT_NOTHING"},
-		{advancePathsKernel_MK_HIT_OBJECT, "AdvancePaths_MK_HIT_OBJECT"},
-		{advancePathsKernel_MK_RT_DL, "AdvancePaths_MK_RT_DL"},
-		{advancePathsKernel_MK_DL_ILLUMINATE, "AdvancePaths_MK_DL_ILLUMINATE"},
-		{advancePathsKernel_MK_DL_SAMPLE_BSDF, "AdvancePaths_MK_DL_SAMPLE_BSDF"},
-		{advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, "AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY"},
-		{advancePathsKernel_MK_SPLAT_SAMPLE, "AdvancePaths_MK_SPLAT_SAMPLE"},
-		{advancePathsKernel_MK_NEXT_SAMPLE, "AdvancePaths_MK_NEXT_SAMPLE"},
-		{advancePathsKernel_MK_GENERATE_CAMERA_RAY, "AdvancePaths_MK_GENERATE_CAMERA_RAY"},
+		{advancePathsKernel_MK_RT_NEXT_VERTEX, slg::ocl::pathoclbase::MK_RT_NEXT_VERTEX, "AdvancePaths_MK_RT_NEXT_VERTEX"},
+		{advancePathsKernel_MK_HIT_NOTHING, slg::ocl::pathoclbase::MK_HIT_NOTHING, "AdvancePaths_MK_HIT_NOTHING"},
+		{advancePathsKernel_MK_HIT_OBJECT, slg::ocl::pathoclbase::MK_HIT_OBJECT, "AdvancePaths_MK_HIT_OBJECT"},
+		{advancePathsKernel_MK_RT_DL, slg::ocl::pathoclbase::MK_RT_DL, "AdvancePaths_MK_RT_DL"},
+		{advancePathsKernel_MK_DL_ILLUMINATE, slg::ocl::pathoclbase::MK_DL_ILLUMINATE, "AdvancePaths_MK_DL_ILLUMINATE"},
+		{advancePathsKernel_MK_DL_SAMPLE_BSDF, slg::ocl::pathoclbase::MK_DL_SAMPLE_BSDF, "AdvancePaths_MK_DL_SAMPLE_BSDF"},
+		{advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, slg::ocl::pathoclbase::MK_GENERATE_NEXT_VERTEX_RAY, "AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY"},
+		{advancePathsKernel_MK_SPLAT_SAMPLE, slg::ocl::pathoclbase::MK_SPLAT_SAMPLE, "AdvancePaths_MK_SPLAT_SAMPLE"},
+		{advancePathsKernel_MK_NEXT_SAMPLE, slg::ocl::pathoclbase::MK_NEXT_SAMPLE, "AdvancePaths_MK_NEXT_SAMPLE"},
+		{advancePathsKernel_MK_GENERATE_CAMERA_RAY, slg::ocl::pathoclbase::MK_GENERATE_CAMERA_RAY, "AdvancePaths_MK_GENERATE_CAMERA_RAY"},
 	};
 
-	advancePathsWorkGroupSize = std::numeric_limits<size_t>::max();
-
-	for (auto& [microKernel, name] : microKernels) {
+	for (auto& [microKernel, state, name] : microKernels) {
 		// Find the program with this micro-kernel (all the micro-kernels are
 		// in the same program unless the source has been split)
 		const std::size_t programIndex = microKernelIndex.empty() ? 0 : 1 + microKernelIndex[name];
@@ -281,13 +314,24 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 
 		// Assign to class members
 		microKernel = std::move(kernel);
-		advancePathsWorkGroupSize = std::min(advancePathsWorkGroupSize, workGroupSize);
+		advancePathsWorkGroupSizes[state] = workGroupSize;
 	}
 
-	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex
-			<< "] AdvancePaths_MK_* workgroup size: "
-			<< advancePathsWorkGroupSize
-	);
+	// GPU light tracing kernels
+	if (renderEngine->lightTaskCount > 0) {
+		std::tie(initLightPathsKernel, initLightPathsWorkGroupSize) =
+				CompileKernel(intersectionDevice, *programs[0], "InitLightPaths");
+		std::tie(lightTracingClearFilmKernel, lightTracingClearFilmWorkGroupSize) =
+				CompileKernel(intersectionDevice, *programs[0], "LightTracing_ClearFilm");
+
+		const std::size_t programIndex = microKernelIndex.empty() ? 0 : 1 + microKernelIndex["AdvanceLightPaths"];
+		std::tie(advanceLightPathsKernel, advanceLightPathsWorkGroupSize) =
+				CompileKernel(intersectionDevice, *programs[programIndex], "AdvanceLightPaths");
+	} else {
+		initLightPathsKernel.reset();
+		lightTracingClearFilmKernel.reset();
+		advanceLightPathsKernel.reset();
+	}
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
@@ -300,12 +344,47 @@ void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	intersectionDevice.SetKernelArg(initSeedKernel, argIndex++, tasksBuff);
 	intersectionDevice.SetKernelArg(initSeedKernel, argIndex++, renderEngine->seedBase + threadIndex * renderEngine->taskCount);
 
+	// resetPathQueuesKernel kernel
+	intersectionDevice.SetKernelArg(resetPathQueuesKernel, 0, pathQueueCountsBuff);
+
+	// queuePathsKernel kernel (the state argument is set at each launch)
+	argIndex = 0;
+	intersectionDevice.SetKernelArg(queuePathsKernel, argIndex++, pathStatesBuff);
+	intersectionDevice.SetKernelArg(queuePathsKernel, argIndex++, pathQueuesBuff);
+	intersectionDevice.SetKernelArg(queuePathsKernel, argIndex++, pathQueueCountsBuff);
+	intersectionDevice.SetKernelArg(queuePathsKernel, argIndex++, 0u);
+
+	// Material sorted queue kernels (the state argument is set at each launch)
+	const u_int materialsCount = renderEngine->compiledScene->mats.size();
+	argIndex = 0;
+	intersectionDevice.SetKernelArg(countPathsByMaterialKernel, argIndex++, pathStatesBuff);
+	intersectionDevice.SetKernelArg(countPathsByMaterialKernel, argIndex++, tasksStateBuff);
+	intersectionDevice.SetKernelArg(countPathsByMaterialKernel, argIndex++, pathMaterialKeysBuff);
+	intersectionDevice.SetKernelArg(countPathsByMaterialKernel, argIndex++, materialQueueCountsBuff);
+	intersectionDevice.SetKernelArg(countPathsByMaterialKernel, argIndex++, 0u);
+	intersectionDevice.SetKernelArg(countPathsByMaterialKernel, argIndex++, materialsCount);
+	argIndex = 0;
+	intersectionDevice.SetKernelArg(scanPathsByMaterialKernel, argIndex++, materialQueueCountsBuff);
+	intersectionDevice.SetKernelArg(scanPathsByMaterialKernel, argIndex++, materialQueueCursorsBuff);
+	intersectionDevice.SetKernelArg(scanPathsByMaterialKernel, argIndex++, pathQueueCountsBuff);
+	intersectionDevice.SetKernelArg(scanPathsByMaterialKernel, argIndex++, 0u);
+	intersectionDevice.SetKernelArg(scanPathsByMaterialKernel, argIndex++, materialsCount);
+	argIndex = 0;
+	intersectionDevice.SetKernelArg(queuePathsByMaterialKernel, argIndex++, pathStatesBuff);
+	intersectionDevice.SetKernelArg(queuePathsByMaterialKernel, argIndex++, pathMaterialKeysBuff);
+	intersectionDevice.SetKernelArg(queuePathsByMaterialKernel, argIndex++, pathQueuesBuff);
+	intersectionDevice.SetKernelArg(queuePathsByMaterialKernel, argIndex++, materialQueueCursorsBuff);
+	intersectionDevice.SetKernelArg(queuePathsByMaterialKernel, argIndex++, 0u);
+
 	// initKernel kernel
 	argIndex = 0;
 	intersectionDevice.SetKernelArg(initKernel, argIndex++, taskConfigBuff);
 	intersectionDevice.SetKernelArg(initKernel, argIndex++, tasksBuff);
 	intersectionDevice.SetKernelArg(initKernel, argIndex++, tasksDirectLightBuff);
 	intersectionDevice.SetKernelArg(initKernel, argIndex++, tasksStateBuff);
+	intersectionDevice.SetKernelArg(initKernel, argIndex++, pathStatesBuff);
+	intersectionDevice.SetKernelArg(initKernel, argIndex++, pathQueuesBuff);
+	intersectionDevice.SetKernelArg(initKernel, argIndex++, pathQueueCountsBuff);
 	intersectionDevice.SetKernelArg(initKernel, argIndex++, taskStatsBuff);
 	intersectionDevice.SetKernelArg(initKernel, argIndex++, samplerSharedDataBuff);
 	intersectionDevice.SetKernelArg(initKernel, argIndex++, samplesBuff);
@@ -323,7 +402,7 @@ void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	initKernelArgsCount = argIndex;
 }
 
-void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(
+u_int PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(
 	HardwareDeviceKernelRPtr advancePathsKernel, const u_int filmIndex
 ) {
 	CompiledScene *cscene = renderEngine->compiledScene;
@@ -333,6 +412,9 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, tasksBuff);
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, tasksDirectLightBuff);
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, tasksStateBuff);
+	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, pathStatesBuff);
+	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, pathQueuesBuff);
+	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, pathQueueCountsBuff);
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, taskStatsBuff);
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, pixelFilterBuff);
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, samplerSharedDataBuff);
@@ -413,6 +495,44 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, pgicRadiancePhotonsBVHNodesBuff);
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, pgicCausticPhotonsBuff);
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, pgicCausticPhotonsBVHNodesBuff);
+
+	return argIndex;
+}
+
+void PathOCLBaseOCLRenderThread::SetLightTracingKernelArgs(const u_int filmIndex) {
+	if (!advanceLightPathsKernel)
+		return;
+
+	const u_int taskCount = renderEngine->taskCount;
+	const u_int lightTaskCount = renderEngine->lightTaskCount;
+
+	// initLightPathsKernel kernel: the light seeds follow the ones of the
+	// eye paths of all threads
+	u_int argIndex = 0;
+	intersectionDevice.SetKernelArg(initLightPathsKernel, argIndex++, lightTasksBuff);
+	intersectionDevice.SetKernelArg(initLightPathsKernel, argIndex++, lightPathCountsBuff);
+	intersectionDevice.SetKernelArg(initLightPathsKernel, argIndex++, raysBuff);
+	intersectionDevice.SetKernelArg(initLightPathsKernel, argIndex++, lightTaskCount);
+	intersectionDevice.SetKernelArg(initLightPathsKernel, argIndex++, taskCount);
+	intersectionDevice.SetKernelArg(initLightPathsKernel, argIndex++, renderEngine->seedBase +
+			(u_int)renderEngine->renderOCLThreads.size() * taskCount + threadIndex * lightTaskCount);
+
+	// advanceLightPathsKernel kernel
+	argIndex = SetAdvancePathsKernelArgs(advanceLightPathsKernel, filmIndex);
+	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++, lightTasksBuff);
+	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++, lightPathCountsBuff);
+	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++, lightTaskCount);
+	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++, taskCount);
+	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++, emitLightsDistributionBuff);
+	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++, lightFilterLUTsBuff);
+	// No guided emission without casters
+	const u_int lightCasterCount = (renderEngine->lightGuidedProb > 0.f) ?
+		(u_int)renderEngine->compiledScene->lightTracingCasters.size() / 4 : 0;
+	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++, lightCastersBuff);
+	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++, lightCasterCount);
+	intersectionDevice.SetKernelArg(advanceLightPathsKernel, argIndex++,
+		(lightCasterCount > 0) ? renderEngine->lightGuidedProb : 0.f);
+	threadFilms[filmIndex]->SetLightTracingFilmKernelArgs(intersectionDevice, advanceLightPathsKernel, argIndex);
 }
 
 void PathOCLBaseOCLRenderThread::SetAllAdvancePathsKernelArgs(const u_int filmIndex) {
@@ -453,36 +573,199 @@ void PathOCLBaseOCLRenderThread::SetKernelArgs() {
 	SetAllAdvancePathsKernelArgs(0);
 
 	//--------------------------------------------------------------------------
+	// GPU light tracing kernels
+	//--------------------------------------------------------------------------
+
+	SetLightTracingKernelArgs(0);
+
+	//--------------------------------------------------------------------------
 	// initKernel
 	//--------------------------------------------------------------------------
 
 	SetInitKernelArgs(0);
 }
 
+void PathOCLBaseOCLRenderThread::EnqueueInitKernel() {
+	// The queues are filled by QueuePaths during the first iteration
+	intersectionDevice.EnqueueKernel(resetPathQueuesKernel,
+			HardwareDeviceRange(resetPathQueuesWorkGroupSize), HardwareDeviceRange(resetPathQueuesWorkGroupSize));
+	intersectionDevice.EnqueueKernel(initKernel,
+			HardwareDeviceRange(renderEngine->taskCount), HardwareDeviceRange(initWorkGroupSize));
+	initPathsPending = true;
+}
+
+void PathOCLBaseOCLRenderThread::EnqueueInitLightPathsKernel() {
+	const u_int lightTaskCount = renderEngine->lightTaskCount;
+	intersectionDevice.EnqueueKernel(initLightPathsKernel,
+			HardwareDeviceRange(RoundUp<u_int>(lightTaskCount, initLightPathsWorkGroupSize)),
+			HardwareDeviceRange(initLightPathsWorkGroupSize));
+}
+
+void PathOCLBaseOCLRenderThread::EnqueueAdvanceLightPathsKernel() {
+	const u_int lightTaskCount = renderEngine->lightTaskCount;
+	const double profileStart = BeginKernelProfile();
+	intersectionDevice.EnqueueKernel(advanceLightPathsKernel,
+			HardwareDeviceRange(RoundUp<u_int>(lightTaskCount, advanceLightPathsWorkGroupSize)),
+			HardwareDeviceRange(advanceLightPathsWorkGroupSize));
+	EndKernelProfile(KERNEL_PROFILE_LIGHT_TRACING, profileStart);
+}
+
+// Queues the paths in the given state for its micro-kernel: all the
+// micro-kernels that can set the state have already run in this iteration
+void PathOCLBaseOCLRenderThread::EnqueueQueuePathsKernels(const slg::ocl::pathoclbase::PathState state,
+		const bool sortByMaterial) {
+	const u_int taskCount = renderEngine->taskCount;
+
+	if (sortByMaterial) {
+		intersectionDevice.SetKernelArg(countPathsByMaterialKernel, 4, (u_int)state);
+		intersectionDevice.EnqueueKernel(countPathsByMaterialKernel,
+				HardwareDeviceRange(taskCount), HardwareDeviceRange(countPathsByMaterialWorkGroupSize));
+		intersectionDevice.SetKernelArg(scanPathsByMaterialKernel, 3, (u_int)state);
+		intersectionDevice.EnqueueKernel(scanPathsByMaterialKernel,
+				HardwareDeviceRange(1), HardwareDeviceRange(1));
+		intersectionDevice.SetKernelArg(queuePathsByMaterialKernel, 4, (u_int)state);
+		intersectionDevice.EnqueueKernel(queuePathsByMaterialKernel,
+				HardwareDeviceRange(taskCount), HardwareDeviceRange(queuePathsByMaterialWorkGroupSize));
+	} else {
+		intersectionDevice.SetKernelArg(queuePathsKernel, 3, (u_int)state);
+		intersectionDevice.EnqueueKernel(queuePathsKernel,
+				HardwareDeviceRange(taskCount), HardwareDeviceRange(queuePathsWorkGroupSize));
+	}
+}
+
+// The micro-kernels evaluating the BSDF, when there is more than one material.
+// MK_DL_ILLUMINATE only checks BSDF_IsDelta() and samples a light: sorted, it
+// was 10-50% slower on all the bench scenes.
+bool PathOCLBaseOCLRenderThread::IsMaterialSortState(const slg::ocl::pathoclbase::PathState state) const {
+	switch (state) {
+		case slg::ocl::pathoclbase::MK_HIT_OBJECT:
+		case slg::ocl::pathoclbase::MK_DL_SAMPLE_BSDF:
+		case slg::ocl::pathoclbase::MK_GENERATE_NEXT_VERTEX_RAY:
+			return renderEngine->compiledScene->mats.size() > 1;
+		default:
+			return false;
+	}
+}
+
+static const char *kernelProfileNames[] = {
+	"RT_NEXT_VERTEX", "HIT_NOTHING", "HIT_OBJECT", "DL_ILLUMINATE",
+	"DL_SAMPLE_BSDF", "RT_DL", "GENERATE_NEXT_VERTEX_RAY", "SPLAT_SAMPLE",
+	"NEXT_SAMPLE", "GENERATE_CAMERA_RAY", "TRACE (OptiX)", "PATH_QUEUES", "LIGHT_TRACING"
+};
+
+// Called after each iteration: at the end of the calibration, picks the
+// faster queue order of each state
+void PathOCLBaseOCLRenderThread::UpdateMaterialSortCalibration() {
+	if (materialSortIteration >= MATERIAL_SORT_WARMUP + MATERIAL_SORT_CALIBRATION)
+		return;
+
+	++materialSortIteration;
+	if (materialSortIteration < MATERIAL_SORT_WARMUP + MATERIAL_SORT_CALIBRATION)
+		return;
+
+	for (u_int i = 0; i < slg::ocl::pathoclbase::MK_DONE; ++i) {
+		const slg::ocl::pathoclbase::PathState state = (slg::ocl::pathoclbase::PathState)i;
+		if (!IsMaterialSortState(state))
+			continue;
+
+		materialSortEnabled[state] = (materialSortTimes[state][1] < materialSortTimes[state][0]);
+		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Material sort " << kernelProfileNames[state] <<
+				": path order " << materialSortTimes[state][0] * 1000.0 << "ms, sorted " <<
+				materialSortTimes[state][1] * 1000.0 << "ms, using " <<
+				(materialSortEnabled[state] ? "sorted" : "path order"));
+	}
+}
+
 void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel() {
 	const u_int taskCount = renderEngine->taskCount;
 
-	// Micro kernels version
-	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_RT_NEXT_VERTEX,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
-	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_HIT_NOTHING,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
-	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_HIT_OBJECT,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
-	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_RT_DL,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
-	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_DL_ILLUMINATE,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
-	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_DL_SAMPLE_BSDF,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
-	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
-	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_SPLAT_SAMPLE,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
-	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_NEXT_SAMPLE,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
-	intersectionDevice.EnqueueKernel(advancePathsKernel_MK_GENERATE_CAMERA_RAY,
-			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+	// Micro kernels version, in the order of the path state machine
+	const std::tuple<const HardwareDeviceKernelUPtr *, slg::ocl::pathoclbase::PathState> microKernels[] = {
+		{&advancePathsKernel_MK_RT_NEXT_VERTEX, slg::ocl::pathoclbase::MK_RT_NEXT_VERTEX},
+		{&advancePathsKernel_MK_HIT_NOTHING, slg::ocl::pathoclbase::MK_HIT_NOTHING},
+		{&advancePathsKernel_MK_HIT_OBJECT, slg::ocl::pathoclbase::MK_HIT_OBJECT},
+		{&advancePathsKernel_MK_RT_DL, slg::ocl::pathoclbase::MK_RT_DL},
+		{&advancePathsKernel_MK_DL_ILLUMINATE, slg::ocl::pathoclbase::MK_DL_ILLUMINATE},
+		{&advancePathsKernel_MK_DL_SAMPLE_BSDF, slg::ocl::pathoclbase::MK_DL_SAMPLE_BSDF},
+		{&advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, slg::ocl::pathoclbase::MK_GENERATE_NEXT_VERTEX_RAY},
+		{&advancePathsKernel_MK_SPLAT_SAMPLE, slg::ocl::pathoclbase::MK_SPLAT_SAMPLE},
+		{&advancePathsKernel_MK_NEXT_SAMPLE, slg::ocl::pathoclbase::MK_NEXT_SAMPLE},
+		{&advancePathsKernel_MK_GENERATE_CAMERA_RAY, slg::ocl::pathoclbase::MK_GENERATE_CAMERA_RAY},
+	};
+
+	// During the material sort calibration, odd iterations sort and even ones
+	// keep the path order
+	const bool calibrating = (materialSortIteration >= MATERIAL_SORT_WARMUP) &&
+			(materialSortIteration < MATERIAL_SORT_WARMUP + MATERIAL_SORT_CALIBRATION);
+	const bool calibrationSort = (materialSortIteration & 1);
+
+	for (const auto &[microKernel, state] : microKernels) {
+		if (!initPathsPending && ((state == slg::ocl::pathoclbase::MK_NEXT_SAMPLE) ||
+				(state == slg::ocl::pathoclbase::MK_GENERATE_CAMERA_RAY)))
+			continue;
+
+		const bool sortable = IsMaterialSortState(state);
+		const bool timeSort = calibrating && sortable;
+		const bool sortByMaterial = sortable && (timeSort ? calibrationSort : materialSortEnabled[state]);
+
+		// WallClockTime() is too coarse on Windows (GetTickCount())
+		std::chrono::steady_clock::time_point sortStart;
+		if (timeSort) {
+			intersectionDevice.FinishQueue();
+			sortStart = std::chrono::steady_clock::now();
+		}
+
+		double profileStart = BeginKernelProfile();
+		EnqueueQueuePathsKernels(state, sortByMaterial);
+		EndKernelProfile(KERNEL_PROFILE_PATH_QUEUES, profileStart);
+
+		profileStart = BeginKernelProfile();
+		intersectionDevice.EnqueueKernel(*microKernel,
+				HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSizes[state]));
+		EndKernelProfile(state, profileStart);
+
+		if (timeSort) {
+			intersectionDevice.FinishQueue();
+			materialSortTimes[state][sortByMaterial] +=
+					std::chrono::duration<double>(std::chrono::steady_clock::now() - sortStart).count();
+		}
+	}
+	initPathsPending = false;
+	UpdateMaterialSortCalibration();
+
+	// All queued paths have been consumed
+	const double profileStart = BeginKernelProfile();
+	intersectionDevice.EnqueueKernel(resetPathQueuesKernel,
+			HardwareDeviceRange(resetPathQueuesWorkGroupSize), HardwareDeviceRange(resetPathQueuesWorkGroupSize));
+	EndKernelProfile(KERNEL_PROFILE_PATH_QUEUES, profileStart);
+}
+
+double PathOCLBaseOCLRenderThread::BeginKernelProfile() {
+	if (!renderEngine->profileKernels)
+		return 0.0;
+
+	intersectionDevice.FinishQueue();
+	return WallClockTime();
+}
+
+void PathOCLBaseOCLRenderThread::EndKernelProfile(const u_int index, const double startTime) {
+	if (!renderEngine->profileKernels)
+		return;
+
+	intersectionDevice.FinishQueue();
+	kernelProfileTimes[index] += WallClockTime() - startTime;
+}
+
+void PathOCLBaseOCLRenderThread::LogKernelProfile() const {
+	if (!renderEngine->profileKernels)
+		return;
+
+	double total = 0.0;
+	for (u_int i = 0; i < KERNEL_PROFILE_COUNT; ++i)
+		total += kernelProfileTimes[i];
+	for (u_int i = 0; i < KERNEL_PROFILE_COUNT; ++i)
+		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernel profile " << kernelProfileNames[i] << ": " <<
+				kernelProfileTimes[i] * 1000.0 << "ms (" << (total > 0.0 ? 100.0 * kernelProfileTimes[i] / total : 0.0) << "%)");
 }
 
 #endif

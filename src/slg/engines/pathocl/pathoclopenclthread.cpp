@@ -18,7 +18,11 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#include <algorithm>
+#include <chrono>
+#include <deque>
 #include <mutex>
+#include <numeric>
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/core/geometry/transform.h"
@@ -79,11 +83,25 @@ static void PGICUpdateCallBack(CompiledScene *compiledScene) {
 	compiledScene->RecompilePhotonGI();
 }
 
+// The sum of all the light tracing (RADIANCE_PER_SCREEN_NORMALIZED) channels
+static double LightChannelsEnergy(const Film &film) {
+	double energy = 0.0;
+	if (film.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED)) {
+		for (auto const &channel : film.channel_RADIANCE_PER_SCREEN_NORMALIZEDs) {
+			const float *pixels = channel->GetPixels();
+			energy = accumulate(pixels, pixels + channel->GetWidth() * channel->GetHeight() * 3, energy);
+		}
+	}
+
+	return energy;
+}
+
 void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 	const u_int taskCount = engine->taskCount;
+	const u_int lightTaskCount = engine->lightTaskCount;
 
 	intersectionDevice.PushThreadCurrentDevice();
 
@@ -92,18 +110,16 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	//----------------------------------------------------------------------
 
 	// Clear the frame buffer
-	const u_int filmPixelCount = threadFilms[0]->GetFilm().GetWidth() * threadFilms[0]->GetFilm().GetHeight();
-	intersectionDevice.EnqueueKernel(filmClearKernel,
-		HardwareDeviceRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
-		HardwareDeviceRange(filmClearWorkGroupSize));
+	threadFilms[0]->ClearFilm(intersectionDevice, filmClearKernel, filmClearWorkGroupSize);
 
 	// Initialize random number generator seeds
 	intersectionDevice.EnqueueKernel(initSeedKernel,
 			HardwareDeviceRange(engine->taskCount), HardwareDeviceRange(initWorkGroupSize));
 
 	// Initialize the tasks buffer
-	intersectionDevice.EnqueueKernel(initKernel,
-			HardwareDeviceRange(engine->taskCount), HardwareDeviceRange(initWorkGroupSize));
+	EnqueueInitKernel();
+	if (lightTaskCount > 0)
+		EnqueueInitLightPathsKernel();
 
 	// Check if I have to load the start film
 	if (engine->hasStartFilm && (threadIndex == 0))
@@ -124,12 +140,124 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 
 	const std::function<void()> pgicUpdateCallBack = std::bind(PGICUpdateCallBack, engine->compiledScene);
 
+	// Light tracing duty cycle: the light kernels run every lightPeriod
+	// iterations. When a window of light paths adds no energy to the light
+	// tracing channels (no caustic in view), the period goes to
+	// lightIdlePeriod; the first window that adds energy sets it back to 1.
+	// The period changes only how many light paths are traced, and the
+	// light channels are normalized by that count.
+	const u_int lightIdlePeriod = 16;
+	const double lightWindowPaths = 8.0 * lightTaskCount;
+	u_int lightPeriod = 1;
+	u_int lightIteration = 0;
+	double lightPathTotal = 0.0;
+	double lightWindowStart = 0.0;
+	double lightWindowEnergy = 0.0;
+
+	// Film reads: EnqueueFilmRead() queues non-blocking reads of the film and
+	// of the sample counts, CompleteFilmRead() runs once they are on the host
+	// and updates the film sample counts (the GPU light paths are the
+	// RADIANCE_PER_SCREEN_NORMALIZED samples)
+	auto EnqueueFilmRead = [&]() {
+		// Async. transfer of the Film buffers
+		threadFilms[0]->RecvFilm(intersectionDevice);
+
+		// Async. transfer of GPU task statistics
+		intersectionDevice.EnqueueReadBuffer(
+			taskStatsBuff,
+			CL_FALSE,
+			sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
+			gpuTaskStats.get());
+		if (lightTaskCount > 0) {
+			intersectionDevice.EnqueueReadBuffer(
+				lightPathCountsBuff,
+				CL_FALSE,
+				sizeof(u_int) * lightTaskCount,
+				lightPathCounts.get());
+		}
+	};
+
+	auto CompleteFilmRead = [&]() {
+		// I need to update the film samples count
+
+		double totalCount = 0.0;
+		for (size_t i = 0; i < taskCount; ++i)
+			totalCount += gpuTaskStats[i].sampleCount;
+		lightPathTotal = 0.0;
+		for (size_t i = 0; i < lightTaskCount; ++i)
+			lightPathTotal += lightPathCounts[i];
+		threadFilms[0]->GetFilm().SetSampleCount(totalCount, totalCount, lightPathTotal);
+
+		if ((lightTaskCount > 0) && (lightPathTotal - lightWindowStart >= lightWindowPaths)) {
+			const double energy = LightChannelsEnergy(threadFilms[0]->GetFilm());
+			const u_int period = (energy > lightWindowEnergy) ? 1 : lightIdlePeriod;
+			if (period != lightPeriod) {
+				SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Light tracing kernels every " <<
+						period << " iteration(s): the last " << (lightPathTotal - lightWindowStart) <<
+						" light paths " << ((period == 1) ? "added" : "did not add") << " energy to the film");
+				lightPeriod = period;
+			}
+			lightWindowStart = lightPathTotal;
+			lightWindowEnergy = energy;
+		}
+	};
+
+	// WallClockTime() has the 10-16ms resolution of GetTickCount() on Windows
+	auto Now = []() {
+		return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+	};
+
+	// The work is queued one batch of iterations ahead: the thread waits,
+	// without spinning, for the work before the last batch while the device
+	// runs that batch, so the device does not wait for the host between
+	// batches. A queue marker follows each batch and each film read; markers
+	// lists them, oldest first (true for a film read).
+	std::deque<bool> markers;
+	double lastBatchTime = Now();
+
+	// The time of a film read, measured once with nothing else queued: the
+	// host can not see when the device runs the copies of a queued read (on
+	// Windows a marker can complete for the host only with the next batch).
+	// Each film read adds it to totalTransferTime.
+	u_int filmReadCount = 0;
+	double filmReadTime = 0.0;
+
+	// Waits for the oldest marker. A batch counts as the time since the
+	// previous batch.
+	auto WaitMarker = [&]() {
+		intersectionDevice.WaitMarker();
+
+		if (markers.front())
+			CompleteFilmRead();
+		else {
+			const double batchTime = Now();
+			const double time = batchTime - lastBatchTime;
+			lastBatchTime = batchTime;
+			totalKernelTime += time;
+
+			// Check if I have to adjust the number of kernel enqueued
+			if (time > targetTime)
+				iterations = Max<u_int>(iterations - 1, 1);
+			else
+				iterations = Min<u_int>(iterations + 1, 128);
+		}
+
+		markers.pop_front();
+	};
+
+	auto DrainQueue = [&]() {
+		while (!markers.empty())
+			WaitMarker();
+	};
+
 	while (!stop_token.stop_requested()) {
 		//if (threadIndex == 0)
 		//	SLG_LOG("[DEBUG] =================================");
 
 		// Check if we are in pause mode
 		if (engine->pauseMode) {
+			DrainQueue();
+
 			// Check every 100ms if I have to continue the rendering
 			while (!stop_token.stop_requested() && engine->pauseMode)
 				std::this_thread::sleep_for(100ms);
@@ -138,42 +266,41 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 				break;
 		}
 
-		//------------------------------------------------------------------
+		// The device is idle: the time to the next batch starts now
+		if (markers.empty())
+			lastBatchTime = Now();
 
-		const double timeTransferStart = WallClockTime();
+		//------------------------------------------------------------------
 
 		// Transfer the film only if I have already spent enough time running
 		// rendering kernels. This is very important when rendering very high
 		// resolution images (for instance at 4961x3508)
 
-		if (totalTransferTime < totalKernelTime * (1.0 / 100.0)) {
-			// Async. transfer of the Film buffers
-			threadFilms[0]->RecvFilm(intersectionDevice);
+		if ((find(markers.begin(), markers.end(), true) == markers.end()) &&
+				(totalTransferTime < totalKernelTime * (1.0 / 100.0))) {
+			// The second read is the measured one: the first allocates the
+			// pinned memory of the copies
+			if (filmReadCount == 1) {
+				DrainQueue();
 
-			// Async. transfer of GPU task statistics
-			intersectionDevice.EnqueueReadBuffer(
-				taskStatsBuff,
-				CL_FALSE,
-				sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
-				gpuTaskStats.get());
+				const double transferStart = Now();
+				EnqueueFilmRead();
+				intersectionDevice.FinishQueue();
+				CompleteFilmRead();
+				filmReadTime = Now() - transferStart;
 
-			intersectionDevice.FinishQueue();
+				lastBatchTime = Now();
+			} else {
+				EnqueueFilmRead();
+				intersectionDevice.EnqueueMarker();
+				markers.push_back(true);
+			}
 
-			// I need to update the film samples count
-
-			double totalCount = 0.0;
-			for (size_t i = 0; i < taskCount; ++i)
-				totalCount += gpuTaskStats[i].sampleCount;
-			threadFilms[0]->GetFilm().SetSampleCount(totalCount, totalCount, 0.0);
-
-			//SLG_LOG("[DEBUG] film transferred");
+			++filmReadCount;
+			totalTransferTime += filmReadTime;
 		}
-		const double timeTransferEnd = WallClockTime();
-		totalTransferTime += timeTransferEnd - timeTransferStart;
 
 		//------------------------------------------------------------------
-
-		const double timeKernelStart = WallClockTime();
 
 		// This is required for updating film denoiser parameter
 		if (threadFilms[0]->GetFilm().GetDenoiser().IsEnabled()) {
@@ -182,28 +309,30 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 		}
 
 		for (u_int i = 0; i < iterations; ++i) {
+			// The light rays follow the eye rays: when the light kernel does not
+			// run, they are not traced and wait for the next light iteration
+			const bool lightStep = (lightTaskCount > 0) && ((lightIteration++ % lightPeriod) == 0);
+
 			// Trace rays
-			intersectionDevice.EnqueueTraceRayBuffer(raysBuff, hitsBuff, taskCount);
+			const double profileStart = BeginKernelProfile();
+			intersectionDevice.EnqueueTraceRayBuffer(raysBuff, hitsBuff,
+					taskCount + (lightStep ? lightTaskCount : 0));
+			EndKernelProfile(KERNEL_PROFILE_TRACE, profileStart);
 
 			// Advance to next path state
 			EnqueueAdvancePathsKernel();
+			if (lightStep)
+				EnqueueAdvanceLightPathsKernel();
 		}
 		totalIterations += iterations;
 
-		intersectionDevice.FinishQueue();
-		const double timeKernelEnd = WallClockTime();
-		totalKernelTime += timeKernelEnd - timeKernelStart;
+		intersectionDevice.EnqueueMarker();
+		markers.push_back(false);
 
-		/*if (threadIndex == 0)
-			SLG_LOG("[DEBUG] transfer time: " << (timeTransferEnd - timeTransferStart) * 1000.0 << "ms "
-					"kernel time: " << (timeKernelEnd - timeKernelStart) * 1000.0 << "ms "
-					"iterations: " << iterations << " #"<< taskCount << ")");*/
-
-		// Check if I have to adjust the number of kernel enqueued
-		if (timeKernelEnd - timeKernelStart > targetTime)
-			iterations = Max<u_int>(iterations - 1, 1);
-		else
-			iterations = Min<u_int>(iterations + 1, 128);
+		// Wait for the work queued before this batch, except a film read just
+		// before it: that one is waited for after the next batch is queued
+		while ((markers.size() > 2) || ((markers.size() == 2) && !markers.front()))
+			WaitMarker();
 
 		// Check halt conditions
 		if (engine->GetFilm().GetConvergence() == 1.f)
@@ -211,6 +340,8 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 
 		if (engine->photonGICache) {
                     if (engine->photonGICache->Update(threadIndex, engine->GetTotalEyeSPP(), pgicUpdateCallBack)) {
+                            // The queued batch uses the buffers InitPhotonGI() replaces
+                            DrainQueue();
                             InitPhotonGI();
                             SetKernelArgs();
                     }
@@ -221,8 +352,12 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
         if (stop_token.stop_requested())
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 
-	threadFilms[0]->RecvFilm(intersectionDevice);
+	// The sample counts must match the final film
+	DrainQueue();
+	EnqueueFilmRead();
 	intersectionDevice.FinishQueue();
+	CompleteFilmRead();
+	LogKernelProfile();
 	
 	threadDone = true;
 

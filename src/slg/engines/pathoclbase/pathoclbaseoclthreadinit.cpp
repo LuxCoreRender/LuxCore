@@ -157,10 +157,23 @@ void PathOCLBaseOCLRenderThread::InitMaterials() {
 			sizeof(slg::ocl::MaterialEvalOp) * renderEngine->compiledScene->matEvalOps.size(), "Material evaluation ops");
 
 	const u_int taskCount = renderEngine->taskCount;
-	intersectionDevice.AllocBufferRW(&materialEvalStackBuff, 
-			nullptr, sizeof(float) * renderEngine->compiledScene->maxMaterialEvalStackSize *
-			taskCount, "Material evaluation stacks");
+	intersectionDevice.AllocBufferRW(&materialEvalStackBuff,
+			nullptr, sizeof(float) * (UseLocalEvalStacks() ? 1 :
+				renderEngine->compiledScene->maxMaterialEvalStackSize * taskCount),
+			"Material evaluation stacks");
 
+	// Material sorted queues: the counters must start at 0 (the sort clears
+	// them after use)
+	const vector<u_int> zeros(materialsCount + 1, 0);
+	intersectionDevice.AllocBufferRW(&materialQueueCountsBuff, (void *)&zeros[0],
+			sizeof(u_int) * zeros.size(), "Material queue counts");
+	intersectionDevice.AllocBufferRW(&materialQueueCursorsBuff, nullptr,
+			sizeof(u_int) * zeros.size(), "Material queue cursors");
+}
+
+bool PathOCLBaseOCLRenderThread::UseLocalEvalStacks() const {
+	return renderEngine->specializeKernels &&
+			(intersectionDevice.GetDeviceDesc().GetType() & DEVICE_TYPE_CUDA_ALL);
 }
 
 void PathOCLBaseOCLRenderThread::InitSceneObjects() {
@@ -183,9 +196,10 @@ void PathOCLBaseOCLRenderThread::InitTextures() {
 			sizeof(slg::ocl::TextureEvalOp) * renderEngine->compiledScene->texEvalOps.size(), "Texture evaluation ops");
 
 	const u_int taskCount = renderEngine->taskCount;
-	intersectionDevice.AllocBufferRW(&textureEvalStackBuff, 
-			nullptr, sizeof(float) * renderEngine->compiledScene->maxTextureEvalStackSize *
-			taskCount, "Texture evaluation stacks");
+	intersectionDevice.AllocBufferRW(&textureEvalStackBuff,
+			nullptr, sizeof(float) * (UseLocalEvalStacks() ? 1 :
+				renderEngine->compiledScene->maxTextureEvalStackSize * taskCount),
+			"Texture evaluation stacks");
 }
 
 void PathOCLBaseOCLRenderThread::InitLights() {
@@ -268,6 +282,12 @@ void PathOCLBaseOCLRenderThread::InitLights() {
 		intersectionDevice.FreeBuffer(&elvcTileDistributionOffsetsBuff);
 		intersectionDevice.FreeBuffer(&elvcBVHNodesBuff);
 	}
+
+	if ((renderEngine->lightTaskCount > 0) && (cscene->emitLightsDistributionSize > 0)) {
+		intersectionDevice.AllocBufferRO(&emitLightsDistributionBuff, cscene->emitLightsDistribution.data(),
+			cscene->emitLightsDistributionSize, "EmitLightsDistribution");
+	} else
+		intersectionDevice.FreeBuffer(&emitLightsDistributionBuff);
 }
 
 void PathOCLBaseOCLRenderThread::InitPhotonGI() {
@@ -301,6 +321,45 @@ void PathOCLBaseOCLRenderThread::InitPhotonGI() {
 	}
 }
 
+void PathOCLBaseOCLRenderThread::InitLightTracing() {
+	const u_int lightTaskCount = renderEngine->lightTaskCount;
+
+	if (lightTaskCount > 0) {
+		if (lightTaskCount > renderEngine->taskCount)
+			throw runtime_error("The light tasks use the GPUTask temporaries: lightTaskCount must be <= taskCount");
+
+		intersectionDevice.AllocBufferRW(&lightTasksBuff, nullptr,
+				sizeof(slg::ocl::pathoclbase::LightPathTask) * lightTaskCount, "LightPathTask");
+		intersectionDevice.AllocBufferRW(&lightPathCountsBuff, nullptr,
+				sizeof(u_int) * lightTaskCount, "LightPathCounts");
+		intersectionDevice.AllocBufferRO(&lightFilterLUTsBuff, renderEngine->lightFilterLUTs.data(),
+				sizeof(float) * renderEngine->lightFilterLUTs.size(), "LightFilterLUTs");
+
+		lightPathCounts = std::make_unique<u_int[]>(lightTaskCount);
+		for (u_int i = 0; i < lightTaskCount; ++i)
+			lightPathCounts[i] = 0;
+	} else {
+		intersectionDevice.FreeBuffer(&lightTasksBuff);
+		intersectionDevice.FreeBuffer(&lightPathCountsBuff);
+		intersectionDevice.FreeBuffer(&lightFilterLUTsBuff);
+		lightPathCounts.reset();
+	}
+
+	InitLightTracingCasters();
+}
+
+void PathOCLBaseOCLRenderThread::InitLightTracingCasters() {
+	const vector<float> &casters = renderEngine->compiledScene->lightTracingCasters;
+
+	if (renderEngine->lightTaskCount > 0) {
+		// Never empty, the kernel argument needs a buffer
+		const float noCaster = 0.f;
+		intersectionDevice.AllocBufferRO(&lightCastersBuff, casters.empty() ? &noCaster : casters.data(),
+				sizeof(float) * Max<size_t>(casters.size(), 1), "LightTracingCasters");
+	} else
+		intersectionDevice.FreeBuffer(&lightCastersBuff);
+}
+
 void PathOCLBaseOCLRenderThread::InitImageMaps() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
@@ -332,6 +391,10 @@ void PathOCLBaseOCLRenderThread::InitImageMaps() {
 	}
 }
 
+void PathOCLBaseOCLRenderThread::UpdateGPUTaskConfiguration() {
+	intersectionDevice.AllocBufferRO(&taskConfigBuff, &renderEngine->taskConfig, sizeof(slg::ocl::pathoclbase::GPUTaskConfiguration), "GPUTaskConfiguration");
+}
+
 void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	const u_int taskCount = renderEngine->taskCount;
 
@@ -339,7 +402,7 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	// Allocate tasksConfigBuff
 	//--------------------------------------------------------------------------
 
-	intersectionDevice.AllocBufferRO(&taskConfigBuff, &renderEngine->taskConfig, sizeof(slg::ocl::pathoclbase::GPUTaskConfiguration), "GPUTaskConfiguration");
+	UpdateGPUTaskConfiguration();
 
 	//--------------------------------------------------------------------------
 	// Allocate tasksBuff
@@ -358,6 +421,23 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	//--------------------------------------------------------------------------
 
 	intersectionDevice.AllocBufferRW(&tasksStateBuff, nullptr, sizeof(slg::ocl::pathoclbase::GPUTaskState) * taskCount, "GPUTaskState");
+
+	//--------------------------------------------------------------------------
+	// Allocate pathStatesBuff
+	//--------------------------------------------------------------------------
+
+	intersectionDevice.AllocBufferRW(&pathStatesBuff, nullptr, sizeof(slg::ocl::pathoclbase::PathState) * taskCount, "PathState");
+
+	//--------------------------------------------------------------------------
+	// Allocate pathQueuesBuff and pathQueueCountsBuff
+	//--------------------------------------------------------------------------
+
+	// One queue of taskCount path indices for each queued micro-kernel. The
+	// counters are reset by the ResetPathQueues kernel.
+	intersectionDevice.AllocBufferRW(&pathQueuesBuff, nullptr, sizeof(u_int) * slg::ocl::pathoclbase::PATH_QUEUE_COUNT * taskCount, "PathQueues");
+	intersectionDevice.AllocBufferRW(&pathQueueCountsBuff, nullptr, sizeof(u_int) * slg::ocl::pathoclbase::PATH_QUEUE_COUNT, "PathQueueCounts");
+	// Material of each path, written and read by the material sort
+	intersectionDevice.AllocBufferRW(&pathMaterialKeysBuff, nullptr, sizeof(u_int) * taskCount, "PathMaterialKeys");
 }
 
 void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
@@ -597,8 +677,16 @@ void PathOCLBaseOCLRenderThread::InitRender() {
 	// Allocate Ray/RayHit buffers
 	//--------------------------------------------------------------------------
 
-	intersectionDevice.AllocBufferRW(&raysBuff, nullptr, sizeof(Ray) * taskCount, "Ray");
-	intersectionDevice.AllocBufferRW(&hitsBuff, nullptr, sizeof(RayHit) * taskCount, "RayHit");
+	// The light task rays are after the eye path rays
+	const u_int rayCount = taskCount + renderEngine->lightTaskCount;
+	intersectionDevice.AllocBufferRW(&raysBuff, nullptr, sizeof(Ray) * rayCount, "Ray");
+	intersectionDevice.AllocBufferRW(&hitsBuff, nullptr, sizeof(RayHit) * rayCount, "RayHit");
+
+	//--------------------------------------------------------------------------
+	// GPU light tracing buffers
+	//--------------------------------------------------------------------------
+
+	InitLightTracing();
 
 	//--------------------------------------------------------------------------
 	// Allocate GPU task buffers
