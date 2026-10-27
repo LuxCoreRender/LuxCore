@@ -423,6 +423,11 @@ typedef struct {
 #endif
 // Used at the start of a case of a switch on the material type
 #define MATERIAL_TYPE_GUARD(t) if (!MATERIAL_TYPE_ENABLED(t)) break
+// Volumes are materials too. Without any volume in the scene, all volume
+// indices are NULL_INDEX and the volume code has no effect.
+#define SCENE_HAS_VOLUMES (MATERIAL_TYPE_ENABLED(HOMOGENEOUS_VOL) || \
+		MATERIAL_TYPE_ENABLED(CLEAR_VOL) || \
+		MATERIAL_TYPE_ENABLED(HETEROGENEOUS_VOL))
 
 #define MATERIAL_EVALUATE_RETURN_BLACK { \
 		const float3 result = BLACK; \

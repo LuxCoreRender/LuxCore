@@ -323,16 +323,19 @@ OPENCL_FORCE_NOT_INLINE float Volume_Scatter(__global const Volume *vol,
 		TEXTURES_PARAM_DECL) {
 	switch (vol->type) {
 		case CLEAR_VOL:
+			MATERIAL_TYPE_GUARD(CLEAR_VOL);
 			return ClearVolume_Scatter(vol, ray, hitT,
 					passThrough, scatteredStart,
 					connectionThroughput, connectionEmission, tmpHitPoint
 					TEXTURES_PARAM);
 		case HOMOGENEOUS_VOL:
+			MATERIAL_TYPE_GUARD(HOMOGENEOUS_VOL);
 			return HomogeneousVolume_Scatter(vol, ray, hitT,
 					passThrough, scatteredStart,
 					connectionThroughput, connectionEmission, tmpHitPoint
 					TEXTURES_PARAM);
 		case HETEROGENEOUS_VOL:
+			MATERIAL_TYPE_GUARD(HETEROGENEOUS_VOL);
 			return HeterogeneousVolume_Scatter(vol, ray, hitT,
 					passThrough, scatteredStart,
 					connectionThroughput, connectionEmission, tmpHitPoint
@@ -340,5 +343,8 @@ OPENCL_FORCE_NOT_INLINE float Volume_Scatter(__global const Volume *vol,
 		default:
 			return -1.f;
 	}
+
+	// Volume types compiled out by MATERIAL_TYPE_GUARD()
+	return -1.f;
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

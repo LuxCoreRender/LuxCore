@@ -59,7 +59,7 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 	}
 
 	// Check if there is volume scatter event
-	if (rayVolumeIndex != NULL_INDEX) {
+	if (SCENE_HAS_VOLUMES && (rayVolumeIndex != NULL_INDEX)) {
 		// This applies volume transmittance too
 		// Note: by using passThrough here, I introduce subtle correlation
 		// between scattering events and pass-through events
@@ -99,8 +99,8 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 	if (hit) {
 		bool continueToTrace =
 			// Check if the volume priority system tells me to continue to trace the ray
-			PathVolumeInfo_ContinueToTrace(volInfo, bsdf
-				MATERIALS_PARAM) ||
+			(SCENE_HAS_VOLUMES && PathVolumeInfo_ContinueToTrace(volInfo, bsdf
+				MATERIALS_PARAM)) ||
 			// Check if it is a camera invisible object and we are a tracing a camera ray
 			(cameraRay && sceneObjs[rayHit->meshIndex].cameraInvisible);
 
@@ -128,11 +128,14 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 		}
 
 		if (continueToTrace) {
-			// Update volume information
-			const BSDFEvent eventTypes = BSDF_GetEventTypes(bsdf
+			// Update volume information (without volumes it only sets
+			// scatteredStart, which only Volume_Scatter() reads)
+			if (SCENE_HAS_VOLUMES) {
+				const BSDFEvent eventTypes = BSDF_GetEventTypes(bsdf
+							MATERIALS_PARAM);
+				PathVolumeInfo_Update(volInfo, eventTypes, bsdf
 						MATERIALS_PARAM);
-			PathVolumeInfo_Update(volInfo, eventTypes, bsdf
-					MATERIALS_PARAM);
+			}
 
 			// It is a transparent material, continue to trace the ray
 			ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);

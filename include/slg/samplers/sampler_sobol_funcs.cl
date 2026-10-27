@@ -25,14 +25,17 @@
 OPENCL_FORCE_INLINE uint SobolSequence_SobolDimension(
 		__global const uint* restrict sobolDirections,
 		const uint index, const uint dimension) {
-	const uint offset = dimension * SOBOL_BITS;
+	__global const uint* restrict directions = &sobolDirections[dimension * SOBOL_BITS];
 	uint result = 0;
-	uint i = index;
 
-	for (uint j = 0; i; i >>= 1, j++) {
-		if (i & 1)
-			result ^= sobolDirections[offset + j];
-	}
+	// Unrolled and branch free: the loads don't depend on each other, so they
+	// are all in flight at the same time instead of one per loop iteration
+	// (index includes the random rngPass, so the loop used to run ~32 times).
+	// The address is the same for all the threads of a warp. The order of
+	// the XORs doesn't change the result.
+	#pragma unroll
+	for (uint j = 0; j < SOBOL_BITS; ++j)
+		result ^= directions[j] & (0u - ((index >> j) & 1u));
 
 	return result;
 }

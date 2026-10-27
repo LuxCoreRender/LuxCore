@@ -959,3 +959,89 @@ Blender addon, then T5.5.
   (`PyThreadState_Get ... GIL is released`) unless the session is deleted
   and `SetLogHandler(None)` is called first: test script issue, Blender
   does not finalize Python while a session lives.
+
+### 2026-10-27: T5.5 work in progress (paused by the user)
+
+Branch `gpu-opt/T5.5-specialize` (from `gpu-optimization` at `488eaddd3`).
+Committed as work in progress: not merged, the last part is built but not
+image-checked yet.
+
+Changes:
+
+1. Light type mask: the host passes `-D PARAM_LIGHT_TYPES_MASK` (types in
+   `cscene.lightDefs`); `LIGHT_TYPE_GUARD()` in the light type switches of
+   `EnvLight_GetRadiance`, `Light_Illuminate`, `Light_Emit`
+   (`light_funcs.cl`). Offline NVRTC 12.9 sm_120 registers: LuxBall
+   HIT_NOTHING 64 -> 18, heavy kernels unchanged (248-255), cubin 3.90 ->
+   3.69 MB; DLSC HIT_NOTHING 64 -> 16, GENERATE_CAMERA_RAY 60 -> 47,
+   GENERATE_NEXT_VERTEX_RAY 254 -> 238, DL_SAMPLE_BSDF 254 -> 243,
+   DL_ILLUMINATE 243 -> 235, cubin 6.60 -> 6.28 MB. No kernel gets under
+   the 168-register occupancy step.
+2. Sobol: `SobolSequence_SobolDimension()` (`sampler_sobol_funcs.cl`) is
+   unrolled and branch free (32 independent loads, XOR with a bit mask).
+   Bit-exact result. Found with Nsight Compute source counters (see below):
+   the old loop was the top stall line of SPLAT_SAMPLE (19.5% of its warp
+   stall samples, long_scoreboard), because `pass + rngPass` has ~32 bits
+   set so the loop ran ~32 dependent iterations.
+3. Volume gate (built as `bench\bin-T5.5c`, NOT yet image-checked or
+   timed): `SCENE_HAS_VOLUMES` (`material_types.cl`, from the volume bits of
+   `PARAM_MATERIAL_TYPES_MASK`). Without volumes all volume indices are
+   `NULL_INDEX`, so `Scene_Intersect()` skips `Volume_Scatter()`, the volume
+   priority check and `PathVolumeInfo_Update()`; `BSDF_Init()` skips the two
+   eval-op calls `Material_GetInteriorVolume()`/`GetExteriorVolume()` and
+   sets the four hit point volume fields to `NULL_INDEX` (what the old code
+   computed); MK_DL_ILLUMINATE skips the `directLightVolInfos[gid]` copy
+   (only read by the gated code). `Volume_Scatter()` got
+   `MATERIAL_TYPE_GUARD()` per volume type.
+
+Measurements (bins in `D:\REPO\LuxCoreRepo\bench`):
+
+- Kernel profile LuxBall 20 s (`opencl.kernel.profile.enable 1`), bin-T5.5
+  (light mask) vs bin-T5.5b (+ Sobol): SPLAT_SAMPLE 3890 -> 3577 ms (-8%),
+  other kernels within noise.
+- `bench.py ab --runs 3 --halttime 25`, T5.5 vs T5.5b: LuxBall 17.69 ->
+  17.39 (-1.7%, runs 17.1-17.75 overlap: noise), DLSC 20.29 -> 21.02
+  (+3.6%, all three runs higher).
+- Image check T5.5b (`bench.py image`, 256 spp, vs `T6.1-base-img`):
+  LuxBall RMSE 0.00224 (floor 0.0168), DLSC 0.0142 (floor 0.132): pass.
+
+Nsight Compute source-level profile (LuxBall, bin with
+`--generate-line-info` enabled temporarily in `cuda.cpp`, reverted):
+
+- SPLAT_SAMPLE: 56 registers, 61% achieved occupancy, issue slots 3.6%
+  busy (latency bound). Top stall lines after the Sobol loop: pixel filter
+  `Distribution2D` binary search (`mc_funcs.cl` std_upper_bound, 6%), the
+  `filmRadianceGroup[i]` pointer table in `Film_AddSampleResultColor`
+  (3.9%), NaN checks and film atomics (3% each).
+- The six heavy kernels together: no single hot spot. The top lines are
+  each 1-2.5% of the stall samples, all long_scoreboard on per-path AoS
+  struct fields (`pathStates`, `material->isDelta`, `bsdf->isVolume`,
+  `sampleResult->...`). A real fix is a SoA layout of the path state, which
+  is a multi-week refactor: not planned (user: no multi-week tasks).
+- How to get per-line data: `ncu --section SourceCounters ...`, then
+  `ncu -i <rep> --page source --print-source cuda,sass --csv`. ncu looks
+  for the `.cl` files in the scene directory (the `#line` names have no
+  path): copy `include/**/*.cl` there for the export and delete them after.
+  A multi-kernel export has no kernel name rows; export one kernel per
+  report. A full export of 7 heavy kernels takes over 10 minutes.
+
+Next steps for T5.5:
+
+1. Image check bin-T5.5c on LuxBall, DLSC and a volume scene (DanishMood
+   with `-D path.photongi.indirect.enabled 0`, or LynxSpider): volumes must
+   render as before.
+2. Milestone `bench.py ab` bin-T8.1 (merged chain) vs bin-T5.5c on LuxBall,
+   DLSC, LuxCore2.1Benchmark; record, then merge `--no-ff` into
+   `gpu-optimization`.
+3. Optional, small: `-D PARAM_FILM_RADIANCE_GROUP_COUNT` to drop the
+   `filmRadianceGroup[]` pointer table checks in SPLAT_SAMPLE (radiance
+   group i is non-null iff i < `film->GetRadianceGroupCount()`,
+   `pathoclbaseoclthreadfilm.cpp:143`).
+4. Then T4.2. Design note: keep the original env distribution for
+   `Light_Emit()` (light tracing and hybrid back/forward need full
+   coverage) and add a second, compensated distribution only for
+   `Illuminate()` and the direct pdf in `GetRadiance()` (CPU
+   `infinitelight.cpp`, GPU `compilelights.cpp` TYPE_IL +
+   `light_funcs.cl`). Only when the light is visible to diffuse, glossy
+   and specular indirect rays; fall back to the original distribution if
+   the compensated one is all zero.
