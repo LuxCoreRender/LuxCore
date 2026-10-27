@@ -36,6 +36,71 @@
 #endif
 
 //------------------------------------------------------------------------------
+// The work of MK_NEXT_SAMPLE and MK_GENERATE_CAMERA_RAY, shared by their
+// kernels and by MK_SPLAT_SAMPLE. Defined before the first kernel: the
+// OpenCL split compile (SplitMicroKernelSources()) gives each kernel program
+// only the source before the first __kernel and the kernel itself.
+//------------------------------------------------------------------------------
+
+// Returns the next state of the path
+OPENCL_FORCE_INLINE PathState NextSample(
+		__constant const GPUTaskConfiguration* restrict taskConfig,
+		__global float *filmNoise,
+		__global float *filmUserImportance,
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3,
+		__global Ray *ray
+		SAMPLER_PARAM_DECL) {
+	Sampler_NextSample(taskConfig,
+			filmNoise,
+			filmUserImportance,
+			filmWidth, filmHeight,
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3
+			SAMPLER_PARAM);
+
+	// Generate a new path and camera ray only it is not TILEPATHOCL
+#if !defined(RENDER_ENGINE_TILEPATHOCL) && !defined(RENDER_ENGINE_RTPATHOCL)
+	return MK_GENERATE_CAMERA_RAY;
+#else
+	// Mark the ray like like one to NOT trace
+	ray->flags = RAY_FLAGS_MASKED;
+	return MK_DONE;
+#endif
+}
+
+#if !defined(RENDER_ENGINE_TILEPATHOCL) && !defined(RENDER_ENGINE_RTPATHOCL)
+// The caller sets the state to MK_RT_NEXT_VERTEX
+OPENCL_FORCE_INLINE void GenerateCameraRay(
+		__constant const GPUTaskConfiguration* restrict taskConfig,
+		__global GPUTaskDirectLight *taskDirectLight,
+		__global GPUTaskState *taskState,
+		__global const Camera* restrict camera,
+		__global const float* restrict cameraBokehDistribution,
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3,
+		__global float *pixelFilterDistribution,
+		__global Ray *ray,
+		__global EyePathInfo *pathInfo
+		SAMPLER_PARAM_DECL) {
+	// Re-initialize the volume information
+	PathVolumeInfo_Init(&pathInfo->volume);
+
+	GenerateEyePath(taskConfig,
+			taskDirectLight, taskState,
+			camera,
+			cameraBokehDistribution,
+			filmWidth, filmHeight,
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
+			pixelFilterDistribution,
+			ray,
+			pathInfo
+			SAMPLER_PARAM);
+}
+#endif
+
+//------------------------------------------------------------------------------
 // Evaluation of the Path finite state machine.
 //
 // From: MK_RT_NEXT_VERTEX
@@ -894,69 +959,6 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 	// Save the seed
 	task->seed = seedValue;
 }
-
-//------------------------------------------------------------------------------
-// The work of MK_NEXT_SAMPLE and MK_GENERATE_CAMERA_RAY, shared by their
-// kernels and by MK_SPLAT_SAMPLE
-//------------------------------------------------------------------------------
-
-// Returns the next state of the path
-OPENCL_FORCE_INLINE PathState NextSample(
-		__constant const GPUTaskConfiguration* restrict taskConfig,
-		__global float *filmNoise,
-		__global float *filmUserImportance,
-		const uint filmWidth, const uint filmHeight,
-		const uint filmSubRegion0, const uint filmSubRegion1,
-		const uint filmSubRegion2, const uint filmSubRegion3,
-		__global Ray *ray
-		SAMPLER_PARAM_DECL) {
-	Sampler_NextSample(taskConfig,
-			filmNoise,
-			filmUserImportance,
-			filmWidth, filmHeight,
-			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3
-			SAMPLER_PARAM);
-
-	// Generate a new path and camera ray only it is not TILEPATHOCL
-#if !defined(RENDER_ENGINE_TILEPATHOCL) && !defined(RENDER_ENGINE_RTPATHOCL)
-	return MK_GENERATE_CAMERA_RAY;
-#else
-	// Mark the ray like like one to NOT trace
-	ray->flags = RAY_FLAGS_MASKED;
-	return MK_DONE;
-#endif
-}
-
-#if !defined(RENDER_ENGINE_TILEPATHOCL) && !defined(RENDER_ENGINE_RTPATHOCL)
-// The caller sets the state to MK_RT_NEXT_VERTEX
-OPENCL_FORCE_INLINE void GenerateCameraRay(
-		__constant const GPUTaskConfiguration* restrict taskConfig,
-		__global GPUTaskDirectLight *taskDirectLight,
-		__global GPUTaskState *taskState,
-		__global const Camera* restrict camera,
-		__global const float* restrict cameraBokehDistribution,
-		const uint filmWidth, const uint filmHeight,
-		const uint filmSubRegion0, const uint filmSubRegion1,
-		const uint filmSubRegion2, const uint filmSubRegion3,
-		__global float *pixelFilterDistribution,
-		__global Ray *ray,
-		__global EyePathInfo *pathInfo
-		SAMPLER_PARAM_DECL) {
-	// Re-initialize the volume information
-	PathVolumeInfo_Init(&pathInfo->volume);
-
-	GenerateEyePath(taskConfig,
-			taskDirectLight, taskState,
-			camera,
-			cameraBokehDistribution,
-			filmWidth, filmHeight,
-			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
-			pixelFilterDistribution,
-			ray,
-			pathInfo
-			SAMPLER_PARAM);
-}
-#endif
 
 //------------------------------------------------------------------------------
 // Evaluation of the Path finite state machine.

@@ -87,6 +87,8 @@ with no structure in the diff image.
 | ID | Task | Status | Acceptance |
 |---|---|---|---|
 | T4.1 | Path guiding with SD-trees (Mueller, Gross, Novak 2017, `cgf13227-sup-0002-s1.pdf` has the sampling and refinement pseudocode). Training passes of doubling length: the GPU records radiance per vertex (position, direction, value) into a buffer, the CPU builds the spatial binary tree + directional quadtrees between passes and uploads them flattened, `MK_GENERATE_NEXT_VERTEX_RAY` samples a mix of BSDF and guide (one-sample MIS, BSDF fraction 0.5, never 0 so the estimator stays unbiased). Only the last pass, or inverse-variance weighted passes, go to the film. Optional follow-up: variance-aware target density from Rath et al. 2020 (`a151-rath/`). Off for specular-only bounces. New property, off by default until it wins. | open | Unbiased (mean within seed spread vs reference); lower RMSE at equal time on DanishMood / LynxSpider (indirect-heavy). Large: design note in `PROGRESS.md` first. |
+| T4.2 | MIS compensation for environment light sampling (Karlik et al. 2019, SIGGRAPH Asia): build the env light sampling distribution from the image minus a fraction of its average, clamped at 0, because BSDF sampling already covers the flat part under MIS. Normal-independent variant: no render time cost. Only where BSDF sampling can reach every direction the env light pdf drops (not for specular-only or invisible-to-indirect setups). New property, off by default until it wins. | todo | Unbiased; lower RMSE at equal time on HDRI-lit scenes (paper: 2.75x lower MSE for image based lighting). |
+| T4.3 | Owen-scrambled Sobol (Burley 2020, JCGT 9(4), hash-based): LuxCore scrambles Sobol with a Cranley-Patterson rotation (`sobolsequence.cpp:64`), which loses stratification. Owen scrambling keeps it and converges faster on smooth integrands (Cycles "Sobol-Burley"). New sampler option, CPU and GPU sampler code. | todo | Unbiased; lower RMSE at equal spp and equal time on LuxBall / DLSC; no structure. |
 
 ## Phase 5: memory-bound kernels (roadmap from Nsight Compute, 2026-10-26)
 
@@ -161,7 +163,7 @@ otherwise.
 |---|---|---|---|
 | T6.1 | GPU light tracing for caustics: when `path.hybridbackforward.enable` is on, GPU threads trace light paths too (design below). | done (branch `gpu-opt/T6.1-gpu-light-tracing`, see PROGRESS 2026-10-26 "T6.1 GPU light tracing, done"): light part equal to CPU light tracing (2-glasses 1.014 / 0.987, CPU seed spread 2.3%); caustic noise at equal time 28% below CPU light tracing on 12 threads, with the CPU idle (acceptance "far below" only partly met, see T6.2); eye-only renders unchanged. Perspective camera only. | Same expected image as CPU hybrid (mean within seed spread vs a 16K spp reference); caustic RMSE at equal time far below CPU light tracing; eye-only renders unchanged. |
 | T6.2 | Light path efficiency: most light paths miss the specular objects and end at once. On 2-glasses only 0.06% of the GPU light paths make a caustic connection (T6.1). Unbiased options: guided emission toward specular geometry (MIS with plain emission), light path pool sizing (T6.1 uses taskCount, the max while light tasks share the `GPUTask` temporaries on OpenCL), separate CUDA stream so light and eye kernels overlap. | done for the guided emission (branch `gpu-opt/T6.2-light-path-efficiency`, see PROGRESS 2026-10-27 "T6.2 guided light emission"): unbiased on all 10 tested light types; light-only caustic noise at equal time 8-23x lower (point, area, sun, sky, constant env), 2.2x for a spot aimed at the glasses; eye samples -14% to +5%. Pool sizing and stream overlap moved to T6.5 / T9.2. | Caustic RMSE at equal time down on the caustic scenes. |
-| T6.3 | Path guiding on the GPU (= T4.1): training records on the GPU, tree build on the host first, later on the GPU. | todo | See T4.1. |
+| T6.3 | Path guiding on the GPU, scoped to about a week (user decision 2026-10-27: keep path guiding, no multi-week tasks). GPU-native instead of the T4.1 SD-tree: a hashed spatial grid, each cell with a small directional distribution, trained on the GPU with atomics from the path vertices (no host tree build), sampled in `MK_GENERATE_NEXT_VERTEX_RAY` as a one-sample MIS mix with the BSDF (BSDF fraction never 0: unbiased). New property, off by default. Later options: SD-tree refinement (T4.1), EARS (Rath 2022) on top of the same cache. | todo | Unbiased; lower RMSE at equal time on DanishMood / LynxSpider. |
 | T6.5 | Light/eye work balance: the light task count is fixed at taskCount, so the light paths take the same share of each iteration in every scene. With the guided emission a scene whose casters make no caustics (LuxCore2.1Benchmark: only archglass windows, whose transmission is pass-through) loses ~14% of the eye samples for nothing. Options: size the light task pool from the caustic connection rate measured while rendering, or skip light tracing when no caster can start a caustic path. Unbiased either way. | done (branch `gpu-opt/T6.5-light-eye-balance`, see PROGRESS 2026-10-27 "T6.5 light tracing duty cycle"): light kernels run every 16th iteration while windows of light paths add no energy to the film; LuxCore2.1Benchmark eye spp 599 (T6.2) to 838, no light tracing 857; 2-glasses unchanged. | Eye samples/sec back to the no light tracing level on scenes without caustics; caustic noise at equal time not worse on 2-glasses. |
 | T6.6 | GPU light path count at film reads: a light path is counted when it is done, so the paths in flight at a film read are left out, and those are more often the long (caustic) ones. The light part reads low by about Cov(contribution, length) / (mean length x mean contribution x paths per light task): measured -0.03% at 40 s on 2-glasses, -0.5% with 16x fewer light paths (T6.5 test). Consistent (falls as 1/time), so it matters only for short renders. Fix: at the end of a batch render, stop starting light paths and finish the ones in flight before the last film read. Low priority. | todo | Light part of a 5 s 2-glasses render within noise of a 600 s reference. |
 | T6.4 | Unbiased heterogeneous volumes: delta / ratio tracking (null scattering) with a majorant per volume, replacing fixed-step marching. Changes the converged image (removes the marching bias), so it is a new property, off by default. | todo | Converges to a high step count marching reference; faster at equal error on DanishMood / LynxSpider. |
@@ -215,7 +217,7 @@ T6.1 design (from the code, 2026-10-26):
 
 | ID | Task | Status | Acceptance |
 |---|---|---|---|
-| T8.1 | Kernel compile: parallel NVRTC compile (one program per micro-kernel or `-split-compile`), prebuilt caches for common feature sets, render with a generic kernel while the specialized one compiles. | todo | Cold first sample in seconds, not minutes. |
+| T8.1 | Kernel compile: parallel NVRTC compile (one program per micro-kernel or `-split-compile`), prebuilt caches for common feature sets, render with a generic kernel while the specialized one compiles. | done, bug fixes only (branch `gpu-opt/T8.1-kernel-compile`, PROGRESS 2026-10-27 "T8.1"): CUBIN compile cut a cold compile 13.9 s to 10.0 s but DLSC rendered 1.3% slower, rejected; per-kernel programs rejected. Fixed: OpenCL split compile (broken since T5.10), kernel cache deadlock on a corrupt file. Open: generic kernel while compiling (large); T5.5 cuts compile time with less code. | Cold first sample in seconds, not minutes. |
 | T8.2 | DLSC and env light visibility cache built on the GPU (OptiX visibility rays, GPU reductions). | todo | Cache build time down on DLSC; same cache content statistics. |
 | T8.3 | Profile `CompiledScene` and the host side of scene edits; move or parallelize the hot parts (image map conversion, light distributions). | todo | Time to first sample and edit latency measured and down. |
 | T8.4 | PhotonGI (biased, optional): caustic cache updates without stalling the GPU. | todo | No GPU idle during updates. |
@@ -227,6 +229,8 @@ T6.1 design (from the code, 2026-10-26):
 | T9.1 | Occupancy and fusion: T5.5 (registers), T5.6 (BSDF kernel fusion). | T5.5 in progress | See Phase 5. |
 | T9.2 | Concurrency: eye and light wavefronts on separate CUDA streams so small launches fill idle SMs. | todo | SM utilization up with hybrid on. |
 | T9.3 | Engine coverage: GPU bake engine; GPU bidirectional (BDPT with MIS) as research. | todo | Feature parity, measured. |
+| T9.4 | Launch overhead: CUDA Graphs (or programmatic dependent launch, sm_90+) for the per-iteration micro-kernel sequence. Measure the gaps between kernels first; NVIDIA reports 1.5-3x for launch-bound work, a wavefront batch of ~10 kernels per iteration is partly launch-bound only on small scenes. | todo | Samples/sec up on LuxBall; no change on heavy scenes; image identical. |
+| T9.5 | Many-light sampling with a light tree (Conty Estevez, Kulla 2018; Cycles 3.5 light tree): BVH over emitters traversed per shading point with one random number, importance from bounds and orientation cones. Host build, GPU traversal in the light sampling code. New light strategy, unbiased. About a week. | todo | Lower RMSE at equal time on many-light scenes (DLSC); no change elsewhere. |
 
 Measures for this roadmap, besides M samples/sec: time to first sample
 (warm and cold kernel cache), GPU SM utilization over the whole render
@@ -235,6 +239,11 @@ estimators RMSE at equal time against a 16K spp reference.
 
 Order: T6.1 (user request, caustics), T7.1 + T7.2, T8.1 + T8.2, T5.5 / T5.6,
 T6.3, then the rest.
+
+Order from 2026-10-27 (user: a good, fast, stable renderer; nothing that takes
+weeks; keep path guiding): T5.5, T4.2, T6.3 (scoped), T4.3, T9.4, T9.5.
+T8.2 is low value (DLSC and the env light cache are off by default in
+BlendLuxCore).
 
 ## References
 
@@ -285,6 +294,32 @@ Extract text with `pdftotext -layout <file> <out.txt>` (available in Git Bash).
   real-time. Rejected for final renders: spatial reuse correlates
   neighbouring pixels (structured noise at low spp), the practical variants
   are biased, and temporal reuse needs animation frames.
+- Research pass 2026-10-27 (web, university and NVIDIA papers):
+  - Karlik, Sik, Vevoda, Skrivan, Krivanek, "MIS Compensation: Optimizing
+    Sampling Techniques in Multiple Importance Sampling", TOG 38(6) 2019,
+    https://cgg.mff.cuni.cz/~jaroslav/papers/2019-mis-compensation/ (T4.2).
+  - Burley, "Practical Hash-based Owen Scrambling", JCGT 9(4) 2020,
+    https://jcgt.org/published/0009/04/01/paper.pdf (T4.3). Cycles added it
+    as "Sobol-Burley": less noise in some scenes, slower on the CPU.
+  - Conty Estevez, Kulla, "Importance Sampling of Many Lights with Adaptive
+    Tree Splitting", 2018; Cycles 3.5 light tree with min/max importance
+    (T9.5).
+  - Rath, Grittmann, Herholz, Weier, Slusallek, "EARS: Efficiency-Aware
+    Russian Roulette and Splitting", SIGGRAPH 2022,
+    https://graphics.cg.uni-saarland.de/papers/rath-2022-ears.pdf. Needs a
+    learned cache like path guiding: after T6.3.
+  - Guo, Eisemann, Eisemann, "Next Event Estimation++", CGF 39(7) 2020:
+    visibility map skips up to 80% of shadow rays. Not now: ray tracing is
+    1.6% of the GPU time (T0.4), shading dominates.
+  - Meister, Boksansky, Guthe, Bittner, "On Ray Reordering Techniques for
+    Faster GPU Ray Tracing", I3D 2020: trace 1.3-2x faster, but the sort
+    overhead is hard to recover on RTX. Rejected for the same reason.
+  - Yalciner, Akyuz, "Path Guiding for Wavefront Path Tracing", arXiv
+    2405.06997: radiant exitance in one sparse voxel octree, PDFs built on
+    the fly; reference for T6.3. Alber, Hanika, Dachsbacher, I3D 2025:
+    real-time Markov chain path guiding with hash grids (T6.3 design input).
+  - NVIDIA CUDA Graphs docs: 1.5-3x for many small launch-bound kernels
+    (T9.4).
 - Interactive path tracing of sparse volumes (NVIDIA 2021): NanoVDB +
   unbiased tracking + reconstruction. Rejected: the reconstruction is a
   denoiser, and replacing LuxCore's ray-marched heterogeneous volumes with

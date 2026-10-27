@@ -872,3 +872,73 @@ pageable memory at each film read (CUDA may synchronize such copies; no
 CPU or speed effect was measured).
 
 Next: T8.1 + T8.2 per the roadmap order.
+
+### 2026-10-27: T8.1 kernel compile time (branch `gpu-opt/T8.1-kernel-compile`)
+
+Branched from `gpu-opt/T7.5-async-render-loop`.
+
+Where a cold compile goes (LuxBall, specialized kernels, fresh LuxCore
+cache, `CUDA_CACHE_DISABLE=1`): 13.9 s = NVRTC source to PTX 5.4 s + driver
+PTX to SASS JIT at module load 8.4 s (one thread). Warm (LuxCore PTX cache +
+driver JIT cache): 20 ms.
+
+Measuring pitfall: NVRTC 12.9 caches its own results in the driver
+ComputeCache (`%APPDATA%\NVIDIA\ComputeCache`), keyed after preprocessing
+(an unused `-D` still hits). For cold numbers set `CUDA_CACHE_DISABLE=1`
+or change the source.
+
+Tried and rejected:
+
+- NVRTC straight to CUBIN (`--gpu-architecture=sm_120`, `nvrtcGetCUBIN`),
+  so ptxas runs inside NVRTC with `--split-compile=0`: cold 10.0 s, warm
+  28 ms. Interleaved A/B (3 x 60 s, `bench\T8.1-ab.txt`): LuxBall 18.00 /
+  18.00, DLSC 21.11 / 20.83 (-1.3%, runs 21.04-21.12 vs 20.80-20.93),
+  LuxCore2.1Benchmark 20.04 / 19.96. Without split the CUBIN compile takes
+  15.0 s, slower than today. Split thread counts 4-12 are equal within
+  noise, and the SASS changes with the split count. Rejected: a 4 s saving
+  once per feature set does not pay for 1.3% on every render.
+- One NVRTC program per micro-kernel, compiled in parallel (12 threads,
+  CUBIN): 8.7 s with `--split-compile=1` per program, 35 s with `0`
+  (oversubscription). Each program parses the whole 1.3 MB source again
+  (~1 s, measured with the non micro-kernels only).
+
+ptxas per kernel (offline, CUDA 12.8 ptxas, ~0.35 s of it parsing): the 7
+heavy kernels take ~1.2 s each (DL_ILLUMINATE, RT_NEXT_VERTEX, RT_DL,
+HIT_OBJECT, GENERATE_NEXT_VERTEX_RAY, SPLAT_SAMPLE, DL_SAMPLE_BSDF), the
+rest ~0.05-0.2 s. Less code per kernel (T5.5) is what shortens the compile.
+
+Kept, bug fixes:
+
+- OpenCL split compile broken since T5.10: `NextSample()` and
+  `GenerateCameraRay()` sat between two kernels, so the split programs of
+  MK_SPLAT_SAMPLE, MK_NEXT_SAMPLE and MK_GENERATE_CAMERA_RAY did not see
+  them. With `-D opencl.devices.select 10` (the NVIDIA OpenCL device) the
+  T7.5 build fails with `PathOCL kernel AdvancePaths_MK_SPLAT_SAMPLE OpenCL
+  program compilation error`; moved above the first kernel, LuxBall renders
+  on OpenCL (kernel compile 21 s).
+- `cudaKernelPersistentCache::CompilePTX()` retried a corrupt cache file by
+  calling itself while holding `cacheMutex`: with a cache file damaged on
+  purpose the T7.5 build stops with `RUNTIME ERROR: resource deadlock would
+  occur`; now it removes the file and compiles (tested, renders).
+- `ForcedCompilePTX()` leaked the `nvrtcProgram` on a compile error.
+
+Image check 256 spp vs `T6.1-base-img`: LuxBall RMSE 0.00147 (floor
+0.0168), DLSC 0.00513 (0.132), mean +0.000% / -0.002%: pass.
+
+Not done: rendering with a generic kernel while the specialized one
+compiles (large); prebuilt caches (feature sets are combinatorial with the
+specialization).
+
+### 2026-10-27: research pass and new order
+
+The user asked for a web research pass (university and NVIDIA papers) and
+set the direction: a good, fast, stable renderer, no tasks that take
+weeks, keep path guiding. Findings and links are in `PLAN.md`
+"References"; new tasks T4.2 (MIS compensation for env lights), T4.3
+(Owen-scrambled Sobol), T9.4 (CUDA Graphs), T9.5 (light tree); T6.3 path
+guiding scoped to a GPU-native hash grid. Rejected for now: ray
+reordering and NEE++ (ray tracing is 1.6% of the GPU time), EARS (after
+T6.3, needs the same kind of cache).
+
+Next: merge the verified chain into one branch and build pyluxcore + the
+Blender addon, then T5.5.

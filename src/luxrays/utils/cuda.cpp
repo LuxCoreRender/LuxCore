@@ -142,8 +142,10 @@ bool cudaKernelCache::ForcedCompilePTX(
 
 	*error = std::string(log.get());
 
-	if (compilationResult != NVRTC_SUCCESS)
+	if (compilationResult != NVRTC_SUCCESS) {
+		CHECK_NVRTC_ERROR(nvrtcDestroyProgram(&prog));
 		return false;
+	}
 
 	// Obtain PTX from the program.
 	CHECK_NVRTC_ERROR(nvrtcGetPTXSize(prog, ptxSize));
@@ -243,20 +245,16 @@ bool cudaKernelPersistentCache::CompilePTX(const std::vector<std::string> &kerne
 				file.close();
 
 				// Check the binary hash
-				if (hashBin != oclKernelPersistentCache::HashBin(ptx->get(), *ptxSize)) {
-					// Something wrong in the file, remove the file and retry
-					std::filesystem::remove(filePath);
-					return CompilePTX(kernelsParameters, kernelSource, programName, ptx, ptxSize, cached, error);
-				} else {
+				if (hashBin == oclKernelPersistentCache::HashBin(ptx->get(), *ptxSize)) {
 					*cached = true;
 
 					return true;
 				}
-			} else {
-				// Something wrong in the file, remove the file and retry
-				std::filesystem::remove(filePath);
-				return CompilePTX(kernelsParameters, kernelSource, programName, ptx, ptxSize, cached, error);
 			}
+
+			// Something wrong in the file, remove the file and compile the source
+			// again (not with a recursive call: cacheMutex is held here)
+			std::filesystem::remove(filePath);
 		}
 	}
 
