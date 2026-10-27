@@ -19,6 +19,7 @@
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include <mutex>
+#include <numeric>
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/core/geometry/transform.h"
@@ -79,6 +80,19 @@ static void PGICUpdateCallBack(CompiledScene *compiledScene) {
 	compiledScene->RecompilePhotonGI();
 }
 
+// The sum of all the light tracing (RADIANCE_PER_SCREEN_NORMALIZED) channels
+static double LightChannelsEnergy(const Film &film) {
+	double energy = 0.0;
+	if (film.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED)) {
+		for (auto const &channel : film.channel_RADIANCE_PER_SCREEN_NORMALIZEDs) {
+			const float *pixels = channel->GetPixels();
+			energy = accumulate(pixels, pixels + channel->GetWidth() * channel->GetHeight() * 3, energy);
+		}
+	}
+
+	return energy;
+}
+
 void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
@@ -123,6 +137,20 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 
 	const std::function<void()> pgicUpdateCallBack = std::bind(PGICUpdateCallBack, engine->compiledScene);
 
+	// Light tracing duty cycle: the light kernels run every lightPeriod
+	// iterations. When a window of light paths adds no energy to the light
+	// tracing channels (no caustic in view), the period goes to
+	// lightIdlePeriod; the first window that adds energy sets it back to 1.
+	// The period changes only how many light paths are traced, and the
+	// light channels are normalized by that count.
+	const u_int lightIdlePeriod = 16;
+	const double lightWindowPaths = 8.0 * lightTaskCount;
+	u_int lightPeriod = 1;
+	u_int lightIteration = 0;
+	double lightPathTotal = 0.0;
+	double lightWindowStart = 0.0;
+	double lightWindowEnergy = 0.0;
+
 	// Reads the film and updates its sample counts (the GPU light paths are
 	// the RADIANCE_PER_SCREEN_NORMALIZED samples)
 	auto RecvFilm = [&]() {
@@ -150,10 +178,10 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 		double totalCount = 0.0;
 		for (size_t i = 0; i < taskCount; ++i)
 			totalCount += gpuTaskStats[i].sampleCount;
-		double lightPathCount = 0.0;
+		lightPathTotal = 0.0;
 		for (size_t i = 0; i < lightTaskCount; ++i)
-			lightPathCount += lightPathCounts[i];
-		threadFilms[0]->GetFilm().SetSampleCount(totalCount, totalCount, lightPathCount);
+			lightPathTotal += lightPathCounts[i];
+		threadFilms[0]->GetFilm().SetSampleCount(totalCount, totalCount, lightPathTotal);
 	};
 
 	while (!stop_token.stop_requested()) {
@@ -181,6 +209,19 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 		if (totalTransferTime < totalKernelTime * (1.0 / 100.0)) {
 			RecvFilm();
 
+			if ((lightTaskCount > 0) && (lightPathTotal - lightWindowStart >= lightWindowPaths)) {
+				const double energy = LightChannelsEnergy(threadFilms[0]->GetFilm());
+				const u_int period = (energy > lightWindowEnergy) ? 1 : lightIdlePeriod;
+				if (period != lightPeriod) {
+					SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Light tracing kernels every " <<
+							period << " iteration(s): the last " << (lightPathTotal - lightWindowStart) <<
+							" light paths " << ((period == 1) ? "added" : "did not add") << " energy to the film");
+					lightPeriod = period;
+				}
+				lightWindowStart = lightPathTotal;
+				lightWindowEnergy = energy;
+			}
+
 			//SLG_LOG("[DEBUG] film transferred");
 		}
 		const double timeTransferEnd = WallClockTime();
@@ -197,14 +238,19 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 		}
 
 		for (u_int i = 0; i < iterations; ++i) {
+			// The light rays follow the eye rays: when the light kernel does not
+			// run, they are not traced and wait for the next light iteration
+			const bool lightStep = (lightTaskCount > 0) && ((lightIteration++ % lightPeriod) == 0);
+
 			// Trace rays
 			const double profileStart = BeginKernelProfile();
-			intersectionDevice.EnqueueTraceRayBuffer(raysBuff, hitsBuff, taskCount + lightTaskCount);
+			intersectionDevice.EnqueueTraceRayBuffer(raysBuff, hitsBuff,
+					taskCount + (lightStep ? lightTaskCount : 0));
 			EndKernelProfile(KERNEL_PROFILE_TRACE, profileStart);
 
 			// Advance to next path state
 			EnqueueAdvancePathsKernel();
-			if (lightTaskCount > 0)
+			if (lightStep)
 				EnqueueAdvanceLightPathsKernel();
 		}
 		totalIterations += iterations;

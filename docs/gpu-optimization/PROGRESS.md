@@ -740,3 +740,48 @@ Default (no hybrid) image check, `bench.py image` 256 spp vs
 preprocessed code as T6.1).
 
 Next: T6.5 (work balance), then T7.1 + T7.2 per the roadmap order.
+
+### 2026-10-27: T6.5 light tracing duty cycle (branch `gpu-opt/T6.5-light-eye-balance`)
+
+Branched from `gpu-opt/T6.2-light-path-efficiency`. The GPU render loop
+(`pathoclopenclthread.cpp`) now runs the light kernel, and traces the light
+rays, only every `lightPeriod` iterations. The light rays follow the eye
+rays in the ray buffer, so on the other iterations only `taskCount` rays
+are traced and the light rays wait, untouched, for the next light
+iteration. After each film read, once 8 x lightTaskCount light paths have
+been counted since the last check, the loop sums the light tracing
+(RADIANCE_PER_SCREEN_NORMALIZED) channels: no new energy sets the period
+to 16, new energy sets it back to 1. The light channels are normalized by
+the light path count, so the period changes the noise, not the image.
+Only host code changed; the kernels are the T6.2 ones.
+
+Speed (GPU only, 40 s, warm kernel cache, eye spp):
+
+| Scene | no GPU light tracing | T6.2 | T6.5 |
+|---|---|---|---|
+| LuxCore2.1Benchmark (photongi off) | 857 | 599 | 838 |
+| 2-glasses | | 297 | 300 |
+
+LuxCore2.1Benchmark switches to period 16 at 1.1 s (the first window,
+1.4e7 light paths). 2-glasses never leaves period 1.
+
+Measuring pitfall: `batch.halttime` includes the kernel compile. The
+first T6.5 runs with a cold cache lost 21-27 s of 40 to it (392 spp
+instead of 857). The T6.2 table runs had warm caches; only
+`lo_bench_g0` (the odd 211 spp) did not.
+
+Check of the skipped iterations: a debug build with the period forced to
+16 and the eye radiance cleared (light-only, not committed,
+`bench\bin-T6.5-p16lo`) vs the T6.2 light-only 2-glasses images: light
+mean ratio 0.9937 / 0.9948 (seeds 1 / 2) at 40 s, 0.9988 / 0.9988 at
+160 s, every bright tile the same. The gap falls as 1/time, so it is not
+the duty cycle: it is the count of light paths at the end (T6.6). A path
+is counted when it is done, and the paths still in flight are more often
+the long caustic ones, so the light part reads low by about
+Cov(contribution, length) / (mean length x mean contribution x paths per
+task). With 16x fewer paths the gap is 16x larger. At the normal period
+it is about -0.03% of the light part at 40 s on 2-glasses (the T6.2
+light-only reference itself). In normal use the period is 16 only while
+the light paths add nothing, so T6.5 does not make it larger.
+
+Next: T7.1 + T7.2 per the roadmap order (T6.6 is low priority).
