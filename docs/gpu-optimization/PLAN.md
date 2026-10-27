@@ -205,10 +205,11 @@ T6.1 design (from the code, 2026-10-26):
 
 | ID | Task | Status | Acceptance |
 |---|---|---|---|
-| T7.1 | Keep the film on the CUDA device: merge thread films there, no per-update host merge; read back only for outputs, halt checks and the Blender display. | todo | No `AddFilm` on the host during rendering; same output. |
-| T7.2 | Convergence test and noise estimation (adaptive sampling) as GPU kernels. | todo | Same convergence values; host time per update ~0. |
+| T7.1 | Keep the film on the CUDA device: merge thread films there, no per-update host merge; read back only for outputs, halt checks and the Blender display. | deferred: measured no gain (PROGRESS 2026-10-27 "T7.5"): the host merge takes 0-6 ms per 1 s film update, off the GPU path; the render loop host work was the real cost, done in T7.5 | No `AddFilm` on the host during rendering; same output. |
+| T7.2 | Convergence test and noise estimation (adaptive sampling) as GPU kernels. | deferred: measured 18-41 ms of host time per 1 s film update (PROGRESS 2026-10-27 "T7.5"), on the session thread beside the GPU: no speed gain to get; revisit with T7.3 / T7.4 | Same convergence values; host time per update ~0. |
 | T7.3 | Image pipeline in CUDA on the render device (today OpenCL through a second device context). | todo | Same pixels; no OpenCL needed on NVIDIA. |
 | T7.4 | OIDN with its CUDA device (ship `device_cuda`); keep the OptiX denoiser option. | todo | Denoise time down; same denoiser output within OIDN tolerance. |
+| T7.5 | Render loop host work: the PATHOCL render thread spun a CPU core in `FinishQueue()` (CUDA context `CU_CTX_SCHED_YIELD`) and the GPU idled during film reads. Queue one batch ahead, wait on blocking-sync events, read the film asynchronously through pinned memory. | done (branch `gpu-opt/T7.5-async-render-loop`): render thread CPU from one core to 3-5% of a core, samples/sec unchanged, image check pass | Host CPU during rendering down; samples/sec and image unchanged. |
 
 ### Phase 8: time to first sample and scene edits
 

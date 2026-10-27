@@ -523,6 +523,16 @@ void OpenCLDevice::FinishQueue() {
 		CHECK_OCL_ERROR(clFinish(oclQueue));
 }
 
+// OpenCL reads write the host memory directly: a marker is a flush and
+// waiting for it is a finish
+void OpenCLDevice::EnqueueMarker() {
+	FlushQueue();
+}
+
+void OpenCLDevice::WaitMarker() {
+	FinishQueue();
+}
+
 //------------------------------------------------------------------------------
 // Memory management for hardware (aka GPU) only applications
 //------------------------------------------------------------------------------

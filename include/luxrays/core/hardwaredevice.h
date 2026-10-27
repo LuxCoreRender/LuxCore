@@ -219,6 +219,13 @@ public:
 			const bool blocking, const size_t size, const void *ptr) = 0;
 	virtual void FlushQueue() = 0;
 	virtual void FinishQueue() = 0;
+	// Queue markers. EnqueueMarker() adds a marker after the work queued so
+	// far. WaitMarker() blocks the calling thread, without spinning where the
+	// device allows it, until the device has executed the oldest marker not
+	// waited for yet: the non-blocking reads queued before it are then
+	// complete. FinishQueue() completes all the markers.
+	virtual void EnqueueMarker() = 0;
+	virtual void WaitMarker() = 0;
 
 	//--------------------------------------------------------------------------
 	// Memory management for hardware (aka GPU) only applications

@@ -785,3 +785,90 @@ light-only reference itself). In normal use the period is 16 only while
 the light paths add nothing, so T6.5 does not make it larger.
 
 Next: T7.1 + T7.2 per the roadmap order (T6.6 is low priority).
+
+### 2026-10-27: T7.1 / T7.2 measured; T7.5 asynchronous render loop (branch `gpu-opt/T7.5-async-render-loop`)
+
+Branched from `gpu-opt/T6.5-light-eye-balance` (same render loop file).
+
+T7.1 / T7.2 first: a temporary build timed `RenderEngine::UpdateFilm()`
+(host merge of the thread films, then `Film::RunTests()`) and the render
+thread film transfers. GPU only, 30 s, one film update per second:
+
+| Scene | film | merge / update | RunTests / update | film transfer, % of kernel time |
+|---|---|---|---|---|
+| LuxBall | 800x800 | 2.5 ms | 22 ms | 1.0% |
+| DLSC | 864x640 | ~0 ms | 41 ms | 0.9% |
+| 2-glasses | 1024x1024 | 1.4 ms | 18 ms | 0.8% |
+| LuxCore2.1Benchmark | 789x1071 | 6.4 ms | 28 ms | 1.0% |
+
+The merge and the tests run on the session thread beside the GPU, so
+moving them to the GPU cannot raise samples/sec: T7.1 and T7.2 are
+deferred. The real host cost was the render thread itself: one full core
+for the whole render. The CUDA context is created with
+`CU_CTX_SCHED_YIELD`, so `FinishQueue()` after each batch of iterations
+spins. `CU_CTX_SCHED_BLOCKING_SYNC` alone cut the process CPU time
+(2-glasses 33.9 s to 3.9 s in 30 s), but the GPU then idles while the
+woken thread queues the next batch: LuxBall 18.03 to 17.75 M samples/sec
+(-1.6%, speed protocol), DLSC 20.87 to 20.97. Not kept.
+
+T7.5 instead:
+
+- `HardwareDevice::EnqueueMarker()` / `WaitMarker()`. CUDA: an event with
+  `CU_EVENT_BLOCKING_SYNC`, so the waiting thread sleeps; the context stays
+  `CU_CTX_SCHED_YIELD`. OpenCL: flush / finish (the old behavior, not
+  tested).
+- CUDA non-blocking `EnqueueReadBuffer()` goes through pinned memory (one
+  allocation of the buffer size per buffer, at the first read): an async
+  copy to pageable memory blocks until the device has run all the queued
+  work. The copy to the destination runs in `WaitMarker()` /
+  `FinishQueue()`, the point where an OpenCL non-blocking read is
+  complete too. A blocking read finishes the queue first, so the reads
+  stay in queue order. Falls back to the old copy if pinned memory can not
+  be allocated.
+- `PathOCLOpenCLRenderThread::RenderThreadImpl()` keeps one batch queued
+  ahead: it queues batch k, then waits for batch k-1. Film reads are queued
+  between two batches with their own marker and completed (sample counts,
+  T6.5 light window) after the next batch is queued. Pause, the PhotonGI
+  cache update and the end of the render drain the queue; the last film
+  read is synchronous as before.
+- The 1% film transfer budget now charges each read the time of the
+  second read, measured once with nothing else queued.
+
+Windows pitfalls found on the way: `WallClockTime()` is `GetTickCount()`,
+10-16 ms resolution (the loop now uses `std::chrono::steady_clock`). On
+WDDM a marker can complete for the host only together with the next batch
+(a film read marker waited 92-192 ms): the first version charged that wait
+to the transfer budget and read the film only every ~10-20 s, which also
+delayed noise estimation and made samples/sec look 10% higher on
+2-glasses. Fixed by the measured read time above.
+
+Results (bins `bench\bin-T7.1-base` = T6.5, `bench\bin-T7.1`):
+
+| Scene (GPU only) | render thread CPU, base | T7.5 |
+|---|---|---|
+| LuxBall | 100% of a core | 4% |
+| DLSC | 101% | 5% |
+| 2-glasses | 100% | 3% |
+| 2-glasses hybrid | 99% | 3% |
+
+(process CPU over seconds 6-26 of a 30 s render, `batch.haltspp 0`; the
+rest of the process CPU is the scene load and, for LuxBall, the CPU OIDN
+of its output pipeline at the end.)
+
+- Speed protocol, back to back: LuxBall 17.88 base, 17.94 T7.5 (+0.3%). DLSC
+  20.87 (base, earlier) vs 21.02 (+0.7%). Equal within noise; the film
+  copies no longer stop the GPU, but they cost under 1% before.
+- Image check 256 spp vs `T6.1-base-img`: LuxBall RMSE 0.00224 (floor
+  0.0168), DLSC 0.0141 (0.132), mean -0.001% / +0.041%: pass.
+- Film update cadence with the scene settings (30 s, noise estimations
+  base / T7.5): LuxBall 16 / 15, DLSC 23 / 28, 2-glasses 5 / 6.
+- 2-glasses hybrid, 40 s: brightest 50x50 tiles T7.5 / base 0.999-1.000,
+  the same as between two T7.5 seeds (light path counts and the light
+  channels are read at the same queue point).
+
+Open: TILEPATHOCL and RTPATHOCL keep their own loops with `FinishQueue()`.
+The NOISE / CONVERGENCE / USER_IMPORTANCE channels are still written from
+pageable memory at each film read (CUDA may synchronize such copies; no
+CPU or speed effect was measured).
+
+Next: T8.1 + T8.2 per the roadmap order.
