@@ -19,44 +19,48 @@
  ***************************************************************************/
 
 typedef struct {
-	union {
-		struct {
-			// I can not use BBox here because objects with a constructor are not
-			// allowed inside an union.
-			float bboxMin[3];
-			float bboxMax[3];
-		} bvhNode;
-		struct {
-			unsigned int v[3];
-			unsigned int meshIndex, triangleIndex;
-		} triangleLeaf;
-		struct {
-			unsigned int leafIndex;
-			unsigned int transformIndex, motionIndex; // transformIndex or motionIndex have to be NULL_INDEX (i.e. only one can be used)
-			unsigned int meshOffsetIndex;
-		} bvhLeaf; // Used by MBVH
-	};
+	// Note: this is not a union (anymore) because the unions in buffer
+	// layouts are not supported by all the OpenCL compilers (e.g. clspv,
+	// used to run the kernels over Vulkan, doesn't). The views over the
+	// raw storage are provided by the BVHArrayNode_* macros below and the
+	// layout is the same as the one of the host side (see
+	// include/luxrays/core/bvh/bvhbuild.h)
+	float data[6];
+
 	// Most significant bit is used to mark leafs
 	unsigned int nodeData;
 	int pad0; // To align to float4
 } BVHArrayNode;
 
+// Views over BVHArrayNode.data (see the note above)
+#define BVHArrayNode_BBoxMin(node, i) ((node).data[i])
+#define BVHArrayNode_BBoxMax(node, i) ((node).data[3 + (i)])
+#define BVHArrayNode_TriangleV(node, i) (as_uint((node).data[i]))
+#define BVHArrayNode_TriangleMeshIndex(node) (as_uint((node).data[3]))
+#define BVHArrayNode_TriangleIndex(node) (as_uint((node).data[4]))
+#define BVHArrayNode_LeafIndex(node) (as_uint((node).data[0]))
+#define BVHArrayNode_TransformIndex(node) (as_uint((node).data[1]))
+#define BVHArrayNode_MotionIndex(node) (as_uint((node).data[2]))
+#define BVHArrayNode_MeshOffsetIndex(node) (as_uint((node).data[3]))
+
 typedef struct {
-	union {
-		// I can not use BBox/Point/Normal here because objects with a constructor are not
-		// allowed inside an union.
-		struct {
-			float bboxMin[3];
-			float bboxMax[3];
-		} bvhNode;
-		struct {
-			unsigned int entryIndex;
-		} entryLeaf;
-	};
+	// Note: this is not a union (anymore) because the unions in buffer
+	// layouts are not supported by all the OpenCL compilers (e.g. clspv,
+	// used to run the kernels over Vulkan, doesn't). The views over the
+	// raw storage are provided by the IndexBVHArrayNode_* macros below
+	// and the layout is the same as the one of the host side (see
+	// include/slg/core/indexbvh.h)
+	float data[6];
+
 	// Most significant bit is used to mark leafs
 	unsigned int nodeData;
 	int pad; // To align to float4
 } IndexBVHArrayNode;
+
+// Views over IndexBVHArrayNode.data (see the note above)
+#define IndexBVHArrayNode_BBoxMin(node, i) ((node).data[i])
+#define IndexBVHArrayNode_BBoxMax(node, i) ((node).data[3 + (i)])
+#define IndexBVHArrayNode_EntryIndex(node) (as_uint((node).data[0]))
 
 #define IndexBVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
 #define IndexBVHNodeData_GetSkipIndex(nodeData) ((nodeData) & 0x7fffffffu)

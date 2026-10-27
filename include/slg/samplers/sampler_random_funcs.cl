@@ -73,10 +73,10 @@ OPENCL_FORCE_INLINE void RandomSampler_InitNewSample(__constant const GPUTaskCon
 	__global RandomSample *sample = &samples[gid];
 	__global float *samplesData = &samplesDataBuff[gid * RANDOMSAMPLER_TOTAL_U_SIZE];
 
-	const uint bucketSize = sampler->sobol.bucketSize;
-	const uint tileSize = sampler->sobol.tileSize;
-	const uint superSampling = sampler->sobol.superSampling;
-	const uint overlapping = sampler->sobol.overlapping;
+	const uint bucketSize = sampler->random.bucketSize;
+	const uint tileSize = sampler->random.tileSize;
+	const uint superSampling = sampler->random.superSampling;
+	const uint overlapping = sampler->random.overlapping;
 	
 	const uint subRegionWidth = filmSubRegion1 - filmSubRegion0 + 1;
 	const uint subRegionHeight = filmSubRegion3 - filmSubRegion2 + 1;
@@ -126,7 +126,7 @@ OPENCL_FORCE_INLINE void RandomSampler_InitNewSample(__constant const GPUTaskCon
 		const uint pixelY = filmSubRegion2 + subRegionPixelY;
 
 		if (filmNoise) {
-			const float adaptiveStrength = sampler->sobol.adaptiveStrength;
+			const float adaptiveStrength = sampler->random.adaptiveStrength;
 
 			if (adaptiveStrength > 0.f) {
 				// Pixels are sampled in accordance with how far from convergence they are
@@ -141,7 +141,7 @@ OPENCL_FORCE_INLINE void RandomSampler_InitNewSample(__constant const GPUTaskCon
 					if (isinf(noise))
 						threshold = userImportance;
 					else
-						threshold = (userImportance > 0.f) ? Lerp(sampler->sobol.adaptiveUserImportanceWeight, noise, userImportance) : 0.f;
+						threshold = (userImportance > 0.f) ? Lerp(sampler->random.adaptiveUserImportanceWeight, noise, userImportance) : 0.f;
 				} else
 					threshold = noise;
 
@@ -198,7 +198,7 @@ OPENCL_FORCE_INLINE bool RandomSampler_Init(
 
 	const uint bucketSize = sampler->random.bucketSize;
 	sample->pixelOffset = bucketSize * bucketSize;
-	sample->passOffset = sampler->sobol.superSampling;
+	sample->passOffset = sampler->random.superSampling;
 
 	RandomSampler_NextSample(taskConfig,
 			filmNoise,

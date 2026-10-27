@@ -53,11 +53,12 @@ typedef struct {
 	unsigned int trisOffset;
 
 	// Object space transformation
-	union {
-		TriangleMeshParam triangle;
-		TriangleInstanceMeshParam instance;
-		TriangleMotionMeshParam motion;
-	};
+	// Note: this is not a union (anymore) because the unions in buffer
+	// layouts are not supported by all the OpenCL compilers (e.g. clspv,
+	// used to run the kernels over Vulkan, doesn't)
+	TriangleMeshParam triangle;
+	TriangleInstanceMeshParam instance;
+	TriangleMotionMeshParam motion;
 } ExtMesh;
 
 #if defined(SLG_OPENCL_KERNEL)

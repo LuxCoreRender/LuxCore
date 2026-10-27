@@ -327,11 +327,12 @@ typedef struct {
 	unsigned int volumeLightID;
 	int priority;
 
-	union {
-		ClearVolumeParam clear;
-		HomogenousVolumeParam homogenous;
-		HeterogenousVolumeParam heterogenous;
-	};
+	// Note: this is not a union (anymore) because the unions in buffer
+	// layouts are not supported by all the OpenCL compilers (e.g. clspv,
+	// used to run the kernels over Vulkan, doesn't)
+	ClearVolumeParam clear;
+	HomogenousVolumeParam homogenous;
+	HeterogenousVolumeParam heterogenous;
 } VolumeParam;
 
 typedef struct {
@@ -366,29 +367,30 @@ typedef struct {
 	unsigned int evalEvaluateOpStartIndex, evalEvaluateOpLength;
 	unsigned int evalSampleOpStartIndex, evalSampleOpLength;
 
-	union {
-		MatteParam matte;
-		RoughMatteParam roughmatte;
-		MirrorParam mirror;
-		GlassParam glass;
-		MetalParam metal;
-		ArchGlassParam archglass;
-		MixParam mix;
-		// NULLMAT has no parameters
-		MatteTranslucentParam matteTranslucent;
-		RoughMatteTranslucentParam roughmatteTranslucent;
-		Glossy2Param glossy2;
-		Metal2Param metal2;
-		RoughGlassParam roughglass;
-		VelvetParam velvet;
-        ClothParam cloth;
-		CarPaintParam carpaint;
-		GlossyTranslucentParam glossytranslucent;
-		GlossyCoatingParam glossycoating;
-		DisneyParam disney;
-		TwoSidedParam twosided;
-		VolumeParam volume;
-	};
+	// Note: this is not a union (anymore) because the unions in buffer
+	// layouts are not supported by all the OpenCL compilers (e.g. clspv,
+	// used to run the kernels over Vulkan, doesn't)
+	MatteParam matte;
+	RoughMatteParam roughmatte;
+	MirrorParam mirror;
+	GlassParam glass;
+	MetalParam metal;
+	ArchGlassParam archglass;
+	MixParam mix;
+	// NULLMAT has no parameters
+	MatteTranslucentParam matteTranslucent;
+	RoughMatteTranslucentParam roughmatteTranslucent;
+	Glossy2Param glossy2;
+	Metal2Param metal2;
+	RoughGlassParam roughglass;
+	VelvetParam velvet;
+    ClothParam cloth;
+	CarPaintParam carpaint;
+	GlossyTranslucentParam glossytranslucent;
+	GlossyCoatingParam glossycoating;
+	DisneyParam disney;
+	TwoSidedParam twosided;
+	VolumeParam volume;
 } Material;
 
 //------------------------------------------------------------------------------
