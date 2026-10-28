@@ -440,6 +440,31 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	intersectionDevice.AllocBufferRW(&pathMaterialKeysBuff, nullptr, sizeof(u_int) * taskCount, "PathMaterialKeys");
 }
 
+// The GPU Sobol tables (see SobolSequence_SobolDimension()): for each
+// dimension, table k entry n is the XOR of the direction vectors
+// k * SOBOL_TABLE_BITS + b for the bits b set in n
+static void GenerateSobolTables(u_int *tables, const u_int dimensions) {
+	vector<u_int> directions(dimensions * SOBOL_BITS);
+	SobolSequence::GenerateDirectionVectors(directions.data(), dimensions);
+
+	const u_int tableEntries = 1u << SOBOL_TABLE_BITS;
+	for (u_int dim = 0; dim < dimensions; ++dim) {
+		const u_int *dimDirections = &directions[dim * SOBOL_BITS];
+		u_int *dimTables = &tables[dim * SOBOL_TABLE_SIZE];
+
+		for (u_int k = 0; k < SOBOL_BITS / SOBOL_TABLE_BITS; ++k) {
+			for (u_int n = 0; n < tableEntries; ++n) {
+				u_int value = 0;
+				for (u_int b = 0; b < SOBOL_TABLE_BITS; ++b) {
+					if (n & (1u << b))
+						value ^= dimDirections[k * SOBOL_TABLE_BITS + b];
+				}
+				dimTables[k * tableEntries + n] = value;
+			}
+		}
+	}
+}
+
 void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 	const u_int *subRegion = renderEngine->GetFilm().GetSubRegion();
 	const u_int filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
@@ -455,14 +480,14 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 		// Plus the a pass field for each pixel
 		size += sizeof(u_int) * filmRegionPixelCount;
 
-		// Plus the Sobol directions array
-		size += sizeof(u_int) * renderEngine->pathTracer.eyeSampleSize * SOBOL_BITS;
+		// Plus the Sobol tables
+		size += sizeof(u_int) * renderEngine->pathTracer.eyeSampleSize * SOBOL_TABLE_SIZE;
 	} else if (renderEngine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
 		size += sizeof(slg::ocl::TilePathSamplerSharedData);
 
 		switch (renderEngine->GetType()) {
 			case TILEPATHOCL:
-				size += sizeof(u_int) * renderEngine->pathTracer.eyeSampleSize * SOBOL_BITS;
+				size += sizeof(u_int) * renderEngine->pathTracer.eyeSampleSize * SOBOL_TABLE_SIZE;
 				break;
 			case RTPATHOCL:
 				break;
@@ -501,11 +526,11 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 		u_int *passBuffer = (u_int *)(buffer + sizeof(slg::ocl::SobolSamplerSharedData));
 		fill(passBuffer, passBuffer + filmRegionPixelCount, SOBOL_STARTOFFSET);
 
-		// Initialize the Sobol directions array values. The pass buffer is attached at the
-		// end of slg::ocl::SobolSamplerSharedData + all pass values
+		// Initialize the Sobol tables. They are attached at the end of
+		// slg::ocl::SobolSamplerSharedData + all pass values
 
-		u_int *sobolDirections = (u_int *)(buffer + sizeof(slg::ocl::SobolSamplerSharedData) + sizeof(u_int) * filmRegionPixelCount);
-		SobolSequence::GenerateDirectionVectors(sobolDirections, renderEngine->pathTracer.eyeSampleSize);
+		u_int *sobolTables = (u_int *)(buffer + sizeof(slg::ocl::SobolSamplerSharedData) + sizeof(u_int) * filmRegionPixelCount);
+		GenerateSobolTables(sobolTables, renderEngine->pathTracer.eyeSampleSize);
 
 		// Write the data
 		intersectionDevice.EnqueueWriteBuffer(samplerSharedDataBuff, CL_TRUE, size, buffer);
@@ -518,9 +543,9 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 				auto _buffer = std::make_unique<char[]>(size);
 				auto buffer = _buffer.get();
 
-				// Initialize the Sobol directions array values
-				u_int *sobolDirections = (u_int *)(buffer + sizeof(slg::ocl::TilePathSamplerSharedData));
-				SobolSequence::GenerateDirectionVectors(sobolDirections, renderEngine->pathTracer.eyeSampleSize);
+				// Initialize the Sobol tables
+				u_int *sobolTables = (u_int *)(buffer + sizeof(slg::ocl::TilePathSamplerSharedData));
+				GenerateSobolTables(sobolTables, renderEngine->pathTracer.eyeSampleSize);
 
 				intersectionDevice.EnqueueWriteBuffer(samplerSharedDataBuff, CL_TRUE, size, &buffer[0]);
 				break;

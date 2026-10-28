@@ -785,9 +785,8 @@ __kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 		tasksDirectLight[gid].throughShadowTransparency = false;
 
 		// Make a copy of current PathVolumeInfo for tracing the
-		// shadow ray (Scene_Intersect() doesn't read it without volumes)
-		if (SCENE_HAS_VOLUMES)
-			directLightVolInfos[gid] = pathInfo->volume;
+		// shadow ray
+		directLightVolInfos[gid] = pathInfo->volume;
 
 		// Without transparency and volumes any hit shadows the light: the
 		// closest one is not needed

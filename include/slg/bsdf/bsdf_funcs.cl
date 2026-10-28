@@ -59,24 +59,16 @@ OPENCL_FORCE_INLINE void BSDF_Init(
 	// Set interior and exterior volumes
 	//--------------------------------------------------------------------------
 
-	if (SCENE_HAS_VOLUMES) {
-		PathVolumeInfo_SetHitPointVolumes(
-				volInfo,
-				&bsdf->hitPoint,
-				Material_GetInteriorVolume(matIndex, &bsdf->hitPoint,
-					passThroughEvent
-					MATERIALS_PARAM),
-				Material_GetExteriorVolume(matIndex, &bsdf->hitPoint,
-					passThroughEvent
-					MATERIALS_PARAM)
-				MATERIALS_PARAM);
-	} else {
-		// No volumes in the scene: the result of the code above
-		bsdf->hitPoint.interiorVolumeIndex = NULL_INDEX;
-		bsdf->hitPoint.exteriorVolumeIndex = NULL_INDEX;
-		bsdf->hitPoint.interiorIorTexIndex = NULL_INDEX;
-		bsdf->hitPoint.exteriorIorTexIndex = NULL_INDEX;
-	}
+	PathVolumeInfo_SetHitPointVolumes(
+			volInfo,
+			&bsdf->hitPoint,
+			Material_GetInteriorVolume(matIndex, &bsdf->hitPoint,
+				passThroughEvent
+				MATERIALS_PARAM),
+			Material_GetExteriorVolume(matIndex, &bsdf->hitPoint,
+				passThroughEvent
+				MATERIALS_PARAM)
+			MATERIALS_PARAM);
 
 	//--------------------------------------------------------------------------
 

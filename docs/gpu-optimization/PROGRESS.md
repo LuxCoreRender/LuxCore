@@ -1045,3 +1045,95 @@ Next steps for T5.5:
    `light_funcs.cl`). Only when the light is visible to diffuse, glossy
    and specular indirect rays; fall back to the original distribution if
    the compensated one is all zero.
+
+### 2026-10-28: T5.5 done: Sobol tables kept, light mask and volume gate rejected
+
+Image check of the volume gate (`bin-T5.5c`, 256 spp, volume scenes with
+`-D path.photongi.indirect.enabled 0` against a new `T8.1-vol-img`
+baseline): LuxBall RMSE 0.00172 (floor 0.0168), DLSC 0.00385 (0.132),
+DanishMood 0.00124 (0.0283), LynxSpider 0.000485 (0.0142): pass, volumes
+render as before.
+
+Speed was the problem. `bench.py ab`, T8.1 (merged chain) vs T5.5c,
+3 x 40 s: LuxBall 17.99 -> 16.38 (-8.9%), DLSC 21.02 -> 21.14,
+LuxCore2.1Benchmark 18.70 -> 18.61. Per step (3 x 30 s): T8.1 vs T5.5
+(light mask) LuxBall 18.02 -> 18.13, DLSC 20.91 -> 21.13; T5.5b (+ Sobol)
+vs T5.5c (+ volume gate) LuxBall 18.21 -> 16.50 (-9.4%), DLSC 21.93 ->
+21.11 (-3.7%). The light mask and the Sobol unroll are gains, the volume
+gate is a loss.
+
+Why (LuxBall, bins and reports in `D:\REPO\LuxCoreRepo\bench\T5.5-prof`):
+
+- Kernel profile 20 s, T5.5b vs T5.5c: RT_NEXT_VERTEX 3171 -> 5184 ms,
+  while DL_SAMPLE_BSDF 2317 -> 1670, RT_DL 1686 -> 1237 and
+  GENERATE_NEXT_VERTEX_RAY 4624 -> 4077 ms got faster.
+- Nsight Compute, one RT_NEXT_VERTEX launch: 30% fewer instructions,
+  255 -> 244 registers, no spills (ptxas: stack frame 720 -> 528 bytes),
+  but 41 -> 109 warp cycles per issued instruction, half the memory
+  throughput, long_scoreboard stalls per issue 33.6 -> 98. Same occupancy
+  (16%). Removing code from `Scene_Intersect()` (not inlined, shared by
+  RT_NEXT_VERTEX and RT_DL) made the scheduling of its loads worse; the
+  exact cause was not found (no line info in these builds).
+- Variant without the `BSDF_Init()` gate (T5.5d): RT_NEXT_VERTEX still
+  4996 ms, so the `Scene_Intersect()` gate causes it.
+- Variant with only the shadow ray volume info copy skip and the
+  `Volume_Scatter()` type guards (T5.5e): RT_NEXT_VERTEX back to 3053 ms
+  and DL_SAMPLE_BSDF -20%, but `ab` vs T5.5b: LuxBall +1.6%, DLSC -3.5%,
+  LuxCore2.1Benchmark -3.0%. T5.5e was also unsafe: `directLightVolInfos`
+  is allocated uninitialized and only written by that copy, and
+  `Scene_Intersect()` reads it for shadow rays. If this is retried, call
+  `PathVolumeInfo_Init()` on it in the Init kernel (reruns after every
+  scene edit; the thread start allocation does not).
+
+The volume gate is dropped.
+
+T5.5b (light mask + Sobol unroll) was not a clear win either. `ab`
+T8.1 vs T5.5b: LuxBall +1.3%, DLSC +3.9%, LuxCore2.1Benchmark -4.8%
+(with `-D path.photongi.indirect.enabled 0`, 5 runs: 17.57 vs 16.73;
+with PhotonGI this scene varies 15.6-18.8 between runs, too noisy to
+use). Kernel profile on LuxCore2.1Benchmark (sun + sky2): DL_ILLUMINATE
+T8.1 1624 ms, T5.5 (mask) 2144, T5.5b (+ unroll) 2457. Nsight Compute,
+one DL_ILLUMINATE launch: the mask drops it from 241 to 48 registers
+(40 with the unroll), so occupancy rises 16% -> 57% -> 84%; at 84% the
+unrolled Sobol (32 loads per dimension) saturates the load/store queue:
+lg_throttle stalls per issue 0.6 -> 13 -> 80, long_scoreboard 8.6 ->
+39 -> 100, L1 hit rate 77% -> 71%, with half the instructions.
+
+Fix for the Sobol part: GPU Sobol tables. For each dimension, 8 tables of
+16 entries: entry n of table k is the XOR of the direction vectors 4k..4k+3
+selected by the bits of n (`GenerateSobolTables()` in
+`pathoclbaseoclthreadinit.cpp`, `SOBOL_TABLE_SIZE` = 128 uint per
+dimension instead of 32). `SobolSequence_SobolDimension()` does 8
+independent loads. Bit-exact: image check 256 spp vs `T6.1-base-img`
+LuxBall RMSE 0.00383 (floor 0.0168), DLSC 0.0153 (0.132), pass.
+
+`ab` vs T8.1 (3 x 30 s; LuxCore2.1Benchmark and DanishMood without
+PhotonGI):
+
+| Scene | T5.5f (mask + tables) | T5.5g (tables only) |
+|---|---|---|
+| LuxBall | +2.0% | +1.3% |
+| DLSC | +2.0% | +3.9% |
+| LuxCore2.1Benchmark | -1.4% | +0.2% |
+| DanishMood | -2.0% | +1.8% |
+
+Decision: T5.5 = Sobol tables only (T5.5g). The light type mask is
+dropped too: it raises occupancy where the kernel then gets memory bound
+and costs the heavier scenes; its gain was compile time and cubin size
+(-5%), not speed. Not done: `PARAM_FILM_RADIANCE_GROUP_COUNT` (estimated
+at most 0.7%: 3.9% of the SPLAT_SAMPLE stalls, SPLAT_SAMPLE about 18% of
+the kernel time, below the `ab` noise).
+
+T5.5 conclusion: compiling code out of these kernels does not reliably
+help. The heavy kernels are memory-latency bound; fewer registers raise
+occupancy, which can make them slower (cache and load/store queue
+pressure). Specialization beyond the material/texture types (T3.2) is not
+worth more work.
+
+Lesson: register counts do not predict these effects. Check every
+kernel-code change with a 20 s kernel profile (`opencl.kernel.profile.enable
+1`) per micro-kernel, not only the total.
+
+Tool note: `ptxas` 12.8 on a cached PTX file (`<TEMP>\luxcorerender.org\
+cuda_kernel_cache`): strip the 4-byte header (`tail -c +5`) and change
+`.version 8.8` (NVRTC 12.9) to `8.7`; `-e <kernel>` limits it to one entry.

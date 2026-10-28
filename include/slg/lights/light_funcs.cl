@@ -18,17 +18,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-// Kernel specialization: when the host defines PARAM_LIGHT_TYPES_MASK, only the
-// light types with their bit set are evaluated. The others can not be in the
-// scene, so their code is dead and removed by the compiler.
-#if defined(PARAM_LIGHT_TYPES_MASK)
-#define LIGHT_TYPE_ENABLED(t) ((PARAM_LIGHT_TYPES_MASK >> (t)) & 1u)
-#else
-#define LIGHT_TYPE_ENABLED(t) 1u
-#endif
-// Used at the start of a case of a switch on the light type
-#define LIGHT_TYPE_GUARD(t) if (!LIGHT_TYPE_ENABLED(t)) break
-
 OPENCL_FORCE_INLINE float EnvLightSource_GetEnvRadius(const float sceneRadius) {
 	// This is used to scale the world radius in sun/sky/infinite lights in order to
 	// avoid problems with objects that are near the borderline of the world bounding sphere
@@ -977,25 +966,21 @@ OPENCL_FORCE_NOT_INLINE float3 EnvLight_GetRadiance(__global const LightSource *
 		LIGHTS_PARAM_DECL) {
 	switch (light->type) {
 		case TYPE_IL_CONSTANT:
-			LIGHT_TYPE_GUARD(TYPE_IL_CONSTANT);
 			return ConstantInfiniteLight_GetRadiance(light,
 					bsdf,
 					dir, directPdfA
 					LIGHTS_PARAM);
 		case TYPE_IL:
-			LIGHT_TYPE_GUARD(TYPE_IL);
 			return InfiniteLight_GetRadiance(light,
 					bsdf,
 					dir, directPdfA
 					LIGHTS_PARAM);
 		case TYPE_IL_SKY2:
-			LIGHT_TYPE_GUARD(TYPE_IL_SKY2);
 			return Sky2Light_GetRadiance(light,
 					bsdf,
 					dir, directPdfA
 					LIGHTS_PARAM);
 		case TYPE_SUN:
-			LIGHT_TYPE_GUARD(TYPE_SUN);
 			return SunLight_GetRadiance(light,
 					bsdf,
 					dir, directPdfA);
@@ -1006,8 +991,6 @@ OPENCL_FORCE_NOT_INLINE float3 EnvLight_GetRadiance(__global const LightSource *
 		default:
 			return BLACK;
 	}
-	// Light types compiled out by LIGHT_TYPE_GUARD()
-	return BLACK;
 }
 
 OPENCL_FORCE_INLINE float3 IntersectableLight_GetRadiance(__global const LightSource *light,
@@ -1032,7 +1015,6 @@ OPENCL_FORCE_INLINE float3 Light_Illuminate(
 		LIGHTS_PARAM_DECL) {
 	switch (light->type) {
 		case TYPE_IL_CONSTANT:
-			LIGHT_TYPE_GUARD(TYPE_IL_CONSTANT);
 			return ConstantInfiniteLight_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
@@ -1040,7 +1022,6 @@ OPENCL_FORCE_INLINE float3 Light_Illuminate(
 					shadowRay, directPdfW
 					LIGHTS_PARAM);
 		case TYPE_IL:
-			LIGHT_TYPE_GUARD(TYPE_IL);
 			return InfiniteLight_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
@@ -1048,7 +1029,6 @@ OPENCL_FORCE_INLINE float3 Light_Illuminate(
 					shadowRay, directPdfW
 					LIGHTS_PARAM);
 		case TYPE_IL_SKY2:
-			LIGHT_TYPE_GUARD(TYPE_IL_SKY2);
 			return Sky2Light_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
@@ -1056,14 +1036,12 @@ OPENCL_FORCE_INLINE float3 Light_Illuminate(
 					shadowRay, directPdfW
 					LIGHTS_PARAM);
 		case TYPE_SUN:
-			LIGHT_TYPE_GUARD(TYPE_SUN);
 			return SunLight_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
 					bsdf, time, u0, u1,
 					shadowRay, directPdfW);
 		case TYPE_TRIANGLE:
-			LIGHT_TYPE_GUARD(TYPE_TRIANGLE);
 			return TriangleLight_Illuminate(
 					light,
 					tmpHitPoint,
@@ -1072,59 +1050,50 @@ OPENCL_FORCE_INLINE float3 Light_Illuminate(
 					shadowRay, directPdfW
 					MATERIALS_PARAM);
 		case TYPE_POINT:
-			LIGHT_TYPE_GUARD(TYPE_POINT);
 			return PointLight_Illuminate(
 					light,
 					bsdf, time,
 					shadowRay, directPdfW);
 		case TYPE_MAPPOINT:
-			LIGHT_TYPE_GUARD(TYPE_MAPPOINT);
 			return MapPointLight_Illuminate(
 					light,
 					bsdf, time,
 					shadowRay, directPdfW
 					IMAGEMAPS_PARAM);
 		case TYPE_SPOT:
-			LIGHT_TYPE_GUARD(TYPE_SPOT);
 			return SpotLight_Illuminate(
 					light,
 					bsdf, time,
 					shadowRay, directPdfW);
 		case TYPE_PROJECTION:
-			LIGHT_TYPE_GUARD(TYPE_PROJECTION);
 			return ProjectionLight_Illuminate(
 					light,
 					bsdf, time,
 					shadowRay, directPdfW
 					IMAGEMAPS_PARAM);
 		case TYPE_SHARPDISTANT:
-			LIGHT_TYPE_GUARD(TYPE_SHARPDISTANT);
 			return SharpDistantLight_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
 					bsdf, time,
 					shadowRay, directPdfW);
 		case TYPE_DISTANT:
-			LIGHT_TYPE_GUARD(TYPE_DISTANT);
 			return DistantLight_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
 					bsdf, time, u0, u1,
 					shadowRay, directPdfW);
 		case TYPE_LASER:
-			LIGHT_TYPE_GUARD(TYPE_LASER);
 			return LaserLight_Illuminate(
 					light,
 					bsdf, time,
 					shadowRay, directPdfW);
 		case TYPE_SPHERE:
-			LIGHT_TYPE_GUARD(TYPE_SPHERE);
 			return SphereLight_Illuminate(
 					light,
 					bsdf, time, u0, u1,
 					shadowRay, directPdfW);
 		case TYPE_MAPSPHERE:
-			LIGHT_TYPE_GUARD(TYPE_MAPSPHERE);
 			return MapSphereLight_Illuminate(
 					light,
 					bsdf, time, u0, u1,
@@ -1133,8 +1102,6 @@ OPENCL_FORCE_INLINE float3 Light_Illuminate(
 		default:
 			return BLACK;
 	}
-	// Light types compiled out by LIGHT_TYPE_GUARD()
-	return BLACK;
 }
 
 OPENCL_FORCE_INLINE bool Light_IsEnvOrIntersectable(__global const LightSource *light) {
@@ -1572,7 +1539,6 @@ OPENCL_FORCE_INLINE float3 Light_Emit(__global const LightSource *light,
 
 	switch (light->type) {
 		case TYPE_IL_CONSTANT: {
-			LIGHT_TYPE_GUARD(TYPE_IL_CONSTANT);
 			// A uniform direction and a uniform origin on the disk of the
 			// scene bounding sphere: the same distribution of rays as 2
 			// uniform points on the sphere (LightSource::Emit())
@@ -1592,7 +1558,6 @@ OPENCL_FORCE_INLINE float3 Light_Emit(__global const LightSource *light,
 		}
 		case TYPE_IL:
 		case TYPE_IL_SKY2: {
-			if (!(LIGHT_TYPE_ENABLED(TYPE_IL) || LIGHT_TYPE_ENABLED(TYPE_IL_SKY2))) break;
 			const bool isSky2 = (light->type == TYPE_IL_SKY2);
 
 			float2 sampleUV;
@@ -1637,7 +1602,6 @@ OPENCL_FORCE_INLINE float3 Light_Emit(__global const LightSource *light,
 			}
 		}
 		case TYPE_SUN: {
-			LIGHT_TYPE_GUARD(TYPE_SUN);
 			const float cosThetaMax = light->notIntersectable.sun.cosThetaMax;
 			const float3 sunDir = VLOAD3F(&light->notIntersectable.sun.absoluteDir.x);
 			const float3 x = VLOAD3F(&light->notIntersectable.sun.x.x);
@@ -1652,7 +1616,6 @@ OPENCL_FORCE_INLINE float3 Light_Emit(__global const LightSource *light,
 		}
 		case TYPE_SHARPDISTANT:
 		case TYPE_DISTANT: {
-			if (!(LIGHT_TYPE_ENABLED(TYPE_SHARPDISTANT) || LIGHT_TYPE_ENABLED(TYPE_DISTANT))) break;
 			const float3 lightDir = VLOAD3F(&light->notIntersectable.sharpDistant.absoluteLightDir.x);
 
 			float3 x, y;
@@ -1682,12 +1645,10 @@ OPENCL_FORCE_INLINE float3 Light_Emit(__global const LightSource *light,
 					VLOAD3F(light->notIntersectable.sharpDistant.color.c);
 		}
 		case TYPE_TRIANGLE:
-			LIGHT_TYPE_GUARD(TYPE_TRIANGLE);
 			return TriangleLight_Emit(light, guide, tmpHitPoint, time, u0, u1, u2, u3, passThroughEvent,
 					rayOrig, rayDir, emissionPdfW
 					MATERIALS_PARAM);
 		case TYPE_POINT: {
-			LIGHT_TYPE_GUARD(TYPE_POINT);
 			*rayOrig = VLOAD3F(&light->notIntersectable.point.absolutePos.x);
 
 			const float totalSolidAngle = LightEmitGuide_TotalSolidAngle(guide, *rayOrig);
@@ -1702,7 +1663,6 @@ OPENCL_FORCE_INLINE float3 Light_Emit(__global const LightSource *light,
 			return VLOAD3F(light->notIntersectable.point.emittedFactor.c) * (1.f / (4.f * M_PI_F));
 		}
 		case TYPE_MAPPOINT: {
-			LIGHT_TYPE_GUARD(TYPE_MAPPOINT);
 			*rayOrig = VLOAD3F(&light->notIntersectable.mapPoint.absolutePos.x);
 
 			const float totalSolidAngle = LightEmitGuide_TotalSolidAngle(guide, *rayOrig);
@@ -1725,7 +1685,6 @@ OPENCL_FORCE_INLINE float3 Light_Emit(__global const LightSource *light,
 						IMAGEMAPS_PARAM) / (4.f * M_PI_F * light->notIntersectable.mapPoint.average);
 		}
 		case TYPE_SPOT: {
-			LIGHT_TYPE_GUARD(TYPE_SPOT);
 			const float cosTotalWidth = light->notIntersectable.spot.cosTotalWidth;
 			const float uniformConePdf = UniformConePdf(cosTotalWidth);
 
@@ -1758,7 +1717,6 @@ OPENCL_FORCE_INLINE float3 Light_Emit(__global const LightSource *light,
 					(falloff / fabs(CosTheta(localFromLight)));
 		}
 		case TYPE_PROJECTION: {
-			LIGHT_TYPE_GUARD(TYPE_PROJECTION);
 			// Not guided
 			__global const ProjectionLightParam *projection = &light->notIntersectable.projection;
 
@@ -1783,7 +1741,6 @@ OPENCL_FORCE_INLINE float3 Light_Emit(__global const LightSource *light,
 			return result;
 		}
 		case TYPE_LASER: {
-			LIGHT_TYPE_GUARD(TYPE_LASER);
 			// Not guided
 			const float3 lightDir = VLOAD3F(&light->notIntersectable.laser.absoluteLightDir.x);
 			const float radius = light->notIntersectable.laser.radius;
@@ -1800,10 +1757,8 @@ OPENCL_FORCE_INLINE float3 Light_Emit(__global const LightSource *light,
 			return VLOAD3F(light->notIntersectable.laser.emittedFactor.c);
 		}
 		case TYPE_SPHERE:
-			LIGHT_TYPE_GUARD(TYPE_SPHERE);
 			return SphereLight_Emit(light, guide, u0, u1, u2, u3, rayOrig, rayDir, emissionPdfW);
 		case TYPE_MAPSPHERE: {
-			LIGHT_TYPE_GUARD(TYPE_MAPSPHERE);
 			const float3 result = SphereLight_Emit(light, guide, u0, u1, u2, u3, rayOrig, rayDir, emissionPdfW);
 
 			const float3 localFromLight = Light_WorldToLocal(light, *rayDir);
@@ -1818,8 +1773,6 @@ OPENCL_FORCE_INLINE float3 Light_Emit(__global const LightSource *light,
 		default:
 			return BLACK;
 	}
-	// Light types compiled out by LIGHT_TYPE_GUARD()
-	return BLACK;
 }
 
 #endif
