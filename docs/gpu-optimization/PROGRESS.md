@@ -1264,3 +1264,24 @@ not rebuilt (the last build, bench\bin-T6.3h, had the hooks). Next: build,
 smoke test, speed and default image checks (guiding off must equal the
 tip), equal-time RMSE on DanishMood, LynxSpider, OilPuddle, OrangeJuice
 with guiding on vs off, then merge as opt-in if it wins.
+
+### 2026-10-28: Blender 4.5 addon build with T6.3 path guiding (user test build)
+
+- Addon zip `D:\REPO\LuxCoreRepo\bench\addon\BlendLuxCoreDiginaat-2.11.1-blender45-guiding-c6f1d4407.zip`:
+  pyluxcore (Python 3.11) from `gpu-opt/T6.3-path-guiding` at `c6f1d4407`,
+  i.e. `gpu-optimization` + T6.3 (not merged yet), same packing steps as
+  before.
+- BlendLuxCore commit `357ea393` on local branch `gpu-opt-ui` (from upstream
+  `96b8cd93`): Render > Light Paths > Path Guiding panel (checkbox in the
+  header, Training Samples), exports `path.guiding.enable` and
+  `path.guiding.trainingspp` for the PATH engine; a warning shows when the
+  device is not GPU (only PATHOCL uses it).
+- Smoke test of the source without the experiment hooks: luxcoreconsole,
+  LuxBall, guiding on, CDFs rebuilt at 2, 4, ... 64 spp, 18.7 M samples/sec
+  over 10 s. The unpacked addon wheel renders LuxBall with guiding on with
+  Python 3.11 (16.1 M samples/sec over 20 s including the session start,
+  image correct).
+- pyluxcore drops log messages from threads that do not hold the GIL
+  (`PythonDebugHandler`, `src/pyluxcore/pyluxcore.cpp`), so the "Path
+  guiding CDFs rebuilt" lines from the render thread never reach the
+  Python log handler (or the Blender log); use luxcoreconsole to see them.
