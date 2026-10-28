@@ -10,6 +10,8 @@ only. Results go to <out>/<label>/ (keep <out> outside the repository).
   speed:   median samples/sec per scene (1 warm-up run + N measured runs)
   image:   fixed-SPP renders, written twice so the noise floor is known
   compare: RMSE of candidate vs baseline images against the noise floor
+  equaltime: RMSE against a reference image after the same render time, for
+           two builds or settings (sampling changes: lower is better)
 
 Examples:
   python tests/gpu_bench/bench.py speed --bin out/install/Release/bin/luxcoreconsole.exe --label main
@@ -52,6 +54,11 @@ COMPARE_FILE = "rgb.hdr"
 
 SAMPLES_SEC_RE = re.compile(r"\[Elapsed time:\s*(\d+)/\d+sec\].*?Avg\. samples/sec\s+([\d.]+)M")
 OUTPUT_FILENAME_RE = re.compile(r'^\s*(film\.outputs\.\d+\.filename)\s*=\s*"?([^"\r\n]+)"?', re.MULTILINE)
+SCENE_FILE_RE = re.compile(r'^\s*scene\.file\s*=\s*"?([^"\r\n]+)"?', re.MULTILINE)
+# luxcoreconsole applies -D only to the render config, not to the scene file:
+# properties with these prefixes go into a patched copy of the scene file
+SCENE_PROP_PREFIXES = ("scene.camera.", "scene.lights.", "scene.materials.", "scene.textures.",
+                       "scene.objects.", "scene.shapes.", "scene.volumes.")
 
 
 def scene_dir(scenes_dir, scene):
@@ -75,7 +82,14 @@ def run_console(binary, scene, scenes_dir, run_dir, props, temp_dir):
     cfg_text = (cfg_dir / "render.cfg").read_text(encoding="utf-8", errors="replace")
     for key, filename in OUTPUT_FILENAME_RE.findall(cfg_text):
         all_props[key] = str(run_dir / Path(filename.strip()).name)
-    all_props.update(props)
+    scene_props = {k: v for k, v in props.items() if k.startswith(SCENE_PROP_PREFIXES)}
+    all_props.update({k: v for k, v in props.items() if k not in scene_props})
+    if scene_props:
+        scene_file = cfg_dir / SCENE_FILE_RE.search(cfg_text).group(1).strip()
+        patched = run_dir / scene_file.name
+        patched.write_text(scene_file.read_text(encoding="utf-8", errors="replace") + "\n" +
+                           "".join(f"{k} = {v}\n" for k, v in scene_props.items()), encoding="utf-8")
+        all_props["scene.file"] = str(patched)
 
     cmd = [str(binary)]
     for key, value in all_props.items():
@@ -270,6 +284,40 @@ def cmd_compare(args):
     return 0 if ok_all else 1
 
 
+def cmd_equaltime(args):
+    # The reference is run0 of an "image" run with many samples, e.g.
+    # image --label ref --haltspp 4096 --repeat 1
+    common = parse_props(args.D)
+    sides = [(args.a[0], Path(args.a[1]), {**common, **parse_props(args.da)}),
+             (args.b[0], Path(args.b[1]), {**common, **parse_props(args.db)})]
+    rows = []
+    for scene in args.scenes:
+        reference = read_hdr(args.out / args.reference / "image" / scene / "run0" / COMPARE_FILE)
+        errors = {label: [] for label, _, _ in sides}
+        for label, binary, props in sides:
+            run_console(binary, scene, args.scenes_dir, args.out / "equaltime" / label / scene / "warmup",
+                        {**props, "batch.halttime": "15", "batch.haltspp": "0"}, args.out / label / "tmp")
+        for i in range(args.runs):
+            for label, binary, props in sides:
+                run_dir = args.out / "equaltime" / label / scene / f"run{i}"
+                run_console(binary, scene, args.scenes_dir, run_dir,
+                            {**props, "batch.halttime": str(args.halttime), "batch.haltspp": "0",
+                             "renderengine.seed": str(1 + i),
+                             f"film.outputs.{COMPARE_OUTPUT_INDEX}.type": "RGB",
+                             f"film.outputs.{COMPARE_OUTPUT_INDEX}.filename": str(run_dir / COMPARE_FILE)},
+                            args.out / label / "tmp")
+                errors[label].append(rmse(read_hdr(run_dir / COMPARE_FILE), reference))
+        med_a = statistics.median(errors[args.a[0]])
+        med_b = statistics.median(errors[args.b[0]])
+        rows.append((scene, med_a, med_b))
+        print(f"{scene}: {args.a[0]} {med_a:.6g} {errors[args.a[0]]}, {args.b[0]} {med_b:.6g} {errors[args.b[0]]}",
+              flush=True)
+
+    print(f"\n| Scene | RMSE {args.a[0]} | RMSE {args.b[0]} | MSE ratio |\n|---|---|---|---|")
+    for scene, med_a, med_b in rows:
+        print(f"| {scene} | {med_a:.6g} | {med_b:.6g} | {(med_b * med_b) / (med_a * med_a):.3f} |")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help="results root (outside the repo)")
@@ -311,11 +359,25 @@ def main():
     p.add_argument("--candidate", required=True)
     p.add_argument("--tolerance", type=float, default=1.1)
 
+    p = sub.add_parser("equaltime", help="RMSE against a reference after the same render time")
+    p.add_argument("--scenes", nargs="+", default=SCENES)
+    p.add_argument("--scenes-dir", type=Path, default=DEFAULT_SCENES_DIR)
+    p.add_argument("--reference", required=True, help="label of an image run with many samples")
+    p.add_argument("--a", nargs=2, required=True, metavar=("LABEL", "BIN"))
+    p.add_argument("--b", nargs=2, required=True, metavar=("LABEL", "BIN"))
+    p.add_argument("-D", nargs=2, action="append", metavar=("PROP", "VALUE"), help="override for both sides")
+    p.add_argument("--da", nargs=2, action="append", metavar=("PROP", "VALUE"), help="override for side A only")
+    p.add_argument("--db", nargs=2, action="append", metavar=("PROP", "VALUE"), help="override for side B only")
+    p.add_argument("--runs", type=int, default=3)
+    p.add_argument("--halttime", type=int, default=30)
+
     args = parser.parse_args()
     if args.command == "speed":
         cmd_speed(args)
     elif args.command == "ab":
         cmd_ab(args)
+    elif args.command == "equaltime":
+        cmd_equaltime(args)
     elif args.command == "image":
         cmd_image(args)
     else:

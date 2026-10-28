@@ -1137,3 +1137,59 @@ kernel-code change with a 20 s kernel profile (`opencl.kernel.profile.enable
 Tool note: `ptxas` 12.8 on a cached PTX file (`<TEMP>\luxcorerender.org\
 cuda_kernel_cache`): strip the 4-byte header (`tail -c +5`) and change
 `.version 8.8` (NVRTC 12.9) to `8.7`; `-e <kernel>` limits it to one entry.
+
+### 2026-10-28: T4.2 MIS compensation for `infinite` lights (opt-in)
+
+Branch `gpu-opt/T4.2-mis-compensation`. New property
+`scene.lights.<name>.miscompensation.enable` (default 0) for `infinite`
+lights, CPU and GPU (Karlik et al. 2019). Illuminate() and the direct
+light pdf use a second Distribution2D built from max(0, L - average L)
+in solid angle (sin(theta) per row), mixed with 10% of a distribution
+proportional to L so that every emitting direction keeps a non zero pdf
+(paths without MIS: last vertex, shadow transparency, visibility flags,
+BIDIRCPU, DLSC). Emit() and the emission pdf keep the original
+distribution. GPU: `InfiniteLightParam.illuminateDistributionOffset`
+(equal to `distributionOffset` when the option is off).
+
+Default image unchanged (`bin-T4.2`, 256 spp vs `T6.1-base-img`):
+LuxBall RMSE 0.00367 (floor 0.0168), DLSC 0.00877 (0.132); DanishMood
+without PhotonGI vs `T8.1-vol-img` 0.00411 (0.0283).
+
+`bench.py equaltime` (new): RMSE vs a 2048 spp reference (`ref-T4.2`,
+option off) after 20 s, 3 runs (seeds 1-3), PhotonGI indirect off, the
+scenes' own clamping:
+
+| Scene | RMSE off | RMSE on | MSE ratio |
+|---|---|---|---|
+| OilPuddle | 0.0328 | 0.0333 | 1.032 |
+| OrangeJuice | 1.397 | 1.406 | 1.014 (fireflies dominate) |
+| DanishMood | 0.0194 | 0.0172 | 0.789 |
+| LynxSpider | 0.0143 | 0.0142 | 0.982 |
+
+So it helps the interior lit by the environment through windows
+(DanishMood: 21% less MSE at equal time) and not the outdoor scenes:
+it stays off by default, a per-scene option.
+
+Pitfall (fixed in `bench.py`): `luxcoreconsole -D` sets render config
+properties only; `scene.*` properties in it never reach the scene loaded
+from `scene.file`. The first equaltime run compared "off" with "off"
+(MSE ratio 1.000 everywhere). `run_console()` now writes `scene.camera.`,
+`scene.lights.`, `scene.materials.` ... overrides into a copy of the
+scene file in the run directory and passes `-D scene.file`.
+
+Mean check (image mean vs option off, 3 seeds, fixed spp): with the
+scenes' clamping, on shifts the mean by +0.3% (OilPuddle), -0.35%
+(OrangeJuice), +0.23% (LynxSpider), 0 (DanishMood), seed spread 0.01-0.04%.
+With `-D path.clamping.variance.maxvalue 0` OilPuddle matches (clamping
+bias depends on the sampling), LynxSpider still +0.26% (also on PATHCPU,
+and with Russian roulette off). Cause found upstream, not in T4.2:
+upstream code with only the env distribution changed (data x sin(theta),
+option off, experiment build) shifts LynxSpider by +0.10%, exactly
+(to 0.001%) what the option's code path gives with the same distribution
+(defensive fraction 1). So the upstream PATH estimator on LynxSpider
+depends on the env light pdf: some MIS weights there do not sum to 1, or
+a technique misses some paths. Not RR, not clamping, CPU and GPU alike;
+LynxSpider differs from OilPuddle/DanishMood by alpha transparency on 43
+materials, a shadow-transparent area light material, a sun and a sphere
+light. Open: find it (see PLAN T4.4); the default image has the same
+bias, of unknown size.

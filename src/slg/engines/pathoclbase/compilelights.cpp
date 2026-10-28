@@ -336,6 +336,20 @@ void CompiledScene::CompileLights() {
 
 	CompileELVC(EnvLightVisibilityCacheRPtr(nullptr));
 
+	// Copies a Distribution2D at the end of envLightDistributions and returns
+	// its offset
+	auto AddEnvLightDistribution = [&](Distribution2DConstRef dist) {
+		auto [compiledDist, distributionSize] = CompileDistribution2D(dist);
+		// distributionSize is expressed in bytes while I'm working with float
+		const u_int distributionSize4 = distributionSize / sizeof(float);
+
+		const u_int offset = envLightDistributions.size();
+		envLightDistributions.resize(offset + distributionSize4);
+		std::copy_n(compiledDist.begin(), distributionSize4, envLightDistributions.begin() + offset);
+
+		return offset;
+	};
+
 	for (u_int i = 0; i < lightCount; ++i) {
 		auto& l = scene.GetLightSources().GetLightSource(i);
 
@@ -393,7 +407,7 @@ void CompiledScene::CompileLights() {
 				oclLight->notIntersectable.infinite.imageMapIndex = scene.GetImageMaps().GetImageMapIndex(il.imageMap);
 
 				// Compile the image map Distribution2D
-				auto [dist, visibilityMapCache] = il.GetPreprocessedData();
+				auto [dist, illuminateDist, visibilityMapCache] = il.GetPreprocessedData();
 
 				oclLight->notIntersectable.infinite.useVisibilityMapCache = false;
 				if (il.useVisibilityMapCache && visibilityMapCache) {
@@ -406,19 +420,10 @@ void CompiledScene::CompileLights() {
 					}
 				}
 
-				auto [infiniteLightDistribution, distributionSize] =
-					CompileDistribution2D(dist);
-				// distributionSize is expressed in bytes while I'm working with float
-				const u_int distributionSize4 = distributionSize / sizeof(float);
-
-				// Copy the Distribution2D data in the right place
-				const u_int size = envLightDistributions.size();
-				envLightDistributions.resize(size + distributionSize4);
-				std::copy_n(
-					infiniteLightDistribution.begin(),
-					distributionSize4,
-					envLightDistributions.begin() + size);
-				oclLight->notIntersectable.infinite.distributionOffset = size;
+				oclLight->notIntersectable.infinite.distributionOffset = AddEnvLightDistribution(dist);
+				oclLight->notIntersectable.infinite.illuminateDistributionOffset = (&illuminateDist == &dist) ?
+					oclLight->notIntersectable.infinite.distributionOffset :
+					AddEnvLightDistribution(illuminateDist);
 				break;
 			}
 			case TYPE_IL_SKY2: {
@@ -467,19 +472,7 @@ void CompiledScene::CompileLights() {
 
 				oclLight->notIntersectable.sky2.hasGround = sl.hasGround;
 
-				auto [skyDistribution, distributionSize] = CompileDistribution2D(dist);
-				// distributionSize is expressed in bytes while I'm working with float
-				const u_int distributionSize4 = distributionSize / sizeof(float);
-
-				// Copy the Distribution2D data in the right place
-				const u_int size = envLightDistributions.size();
-				envLightDistributions.resize(size + distributionSize4);
-				std::copy_n(
-					skyDistribution.begin(),
-					distributionSize4,
-					envLightDistributions.begin() + size
-				);
-				oclLight->notIntersectable.sky2.distributionOffset = size;
+				oclLight->notIntersectable.sky2.distributionOffset = AddEnvLightDistribution(dist);
 				break;
 			}
 			case TYPE_SUN: {

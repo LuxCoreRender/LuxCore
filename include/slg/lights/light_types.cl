@@ -31,7 +31,10 @@ typedef enum {
 
 typedef struct {
 	unsigned int imageMapIndex;
-	unsigned int distributionOffset;
+	// distributionOffset is used by Light_Emit(), illuminateDistributionOffset
+	// (the same one or the MIS compensated one) by Illuminate() and the
+	// direct light pdf
+	unsigned int distributionOffset, illuminateDistributionOffset;
 	int useVisibilityMapCache;
 } InfiniteLightParam;
 
