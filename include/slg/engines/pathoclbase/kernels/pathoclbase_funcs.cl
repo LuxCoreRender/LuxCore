@@ -481,6 +481,7 @@ OPENCL_FORCE_INLINE bool DirectLight_BSDFSampling(
 		__global PathDepthInfo *tmpDepthInfo,
 		__global const BSDF *bsdf,
 		const float3 shadowRayDir
+		PATHGUIDING_CDF_PARAM_DECL
 		LIGHTS_PARAM_DECL) {
 	// Sample the BSDF
 	BSDFEvent event;
@@ -488,6 +489,13 @@ OPENCL_FORCE_INLINE bool DirectLight_BSDFSampling(
 	const float3 bsdfEval = BSDF_Evaluate(bsdf,
 			shadowRayDir, &event, &bsdfPdfW
 			MATERIALS_PARAM);
+#if defined(PARAM_PATH_GUIDING)
+	// A guided vertex samples its next direction with the mix of the BSDF
+	// and the guide: the MIS weight uses the pdf of the mix
+	if (guidingCDF)
+		bsdfPdfW = PathGuiding_MISPdf(bsdf, guidingCDF, shadowRayDir, bsdfPdfW
+				MATERIALS_PARAM);
+#endif
 
 	if (Spectrum_IsBlack(bsdfEval) ||
 			(taskConfig->pathTracer.hybridBackForward.enabled &&
@@ -592,6 +600,17 @@ OPENCL_FORCE_INLINE bool DirectLight_BSDFSampling(
 		, __global const Photon* restrict pgicCausticPhotons \
 		, __global const IndexBVHArrayNode* restrict pgicCausticPhotonsBVHNodes
 
+// Path guiding buffers (see pathguiding_funcs.cl), NULL without
+// PARAM_PATH_GUIDING
+#define KERNEL_ARGS_PATHGUIDING \
+		, __global uint *guidingCellKeys \
+		, __global float *guidingTrainBins \
+		, __global uint *guidingTrainCounts \
+		, __global float *guidingCDFs \
+		, __global PathGuidingRecord *guidingRecords \
+		, __global PathGuidingPathState *guidingPathStates \
+		, __global uint *guidingState
+
 #define KERNEL_ARGS \
 		__constant const GPUTaskConfiguration* restrict taskConfig \
 		, __global GPUTask *tasks \
@@ -659,7 +678,8 @@ OPENCL_FORCE_INLINE bool DirectLight_BSDFSampling(
 		, const uint elvcTilesYCount \
 		/* Images */ \
 		KERNEL_ARGS_IMAGEMAPS_PAGES \
-		KERNEL_ARGS_PHOTONGI
+		KERNEL_ARGS_PHOTONGI \
+		KERNEL_ARGS_PATHGUIDING
 
 
 //------------------------------------------------------------------------------

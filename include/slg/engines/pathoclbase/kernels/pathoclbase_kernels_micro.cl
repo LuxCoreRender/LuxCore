@@ -312,6 +312,11 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 	// End of variables setup
 	//--------------------------------------------------------------------------
 
+#if defined(PARAM_PATH_GUIDING)
+	// The CDFs this vertex samples (see PathGuidingPathState)
+	guidingPathStates[gid].cdfBuffer = guidingState[PATHGUIDING_STATE_CDF_BUFFER];
+#endif
+
 	// Something was hit
 
 	if (taskState->albedoToDo && BSDF_IsAlbedoEndPoint(bsdf, taskConfig->pathTracer.albedo.specularSetting,
@@ -757,6 +762,14 @@ __kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 	// End of variables setup
 	//--------------------------------------------------------------------------
 
+#if defined(PARAM_PATH_GUIDING)
+	// The CDF MK_GENERATE_NEXT_VERTEX_RAY samples (if any)
+	__global const float *guidingCDF = PathGuiding_GetCellCDF(guidingCDFs, guidingPathStates[gid].cdfBuffer,
+			PathGuiding_GetVertexCell(taskConfig, &taskState->bsdf, sampleResult, pathInfo,
+				guidingCellKeys, false
+				MATERIALS_PARAM));
+#endif
+
 	GPUTASK_TMP(PathDepthInfo, tmpPathDepthInfo);
 	if (DirectLight_BSDFSampling(
 			taskConfig,
@@ -766,6 +779,7 @@ __kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 			tmpPathDepthInfo,
 			&taskState->bsdf,
 			VLOAD3F(&rays[gid].d.x)
+			PATHGUIDING_CDF_PARAM
 			LIGHTS_PARAM)) {
 		__global GPUTask *task = &tasks[gid];
 		Seed seedValue = task->seed;
@@ -858,6 +872,10 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 	float cosSampledDir;
 	float bsdfPdfW;
 	BSDFEvent bsdfEvent;
+#if defined(PARAM_PATH_GUIDING)
+	// The cell of this vertex if it is recorded for the training
+	uint guidingCell = NULL_INDEX;
+#endif
 
 	if (BSDF_IsShadowCatcher(bsdf MATERIALS_PARAM) && (tasksDirectLight[gid].directLightResult != SHADOWED)) {
 		bsdfSample = BSDF_ShadowCatcherSample(bsdf,
@@ -878,6 +896,26 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 			cosSampledDir = -1.f;
 			bsdfEvent = pathInfo->lastBSDFEvent;
 		} else {
+#if defined(PARAM_PATH_GUIDING)
+			// While training, the cells are created by the vertices that
+			// look them up
+			const bool guidingTraining = guidingState[PATHGUIDING_STATE_TRAINING];
+			const uint cell = PathGuiding_GetVertexCell(taskConfig, bsdf, sampleResult, pathInfo,
+					guidingCellKeys, guidingTraining
+					MATERIALS_PARAM);
+			if (guidingTraining)
+				guidingCell = cell;
+
+			__global const float *guidingCDF = PathGuiding_GetCellCDF(guidingCDFs,
+					guidingPathStates[gid].cdfBuffer, cell);
+			if (guidingCDF)
+				bsdfSample = PathGuiding_SampleBSDF(bsdf, guidingCDF,
+						Sampler_GetSample(taskConfig, sampleOffset + IDX_BSDF_X SAMPLER_PARAM),
+						Sampler_GetSample(taskConfig, sampleOffset + IDX_BSDF_Y SAMPLER_PARAM),
+						&sampledDir, &bsdfPdfW, &cosSampledDir, &bsdfEvent
+						MATERIALS_PARAM);
+			else
+#endif
 			bsdfSample = BSDF_Sample(bsdf,
 					Sampler_GetSample(taskConfig, sampleOffset + IDX_BSDF_X SAMPLER_PARAM),
 					Sampler_GetSample(taskConfig, sampleOffset + IDX_BSDF_Y SAMPLER_PARAM),
@@ -915,6 +953,13 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 		throughputFactor *= bsdfSample;
 
 		VSTORE3F(throughputFactor * VLOAD3F(taskState->throughput.c), taskState->throughput.c);
+
+#if defined(PARAM_PATH_GUIDING)
+		if (guidingCell != NULL_INDEX)
+			PathGuiding_Record(guidingRecords, &guidingPathStates[gid], gid,
+					guidingCell, sampledDir, PathGuiding_RadianceY(&taskConfig->film, sampleResult),
+					VLOAD3F(taskState->throughput.c), bsdfPdfW);
+#endif
 
 		// This is valid for irradiance AOV only if it is not a SPECULAR material and
 		// first path vertex. Set or update sampleResult.irradiancePathThroughput
@@ -1027,6 +1072,12 @@ __kernel void AdvancePaths_MK_SPLAT_SAMPLE(
 	filmRadianceGroupScale[5] = MAKE_FLOAT3(filmRadianceGroupScale5_R, filmRadianceGroupScale5_G, filmRadianceGroupScale5_B);
 	filmRadianceGroupScale[6] = MAKE_FLOAT3(filmRadianceGroupScale6_R, filmRadianceGroupScale6_G, filmRadianceGroupScale6_B);
 	filmRadianceGroupScale[7] = MAKE_FLOAT3(filmRadianceGroupScale7_R, filmRadianceGroupScale7_G, filmRadianceGroupScale7_B);
+
+#if defined(PARAM_PATH_GUIDING)
+	// The radiance the path has gathered, before the holdout and the clamping
+	PathGuiding_Train(guidingRecords, &guidingPathStates[gid], guidingTrainBins, guidingTrainCounts,
+			gid, PathGuiding_RadianceY(film, sampleResult));
+#endif
 
 	if (sampleResult->isHoldout) {
 		SampleResult_ClearRadiance(&taskConfig->film, sampleResult);

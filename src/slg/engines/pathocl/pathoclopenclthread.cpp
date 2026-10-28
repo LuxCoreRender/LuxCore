@@ -177,12 +177,22 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 		}
 	};
 
+	// Path guiding: the sampling CDFs are rebuilt when this device has
+	// rendered 2, 4, 8, ... samples per pixel, the last time at
+	// path.guiding.trainingspp
+	const bool pathGuiding = UsePathGuiding();
+	const double guidingPixelCount = double(threadFilms[0]->GetFilm().GetWidth()) *
+			threadFilms[0]->GetFilm().GetHeight();
+	u_int guidingNextSpp = 2;
+	double guidingSampleCount = 0.0;
+
 	auto CompleteFilmRead = [&]() {
 		// I need to update the film samples count
 
 		double totalCount = 0.0;
 		for (size_t i = 0; i < taskCount; ++i)
 			totalCount += gpuTaskStats[i].sampleCount;
+		guidingSampleCount = totalCount;
 		lightPathTotal = 0.0;
 		for (size_t i = 0; i < lightTaskCount; ++i)
 			lightPathTotal += lightPathCounts[i];
@@ -337,6 +347,16 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 		// Check halt conditions
 		if (engine->GetFilm().GetConvergence() == 1.f)
 			break;
+
+		if (pathGuiding && (guidingNextSpp > 0) &&
+				(guidingSampleCount >= guidingNextSpp * guidingPixelCount)) {
+			// Queued after the last batch: it runs between two iterations
+			const bool stopTraining = (guidingNextSpp >= engine->pathTracer.guidingTrainingSpp);
+			EnqueuePathGuidingRebuild(stopTraining);
+			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Path guiding CDFs rebuilt at " <<
+					guidingNextSpp << " samples/pixel" << (stopTraining ? ", training done" : ""));
+			guidingNextSpp = stopTraining ? 0 : Min(2 * guidingNextSpp, engine->pathTracer.guidingTrainingSpp);
+		}
 
 		if (engine->photonGICache) {
                     if (engine->photonGICache->Update(threadIndex, engine->GetTotalEyeSPP(), pgicUpdateCallBack)) {

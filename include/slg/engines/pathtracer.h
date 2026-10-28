@@ -179,9 +179,13 @@ public:
 	// Albedo AOV settings
 	AlbedoSpecularSetting albedoSpecularSetting;
 	float albedoSpecularGlossinessThreshold;
-	
+
+	// Path guiding settings (PATHOCL only, see pathguiding_funcs.cl)
+	u_int guidingTrainingSpp;
+	float guidingCellScale;
+
 	// Option flags
-	bool forceBlackBackground, hybridBackForwardEnable;
+	bool forceBlackBackground, hybridBackForwardEnable, guidingEnable;
 
 private:
 	void GenerateEyeRay(CameraConstRef camera, FilmConstRef film,

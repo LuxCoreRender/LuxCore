@@ -1079,6 +1079,11 @@ void PathTracer::ParseOptions(
 	albedoSpecularSetting = String2AlbedoSpecularSetting(cfg.Get(defaultProps.Get("path.albedospecular.type")).Get<string>());
 	albedoSpecularGlossinessThreshold = Max(cfg.Get(defaultProps.Get("path.albedospecular.glossinessthreshold")).Get<double>(), 0.0);
 
+	// Path guiding settings
+	guidingEnable = cfg.Get(defaultProps.Get("path.guiding.enable")).Get<bool>();
+	guidingTrainingSpp = Max(cfg.Get(defaultProps.Get("path.guiding.trainingspp")).Get<u_int>(), 2u);
+	guidingCellScale = Max(cfg.Get(defaultProps.Get("path.guiding.cellscale")).Get<double>(), 1e-4);
+
 	// Update eye sample size
 	eyeSampleBootSize = 5;
 	eyeSampleStepSize = 9;
@@ -1131,6 +1136,9 @@ PropertiesUPtr PathTracer::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps()->Get("path.forceblackbackground.enable")) <<
 			cfg.Get(GetDefaultProps()->Get("path.albedospecular.type")) <<
 			cfg.Get(GetDefaultProps()->Get("path.albedospecular.glossinessthreshold")) <<
+			cfg.Get(GetDefaultProps()->Get("path.guiding.enable")) <<
+			cfg.Get(GetDefaultProps()->Get("path.guiding.trainingspp")) <<
+			cfg.Get(GetDefaultProps()->Get("path.guiding.cellscale")) <<
 			*Sampler::ToProperties(cfg);
 
 	return props_ptr;
@@ -1151,7 +1159,10 @@ PropertiesUPtr PathTracer::GetDefaultProps() {
 			Property("path.clamping.variance.maxvalue")(0.f) <<
 			Property("path.forceblackbackground.enable")(false) <<
 			Property("path.albedospecular.type")("REFLECT_TRANSMIT") <<
-			Property("path.albedospecular.glossinessthreshold")(.05f);
+			Property("path.albedospecular.glossinessthreshold")(.05f) <<
+			Property("path.guiding.enable")(false) <<
+			Property("path.guiding.trainingspp")(64u) <<
+			Property("path.guiding.cellscale")(.03f);
 
 	return props;
 }

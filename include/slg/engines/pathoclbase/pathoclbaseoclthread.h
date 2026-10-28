@@ -190,6 +190,9 @@ protected:
 	void InitSamplesBuffer();
 	void InitSampleDataBuffer();
 	void InitSampleResultsBuffer();
+	// Path guiding (see pathguiding_funcs.cl): PATHOCL with path.guiding.enable
+	bool UsePathGuiding() const;
+	void InitPathGuiding();
 
 	void SetInitKernelArgs(const u_int filmIndex);
 	// Returns the index of the next argument
@@ -211,6 +214,11 @@ protected:
 	bool IsMaterialSortState(const slg::ocl::pathoclbase::PathState state) const;
 	void UpdateMaterialSortCalibration();
 	void EnqueueAdvancePathsKernel();
+	// Turns the path guiding training histograms into the sampling CDFs, the
+	// last time also stops the training
+	void EnqueuePathGuidingRebuild(const bool stopTraining);
+	// The CDF buffer of the last path guiding rebuild
+	u_int guidingCDFBuffer;
 	// GPU light tracing (renderEngine->lightTaskCount > 0)
 	void EnqueueInitLightPathsKernel();
 	void EnqueueAdvanceLightPathsKernel();
@@ -311,6 +319,14 @@ protected:
 	luxrays::HardwareDeviceBuffer *lightFilterLUTsBuff;
 	luxrays::HardwareDeviceBuffer *lightCastersBuff;
 	std::unique_ptr<u_int[]> lightPathCounts;
+	// Path guiding buffers (see KERNEL_ARGS_PATHGUIDING)
+	luxrays::HardwareDeviceBuffer *guidingCellKeysBuff;
+	luxrays::HardwareDeviceBuffer *guidingTrainBinsBuff;
+	luxrays::HardwareDeviceBuffer *guidingTrainCountsBuff;
+	luxrays::HardwareDeviceBuffer *guidingCDFsBuff;
+	luxrays::HardwareDeviceBuffer *guidingRecordsBuff;
+	luxrays::HardwareDeviceBuffer *guidingPathStatesBuff;
+	luxrays::HardwareDeviceBuffer *guidingStateBuff;
 
 	u_int initKernelArgsCount;
 	std::string kernelsParameters;
@@ -324,6 +340,8 @@ protected:
 	luxrays::HardwareDeviceKernelUPtr initKernel;
 	luxrays::HardwareDeviceKernelUPtr resetPathQueuesKernel;
 	size_t resetPathQueuesWorkGroupSize;
+	luxrays::HardwareDeviceKernelUPtr pathGuidingRebuildKernel;
+	size_t pathGuidingRebuildWorkGroupSize;
 	luxrays::HardwareDeviceKernelUPtr queuePathsKernel;
 	size_t queuePathsWorkGroupSize;
 	luxrays::HardwareDeviceKernelUPtr countPathsByMaterialKernel;

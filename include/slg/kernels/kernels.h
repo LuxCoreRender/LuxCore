@@ -25,6 +25,7 @@ namespace slg { namespace ocl {
 
 extern std::string KernelSource_pathoclbase_funcs;
 extern std::string KernelSource_pathoclbase_datatypes;
+extern std::string KernelSource_pathguiding_funcs;
 extern std::string KernelSource_pathoclbase_funcs;
 extern std::string KernelSource_pathoclbase_kernels_micro;
 extern std::string KernelSource_tilepathocl_datatypes;

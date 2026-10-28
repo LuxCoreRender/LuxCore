@@ -1204,3 +1204,63 @@ bias, of unknown size.
 - MIS compensation (T4.2) is not in the BlendLuxCore UI: set
   `scene.lights.<name>.miscompensation.enable` by hand or add an addon
   option later.
+
+### 2026-10-28: T6.3 path guiding (in progress, committed on the branch, not merged)
+
+Branch `gpu-opt/T6.3-path-guiding`. Opt-in: `path.guiding.enable` (default
+off), `path.guiding.trainingspp` (64), `path.guiding.cellscale` (.03).
+PATHOCL only (`UsePathGuiding()`), kernels behind `-D PARAM_PATH_GUIDING`.
+
+Design (`kernels/pathguiding_funcs.cl`):
+- Hash table of 2^16 cells: key from the position quantized by a power of 2
+  cell size (distance to the camera x cellscale) plus the dominant axis and
+  side of the geometric normal. 8 probes, insert with `atomic_cmpxchg`, new
+  cells only while training.
+- Per cell 16 x 16 equal area direction bins (cos(theta) x phi, world space).
+- Training: guidable vertices are recorded in `MK_GENERATE_NEXT_VERTEX_RAY`
+  (up to 8 per path); at the splat (R_final - R_vertex) / (throughputY * pdf)
+  goes to the cell bin with `AtomicAdd`. `PathGuiding_Rebuild` (one thread
+  per cell) turns histograms with >= 32 samples into CDFs with a 1% floor
+  at 2, 4, 8, ... spp up to trainingspp, then the training stops.
+- Sampling: one-sample mix, BSDF with probability .5, the cell CDF
+  otherwise; throughput f / pdf_mix. Double-buffered CDFs: a path pins the
+  buffer at `MK_HIT_OBJECT` so DL and the next vertex use the same CDF.
+- The guided branch uses `Material_Evaluate` only on the directions
+  `BSDF_Sample` can return (`PathGuiding_EvaluateBSDF`), not `BSDF_Evaluate`
+  (its geometric normal tests reject some of them). The MIS pdf
+  (`PathGuiding_MISPdf`) is the mix only where both BSDF_Sample and
+  BSDF_Evaluate reach the direction, the BSDF pdf elsewhere, the same on
+  the DL side and the hit side.
+- Not guided: volumes, specular, glossiness < .05, shadow catcher, the
+  shadow-transparency pass-through vertex, Disney (T4.5).
+- Smoke test: LuxBall 17.76 M samples/sec with guiding on (off 17.1-17.9).
+
+Image mean, guiding on vs off (fixed spp, PhotonGI indirect off, clamping
+0, seeds 1-3, spread 0.001-0.03%): the difference is mostly upstream bugs,
+each found by bisecting the on/off difference:
+- Disney Evaluate f * cos^2 (T4.5): LuxBall -1.2%; with Disney -> matte
+  +0.02%. Guiding now skips Disney.
+- Schlick microfacet pdf missing cos(theta_h) (T4.6): DanishMood with only
+  glossy2 guided +1.6%, +0.5% with the pdf fixed (experiment build). A
+  Python replica of the GPU Glossy2 confirms it: without the fix
+  E[f/pdf] is 3-12% below the integral of Evaluate, with it equal.
+- RR factor only in the DL MIS weight (T4.7): DanishMood glossy2 + Schlick
+  fix +0.5% -> +0.15% with RR off.
+- What is left is small and not explained: synthetic GlossyRoom (bench\synth,
+  glossy2 floor and wall, DanishMood HDRI) with both fixes +0.07%; all matte
+  with the env light hidden from BSDF hits (no MIS at all) +0.07%; with a
+  uniform guide -0.3%; with BSDF fraction 1 identical to off. The guide pdf
+  code and the material pairs check out; not bump mapping, alpha
+  transparency, volumes, the visibility map or the env mirror transform.
+  User decision 2026-10-28: mean shifts under 2% do not block, so the hunt
+  stopped here.
+- T4.4 (LynxSpider pdf-dependent mean): not Disney (+0.22% with Disney ->
+  matte), not the Schlick pdf (+0.24% with the fix), and RR off was already
+  tested there; still open.
+
+State of the commit: the experiment hooks (`LUX_PG_DEFINES`, `PG_EXP_*`)
+are removed and the Schlick pdf experiment reverted; this exact source was
+not rebuilt (the last build, bench\bin-T6.3h, had the hooks). Next: build,
+smoke test, speed and default image checks (guiding off must equal the
+tip), equal-time RMSE on DanishMood, LynxSpider, OilPuddle, OrangeJuice
+with guiding on vs off, then merge as opt-in if it wins.

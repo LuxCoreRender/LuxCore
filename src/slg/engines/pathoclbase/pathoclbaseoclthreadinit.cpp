@@ -440,6 +440,55 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	intersectionDevice.AllocBufferRW(&pathMaterialKeysBuff, nullptr, sizeof(u_int) * taskCount, "PathMaterialKeys");
 }
 
+bool PathOCLBaseOCLRenderThread::UsePathGuiding() const {
+	// Not for TILEPATHOCL and RTPATHOCL: the training needs the samples of
+	// the whole image
+	return renderEngine->pathTracer.guidingEnable && (renderEngine->GetType() == PATHOCL);
+}
+
+void PathOCLBaseOCLRenderThread::InitPathGuiding() {
+	if (!UsePathGuiding()) {
+		intersectionDevice.FreeBuffer(&guidingCellKeysBuff);
+		intersectionDevice.FreeBuffer(&guidingTrainBinsBuff);
+		intersectionDevice.FreeBuffer(&guidingTrainCountsBuff);
+		intersectionDevice.FreeBuffer(&guidingCDFsBuff);
+		intersectionDevice.FreeBuffer(&guidingRecordsBuff);
+		intersectionDevice.FreeBuffer(&guidingPathStatesBuff);
+		intersectionDevice.FreeBuffer(&guidingStateBuff);
+		return;
+	}
+
+	const u_int taskCount = renderEngine->taskCount;
+	const size_t binCount = size_t(PATHGUIDING_CELL_COUNT) * PATHGUIDING_BIN_COUNT;
+
+	// An empty hash table, no training data, no sampling CDF (0 in the last
+	// entry of a cell) in the 2 CDF buffers and no recorded vertex: all zeros
+	// (a float 0 is a u_int 0 too)
+	const vector<u_int> zeros(Max<size_t>(2 * binCount, 2 * taskCount), 0u);
+	intersectionDevice.AllocBufferRW(&guidingCellKeysBuff, zeros.data(),
+			sizeof(u_int) * PATHGUIDING_CELL_COUNT, "PathGuidingCellKeys");
+	intersectionDevice.AllocBufferRW(&guidingTrainBinsBuff, zeros.data(),
+			sizeof(float) * binCount, "PathGuidingTrainBins");
+	intersectionDevice.AllocBufferRW(&guidingTrainCountsBuff, zeros.data(),
+			sizeof(u_int) * PATHGUIDING_CELL_COUNT, "PathGuidingTrainCounts");
+	intersectionDevice.AllocBufferRW(&guidingCDFsBuff, zeros.data(),
+			sizeof(float) * 2 * binCount, "PathGuidingCDFs");
+	intersectionDevice.AllocBufferRW(&guidingRecordsBuff, nullptr,
+			sizeof(slg::ocl::pathoclbase::PathGuidingRecord) * PATHGUIDING_MAX_RECORDS * taskCount, "PathGuidingRecords");
+	intersectionDevice.AllocBufferRW(&guidingPathStatesBuff, zeros.data(),
+			sizeof(slg::ocl::pathoclbase::PathGuidingPathState) * taskCount, "PathGuidingPathStates");
+
+	guidingCDFBuffer = 0;
+	u_int guidingState[PATHGUIDING_STATE_SIZE];
+	guidingState[PATHGUIDING_STATE_TRAINING] = 1;
+	guidingState[PATHGUIDING_STATE_CDF_BUFFER] = guidingCDFBuffer;
+	intersectionDevice.AllocBufferRW(&guidingStateBuff, guidingState, sizeof(guidingState), "PathGuidingState");
+
+	// The writes of a reused buffer can be asynchronous: the sources are
+	// local
+	intersectionDevice.FinishQueue();
+}
+
 // The GPU Sobol tables (see SobolSequence_SobolDimension()): for each
 // dimension, table k entry n is the XOR of the direction vectors
 // k * SOBOL_TABLE_BITS + b for the bits b set in n
@@ -748,6 +797,12 @@ void PathOCLBaseOCLRenderThread::InitRender() {
 	//--------------------------------------------------------------------------
 
 	InitSampleResultsBuffer();
+
+	//--------------------------------------------------------------------------
+	// Allocate path guiding buffers if required
+	//--------------------------------------------------------------------------
+
+	InitPathGuiding();
 
 	//--------------------------------------------------------------------------
 	// Allocate volume info buffers if required
