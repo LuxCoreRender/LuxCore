@@ -272,6 +272,7 @@ LightSourceUPtr Scene::CreateLightSource(const string &name, const luxrays::Prop
 		il->lightToWorld = light2World;
 		il->imageMap = ImageMapPtr(std::addressof(imgMap));
 		il->sampleUpperHemisphereOnly = props.Get(Property(propName + ".sampleupperhemisphereonly")(false)).Get<bool>();
+		il->useMISCompensation = props.Get(Property(propName + ".miscompensation.enable")(false)).Get<bool>();
 
 		il->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
 		il->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());

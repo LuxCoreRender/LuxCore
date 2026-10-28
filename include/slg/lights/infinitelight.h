@@ -35,7 +35,9 @@ public:
 
 	virtual void Preprocess();
 
-	std::tuple<luxrays::Distribution2DRef, EnvLightVisibilityCacheRPtr>
+	// Returns the distribution used by Emit(), the one used by Illuminate()
+	// and the visibility map cache
+	std::tuple<luxrays::Distribution2DConstRef, luxrays::Distribution2DConstRef, EnvLightVisibilityCacheRPtr>
 	GetPreprocessedData() const;
 
 	virtual void UpdateVisibilityMap(SceneConstRef scene, const bool useRTMode);
@@ -67,13 +69,21 @@ public:
 
 	ImageMapConstPtr imageMap;
 	bool sampleUpperHemisphereOnly;
+	// MIS compensation of the distribution used by Illuminate()
+	bool useMISCompensation;
 
 	// Visibility map cache options
 	ELVCParams visibilityMapCacheParams;
 	bool useVisibilityMapCache;
 
 private:
+	const luxrays::Distribution2D &GetIlluminateDistribution() const {
+		return misCompensatedDistribution ? *misCompensatedDistribution : *imageMapDistribution;
+	}
+
 	std::unique_ptr<luxrays::Distribution2D> imageMapDistribution;
+	// nullptr when MIS compensation is disabled or has nothing to remove
+	std::unique_ptr<luxrays::Distribution2D> misCompensatedDistribution;
 
 	std::unique_ptr<EnvLightVisibilityCache> visibilityMapCache;
 };

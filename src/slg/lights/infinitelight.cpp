@@ -29,11 +29,69 @@ using namespace luxrays;
 using namespace slg;
 		
 //------------------------------------------------------------------------------
+// MIS compensation
+//------------------------------------------------------------------------------
+
+// MIS compensation (Karlik et al., "MIS Compensation: Optimizing Sampling
+// Techniques in Multiple Importance Sampling", TOG 38(6), 2019): under MIS,
+// BSDF sampling already covers the directions where the environment is not
+// brighter than its average radiance, so Illuminate() samples the radiance
+// minus its average (over the sphere, hence the sin(theta) factors that make
+// the pdf proportional to it in solid angle).
+//
+// A fraction of the samples keeps following the radiance: every direction
+// with emission keeps a non zero pdf, so the estimator stays unbiased where
+// direct light sampling is used without MIS (a path depth of 1, shadow
+// transparency, an environment invisible to indirect rays), in BIDIRCPU and
+// in the DLSC build.
+static const float MIS_COMPENSATION_DEFENSIVE_FRACTION = .1f;
+
+static unique_ptr<Distribution2D> BuildMISCompensatedDistribution(const vector<float> &data,
+		const u_int width, const u_int height) {
+	vector<float> sinTheta(height);
+	for (u_int y = 0; y < height; ++y)
+		sinTheta[y] = sinf(M_PI * (y + .5f) / height);
+
+	double radianceSum = 0.0;
+	double sinThetaSum = 0.0;
+	for (u_int y = 0; y < height; ++y) {
+		for (u_int x = 0; x < width; ++x)
+			radianceSum += sinTheta[y] * data[x + y * width];
+		sinThetaSum += width * sinTheta[y];
+	}
+	const float average = radianceSum / sinThetaSum;
+
+	double compensatedSum = 0.0;
+	for (u_int y = 0; y < height; ++y)
+		for (u_int x = 0; x < width; ++x)
+			compensatedSum += sinTheta[y] * Max(data[x + y * width] - average, 0.f);
+
+	// A constant image: there is nothing to remove
+	if (compensatedSum <= 0.0)
+		return nullptr;
+
+	// The mix of the two normalized densities
+	const float compensatedScale = (1.f - MIS_COMPENSATION_DEFENSIVE_FRACTION) / compensatedSum;
+	const float radianceScale = MIS_COMPENSATION_DEFENSIVE_FRACTION / radianceSum;
+	vector<float> compensated(width * height);
+	for (u_int y = 0; y < height; ++y) {
+		for (u_int x = 0; x < width; ++x) {
+			const u_int index = x + y * width;
+			compensated[index] = sinTheta[y] * (compensatedScale * Max(data[index] - average, 0.f) +
+					radianceScale * data[index]);
+		}
+	}
+
+	return std::make_unique<Distribution2D>(compensated, width, height);
+}
+
+//------------------------------------------------------------------------------
 // InfiniteLight
 //------------------------------------------------------------------------------
 
 InfiniteLight::InfiniteLight() :
-	imageMap(nullptr), imageMapDistribution(nullptr), visibilityMapCache(nullptr) {
+	imageMap(nullptr), useMISCompensation(false), imageMapDistribution(nullptr),
+	misCompensatedDistribution(nullptr), visibilityMapCache(nullptr) {
 }
 
 InfiniteLight::~InfiniteLight() {
@@ -72,12 +130,17 @@ void InfiniteLight::Preprocess() {
 			imageMap->GetWidth(),
 			imageMap->GetHeight()
 		);
+
+	misCompensatedDistribution = useMISCompensation ?
+		BuildMISCompensatedDistribution(data, imageMap->GetWidth(), imageMap->GetHeight()) :
+		nullptr;
 }
 
 
-std::tuple<Distribution2DRef, EnvLightVisibilityCacheRPtr>
+std::tuple<Distribution2DConstRef, Distribution2DConstRef, EnvLightVisibilityCacheRPtr>
 InfiniteLight::GetPreprocessedData() const {
-	return std::make_tuple(std::ref(*imageMapDistribution), std::cref(visibilityMapCache));
+	return std::make_tuple(std::cref(*imageMapDistribution), std::cref(GetIlluminateDistribution()),
+			std::cref(visibilityMapCache));
 }
 
 float InfiniteLight::GetPower(SceneConstRef scene) const {
@@ -106,19 +169,18 @@ Spectrum InfiniteLight::GetRadiance(SceneConstRef scene,
 	if (latLongMappingPdf == 0.f)
 		return Spectrum();
 
-	const float distPdf = imageMapDistribution->Pdf(u, v);
 	if (directPdfA) {
 		if (!bsdf)
 			*directPdfA = 0.f;
 		else if (visibilityMapCache && visibilityMapCache->IsCacheEnabled(*bsdf)) {
 			*directPdfA = visibilityMapCache->Pdf(*bsdf, u, v) * latLongMappingPdf;
 		} else
-			*directPdfA = distPdf * latLongMappingPdf;
+			*directPdfA = GetIlluminateDistribution().Pdf(u, v) * latLongMappingPdf;
 	}
 
 	if (emissionPdfW) {
 		const float envRadius = GetEnvRadius(scene);
-		*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
+		*emissionPdfW = imageMapDistribution->Pdf(u, v) * latLongMappingPdf / (M_PI * envRadius * envRadius);
 	}
 
 	return temperatureScale * gain * imageMap->GetSpectrum(UV(u, v));
@@ -158,8 +220,11 @@ Spectrum InfiniteLight::Emit(SceneConstRef scene,
 	// Compute InfiniteLight ray weight
 	emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 
-	if (directPdfA)
-		*directPdfA = distPdf * latLongMappingPdf;
+	if (directPdfA) {
+		// The pdf of Illuminate()
+		*directPdfA = (misCompensatedDistribution ? misCompensatedDistribution->Pdf(uv[0], uv[1]) : distPdf) *
+				latLongMappingPdf;
+	}
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = Dot(Normalize(worldCenter - rayOrig), rayDir);
@@ -181,7 +246,7 @@ Spectrum InfiniteLight::Illuminate(SceneConstRef scene, const BSDF &bsdf,
 	if (visibilityMapCache && visibilityMapCache->IsCacheEnabled(bsdf))
 		visibilityMapCache->Sample(bsdf, u0, u1, uv, &distPdf);
 	else
-		imageMapDistribution->SampleContinuous(u0, u1, uv, &distPdf);
+		GetIlluminateDistribution().SampleContinuous(u0, u1, uv, &distPdf);
 	if (distPdf == 0.f)
 		return Spectrum();
 
@@ -215,8 +280,12 @@ Spectrum InfiniteLight::Illuminate(SceneConstRef scene, const BSDF &bsdf,
 	directPdfW = distPdf * latLongMappingPdf;
 	assert (!isnan(directPdfW) && !isinf(directPdfW) && (directPdfW > 0.f));
 
-	if (emissionPdfW)
-		*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
+	if (emissionPdfW) {
+		// The pdf of Emit()
+		const float emissionDistPdf = misCompensatedDistribution ?
+			imageMapDistribution->Pdf(uv[0], uv[1]) : distPdf;
+		*emissionPdfW = emissionDistPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
+	}
 
 	const Spectrum result = temperatureScale * gain * imageMap->GetSpectrum(UV(uv[0], uv[1]));
 	assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
@@ -257,6 +326,7 @@ PropertiesUPtr InfiniteLight::ToProperties(const ImageMapCache &imgMapCache, con
 	props->Set(imageMap->ToProperties(prefix, false));
 	props->Set(Property(prefix + ".gamma")(1.f));
 	props->Set(Property(prefix + ".sampleupperhemisphereonly")(sampleUpperHemisphereOnly));
+	props->Set(Property(prefix + ".miscompensation.enable")(useMISCompensation));
 
 	props->Set(Property(prefix + ".visibilitymapcache.enable")(useVisibilityMapCache));
 	if (useVisibilityMapCache)
