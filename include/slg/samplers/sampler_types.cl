@@ -143,6 +143,10 @@ typedef struct {
 } Sampler;
 
 #define SOBOL_BITS 32
+// GPU Sobol tables: per dimension, one table of 16 entries for each 4 bits
+// of the index (see SobolSequence_SobolDimension())
+#define SOBOL_TABLE_BITS 4
+#define SOBOL_TABLE_SIZE ((SOBOL_BITS / SOBOL_TABLE_BITS) << SOBOL_TABLE_BITS)
 #define SOBOL_MAX_DIMENSIONS 21201
 #define SOBOL_STARTOFFSET 32
 

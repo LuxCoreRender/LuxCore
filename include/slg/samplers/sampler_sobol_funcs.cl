@@ -23,26 +23,31 @@
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_INLINE uint SobolSequence_SobolDimension(
-		__global const uint* restrict sobolDirections,
+		__global const uint* restrict sobolTables,
 		const uint index, const uint dimension) {
-	const uint offset = dimension * SOBOL_BITS;
+	// Entry n of table k is the XOR of the direction vectors
+	// k * SOBOL_TABLE_BITS + b for the bits b set in n (see
+	// GenerateSobolTables() in pathoclbaseoclthreadinit.cpp). So 8 loads that
+	// don't depend on each other replace a loop over the 32 bits of index
+	// (index includes the random rngPass, so that loop ran ~32 times). The
+	// order of the XORs doesn't change the result.
+	__global const uint* restrict tables = &sobolTables[dimension * SOBOL_TABLE_SIZE];
 	uint result = 0;
-	uint i = index;
 
-	for (uint j = 0; i; i >>= 1, j++) {
-		if (i & 1)
-			result ^= sobolDirections[offset + j];
-	}
+	#pragma unroll
+	for (uint k = 0; k < SOBOL_BITS / SOBOL_TABLE_BITS; ++k)
+		result ^= tables[(k << SOBOL_TABLE_BITS) +
+				((index >> (k * SOBOL_TABLE_BITS)) & ((1u << SOBOL_TABLE_BITS) - 1u))];
 
 	return result;
 }
 
 OPENCL_FORCE_INLINE float SobolSequence_GetSample(
-		__global const uint* restrict sobolDirections,
+		__global const uint* restrict sobolTables,
 		const uint pass, const uint rngPass, const float rng0, const float rng1,
 		const uint index) {
 	// I scramble pass too in order avoid correlations visible with LIGHTCPU and PATHCPU
-	const uint iResult = SobolSequence_SobolDimension(sobolDirections, pass + rngPass, index);
+	const uint iResult = SobolSequence_SobolDimension(sobolTables, pass + rngPass, index);
 	const float fResult = iResult * (1.f / 0xffffffffu);
 
 	// Cranley-Patterson rotation to reduce visible regular patterns
