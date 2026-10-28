@@ -640,54 +640,39 @@ void processEdgesForSharpness(const ExtTriangleMesh &mesh,
     // Clear any existing edge information
     edgeMap.clear();
 
-    // First pass: build edge map
-	for (const auto& tri : triangles) {
+    // Build edge-to-triangle adjacency map in a single pass over triangles.
+    // Key: canonical edge (v0 < v1). Value: indices of adjacent triangles.
+    // This is O(T) instead of the previous O(E*T) approach which scanned all
+    // triangles for each edge.
+    std::map<std::pair<int, int>, std::vector<size_t>> edgeToTris;
 
-        // Process each edge of the triangle
+    for (size_t triIndex = 0; triIndex < triangles.size(); ++triIndex) {
+        const Triangle &tri = triangles[triIndex];
         for (int i = 0; i < 3; ++i) {
             int v0 = tri.v[i];
             int v1 = tri.v[(i + 1) % 3];
-
-            // Create a canonical edge key (always store with v0 < v1)
             auto edgeKey = std::make_pair(std::min(v0, v1), std::max(v0, v1));
-
-            // If edge doesn't exist in map, create it
-            if (edgeMap.find(edgeKey) == edgeMap.end()) {
-                edgeMap.try_emplace(edgeKey, v0, v1);
-            }
+            edgeToTris[edgeKey].push_back(triIndex);
         }
     }
 
-    // Second pass: calculate dihedral angles for edges shared by two triangles
-    for (auto &edgePair : edgeMap) {
-        EdgeInfo &edgeInfo = edgePair.second;
-        int v0 = edgeInfo.v0;
-        int v1 = edgeInfo.v1;
+    // Calculate sharpness for each edge using the adjacency map (O(E))
+    for (const auto &entry : edgeToTris) {
+        const auto &edgeKey = entry.first;
+        const auto &adjacentTris = entry.second;
 
-        // Find all triangles that share this edge
-        std::vector<size_t> adjacentTris;
-        for (size_t triIndex = 0; triIndex < triangles.size(); ++triIndex) {
-            const Triangle &tri = triangles[triIndex];
-            // Check if triangle contains this edge (in either order)
-            if ((tri.v[0] == v0 && tri.v[1] == v1) ||
-                (tri.v[1] == v0 && tri.v[2] == v1) ||
-                (tri.v[2] == v0 && tri.v[0] == v1) ||
-                (tri.v[0] == v1 && tri.v[1] == v0) ||
-                (tri.v[1] == v1 && tri.v[2] == v0) ||
-                (tri.v[2] == v1 && tri.v[0] == v0)) {
-                adjacentTris.push_back(triIndex);
-            }
-        }
+        int v0 = edgeKey.first;
+        int v1 = edgeKey.second;
+
+        EdgeInfo edgeInfo(v0, v1);
 
         // If edge is on boundary (only one adjacent triangle), mark as sharp
         if (adjacentTris.size() == 1) {
             edgeInfo.sharpness = 1.0f;
             edgeInfo.creaseWeight = 1.0f;
-            continue;
         }
-
         // For internal edges, calculate dihedral angle
-        if (adjacentTris.size() >= 2) {
+        else if (adjacentTris.size() >= 2) {
             const Triangle &tri1 = triangles[adjacentTris[0]];
             const Triangle &tri2 = triangles[adjacentTris[1]];
 
@@ -707,6 +692,8 @@ void processEdgesForSharpness(const ExtTriangleMesh &mesh,
                 edgeInfo.creaseWeight = 0.0f;
             }
         }
+
+        edgeMap.emplace(edgeKey, edgeInfo);
     }
 }
 
