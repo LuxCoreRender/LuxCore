@@ -27,6 +27,7 @@ scene.shapes.obj_redply.type = mesh
 scene.shapes.obj_redply.ply = scenes/bump/mat_red.ply
 scene.shapes.obj_redsubdiv.type = subdiv
 scene.shapes.obj_redsubdiv.source = obj_redply
+scene.shapes.obj_redsubdiv.enhanced = 1
 scene.shapes.obj_redsubdiv.maxlevel = 1
 scene.shapes.obj_redsubdiv.maxedgescreensize = 0.1
 scene.shapes.obj_red.type = harlequin
