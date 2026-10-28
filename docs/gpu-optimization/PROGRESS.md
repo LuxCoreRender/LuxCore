@@ -1193,3 +1193,14 @@ LynxSpider differs from OilPuddle/DanishMood by alpha transparency on 43
 materials, a shadow-transparent area light material, a sun and a sphere
 light. Open: find it (see PLAN T4.4); the default image has the same
 bias, of unknown size.
+
+### 2026-10-28: Blender 4.5 addon build with T5.5 + T4.2
+
+- Addon zip `D:\REPO\LuxCoreRepo\bench\addon\BlendLuxCoreDiginaat-2.11.1-blender45-gpuopt-27b2798db.zip`
+  (`gpu-optimization` at `27b2798db`), same steps as 2026-10-27
+  (`make.bat pyluxcore` with Python 3.11, pyd swapped into the stock wheel).
+- Smoke test with Python 3.11 on the unpacked wheels: CUDA + OptiX, LuxBall
+  PATHOCL 17.1 M samples/sec over 15 s with a warm cache, image correct.
+- MIS compensation (T4.2) is not in the BlendLuxCore UI: set
+  `scene.lights.<name>.miscompensation.enable` by hand or add an addon
+  option later.
