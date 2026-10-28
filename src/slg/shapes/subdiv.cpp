@@ -293,14 +293,12 @@ nRefinedVerts
 	std::vector<BufferPtr> vertAOVSsBuffers(EXTMESH_MAX_DATA_COUNT);
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh.HasVertexAOV(i)) {
-			for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-				vertAOVSsBuffers[i] = BuildBuffer<1>(
-					stencilTable,
-					(const float *)srcMesh.GetVertexAOVs(i).get(),
-					nCoarseVerts,
-					nRefinedVerts
-				);
-			}
+			vertAOVSsBuffers[i] = BuildBuffer<1>(
+				stencilTable,
+				(const float *)srcMesh.GetVertexAOVs(i).get(),
+				nCoarseVerts,
+				nRefinedVerts
+			);
 		}
 	}
 
@@ -379,7 +377,7 @@ nRefinedVerts
 			SDL_LOG("Subdivision (enhanced) - Evaluating AOV layer #" << i);
 			newVertAOVs[i] = std::make_shared<float[]>(nRefinedVerts);
 
-			const float *refinedVertAOVs = alphasBuffers[i]->BindCpuBuffer() + 1 * nCoarseVerts;
+			const float *refinedVertAOVs = vertAOVSsBuffers[i]->BindCpuBuffer() + 1 * nCoarseVerts;
 			std::copy(refinedVertAOVs, refinedVertAOVs + 1 * nRefinedVerts, newVertAOVs[i].get());
 		} else
 			newVertAOVs[i] = nullptr;
@@ -745,7 +743,6 @@ TopologyRefinerPtr createTopologyAdaptiveRefiner(
 	int numVertices,
 	int numFaces,
 	const std::map<std::pair<int, int>, EdgeInfo>& edgeMap,
-	const float sharpnessThresholdRadians,
 	const float creaseWeight,
 	const Far::PatchTableFactory::Options& patchOptions
 ) {
@@ -773,7 +770,7 @@ TopologyRefinerPtr createTopologyAdaptiveRefiner(
 	std::vector<float> creaseWeights;
     for (const auto &edgePair : edgeMap) {
         const EdgeInfo &edge = edgePair.second;
-		if (edge.sharpness > sharpnessThresholdRadians) {
+		if (edge.sharpness > 0.5f) {
 			creases.push_back(edge.v0);
 			creases.push_back(edge.v1);
 			creaseWeights.push_back(creaseWeight);
@@ -843,7 +840,6 @@ struct Surface {
 				srcMesh.GetTotalVertexCount(),
 				srcMesh.GetTotalTriangleCount(),
 				edgeMap,
-				sharpnessThresholdRadians,
 				creaseWeight,
 				patchTableOptions
 			)
@@ -1195,75 +1191,82 @@ struct Surface {
 		const Point* positions = interpolatedPositions.Get<Point>();
 
 		// Evaluate positions and derivatives
-		#pragma omp parallel for
-		for (int vertex = 0; vertex < tessCoords.size(); ++vertex) {
-			// Init
-			auto& coords = tessCoords[vertex];
+		#pragma omp parallel
+		{
+			// Per-thread weight buffers, resized to the patch CV count as needed
+			std::vector<float> pWeights, duWeights, dvWeights;
 
-			// Translate in ptex face
-			int ptexFace = ptexIndices->GetFaceId(coords.face);
+			#pragma omp for
+			for (int vertex = 0; vertex < tessCoords.size(); ++vertex) {
+				// Init
+				auto& coords = tessCoords[vertex];
 
-			//  Locate the patch corresponding to the face ptex idx and (s,t)
-			//  and evaluate:
-			Far::PatchTable::PatchHandle const * handle =
-				patchMap->FindPatch(ptexFace, coords.x, coords.y);
-			assert(handle);
+				// Translate in ptex face
+				int ptexFace = ptexIndices->GetFaceId(coords.face);
 
-			float pWeights[20];
-			float duWeights[20];
-			float dvWeights[20];
-			patchTable->EvaluateBasis(
-				*handle, coords.x, coords.y,
-				pWeights, duWeights, dvWeights
-			);
+				//  Locate the patch corresponding to the face ptex idx and (s,t)
+				//  and evaluate:
+				Far::PatchTable::PatchHandle const * handle =
+					patchMap->FindPatch(ptexFace, coords.x, coords.y);
+				assert(handle);
 
-			//  Identify the patch cvs and combine with the evaluated weights --
-			//  remember to distinguish cvs in the base level:
-			Far::ConstIndexArray cvIndices = patchTable->GetPatchVertices(*handle);
+				//  Identify the patch cvs and combine with the evaluated weights --
+				//  remember to distinguish cvs in the base level:
+				Far::ConstIndexArray cvIndices = patchTable->GetPatchVertices(*handle);
+				const int numCVs = cvIndices.size();
 
-			// Evaluate position and derivatives
-			Point& pos = tessPositions[vertex];
-			pos.Clear();
-
-			Vector du;
-			du.Clear();
-
-			Vector dv;
-			dv.Clear();
-
-			for (int cv = 0; cv < cvIndices.size(); ++cv) {
-				int cvIndex = cvIndices[cv];
-
-				const Point& position = positions[cvIndex];
-
-				pos.AddWithWeight(position, pWeights[cv]);
-				du.AddWithWeight(position, duWeights[cv]);
-				dv.AddWithWeight(position, dvWeights[cv]);
-			}
-
-			// Update normal
-			tessNormals[vertex] = Normal(Cross(du, dv));
-
-			// Check validity of normal and normalize if ok
-			auto& t = tessNormals[vertex];
-			float length = t.Length();
-
-			if (length != 0.f) {
-				t /= length;
-			} else {
-				SDL_LOG(
-					"Subdivision (enhanced) - Vertex #" << vertex << ", "
-					<< "uv = (" << coords.x << ", " << coords.y << "), "
-					<< "du = (" << du[0] << ", " << du[1] << ", " << du[2] << "), "
-					<< "dv = (" << dv[0] << ", " << dv[1] << ", " << dv[2] << ")"
+				pWeights.resize(numCVs);
+				duWeights.resize(numCVs);
+				dvWeights.resize(numCVs);
+				patchTable->EvaluateBasis(
+					*handle, coords.x, coords.y,
+					pWeights.data(), duWeights.data(), dvWeights.data()
 				);
-				SDL_LOG("Subdivision (enhanced) - WARNING - "
-					<< "Null normal (vect(du, dv) == 0)"
-				);
-			}
+
+				// Evaluate position and derivatives
+				Point& pos = tessPositions[vertex];
+				pos.Clear();
+
+				Vector du;
+				du.Clear();
+
+				Vector dv;
+				dv.Clear();
+
+				for (int cv = 0; cv < numCVs; ++cv) {
+					int cvIndex = cvIndices[cv];
+
+					const Point& position = positions[cvIndex];
+
+					pos.AddWithWeight(position, pWeights[cv]);
+					du.AddWithWeight(position, duWeights[cv]);
+					dv.AddWithWeight(position, dvWeights[cv]);
+				}
+
+				// Update normal
+				tessNormals[vertex] = Normal(Cross(du, dv));
+
+				// Check validity of normal and normalize if ok
+				auto& t = tessNormals[vertex];
+				float length = t.Length();
+
+				if (length != 0.f) {
+					t /= length;
+				} else {
+					SDL_LOG(
+						"Subdivision (enhanced) - Vertex #" << vertex << ", "
+						<< "uv = (" << coords.x << ", " << coords.y << "), "
+						<< "du = (" << du[0] << ", " << du[1] << ", " << du[2] << "), "
+						<< "dv = (" << dv[0] << ", " << dv[1] << ", " << dv[2] << ")"
+					);
+					SDL_LOG("Subdivision (enhanced) - WARNING - "
+						<< "Null normal (vect(du, dv) == 0)"
+					);
+				}
 
 
-		}  // ~for vertex
+			}  // ~for vertex
+		}  // ~omp parallel
 
 		return std::make_tuple(std::move(tessPositions), std::move(tessNormals));
 	}
@@ -1294,39 +1297,46 @@ struct Surface {
 		auto inputValues = interpolatedValues.Get<T>();
 
 		// Evaluate
-		#pragma omp parallel for
-		for (int vertex = 0; vertex < tessCoords.size(); ++vertex) {
-			// Init
-			auto& coords = tessCoords[vertex];
+		#pragma omp parallel
+		{
+			// Per-thread weight buffer, resized to the patch CV count as needed
+			std::vector<float> pWeights;
 
-			// Translate in ptex face
-			int ptexFace = ptexIndices->GetFaceId(coords.face);
+			#pragma omp for
+			for (int vertex = 0; vertex < tessCoords.size(); ++vertex) {
+				// Init
+				auto& coords = tessCoords[vertex];
 
-			//  Locate the patch corresponding to the face ptex idx and (s,t)
-			//  and evaluate:
-			Far::PatchTable::PatchHandle const * handle =
-				patchMap->FindPatch(ptexFace, coords.x, coords.y);
-			assert(handle);
+				// Translate in ptex face
+				int ptexFace = ptexIndices->GetFaceId(coords.face);
 
-			float pWeights[20];
-			patchTable->EvaluateBasis(*handle, coords.x, coords.y, pWeights);
+				//  Locate the patch corresponding to the face ptex idx and (s,t)
+				//  and evaluate:
+				Far::PatchTable::PatchHandle const * handle =
+					patchMap->FindPatch(ptexFace, coords.x, coords.y);
+				assert(handle);
 
-			//  Identify the patch cvs and combine with the evaluated weights --
-			//  remember to distinguish cvs in the base level:
-			Far::ConstIndexArray cvIndices = patchTable->GetPatchVertices(*handle);
+				//  Identify the patch cvs and combine with the evaluated weights --
+				//  remember to distinguish cvs in the base level:
+				Far::ConstIndexArray cvIndices = patchTable->GetPatchVertices(*handle);
+				const int numCVs = cvIndices.size();
 
-			// Evaluate
-			T& val = tessValues[vertex];
+				pWeights.resize(numCVs);
+				patchTable->EvaluateBasis(*handle, coords.x, coords.y, pWeights.data());
 
-			val.Clear();
+				// Evaluate
+				T& val = tessValues[vertex];
 
-			for (int cv = 0; cv < cvIndices.size(); ++cv) {
-				int cvIndex = cvIndices[cv];
+				val.Clear();
 
-				val.AddWithWeight(inputValues[cvIndex], pWeights[cv]);
-			}
+				for (int cv = 0; cv < numCVs; ++cv) {
+					int cvIndex = cvIndices[cv];
 
-		}  // ~for vertex
+					val.AddWithWeight(inputValues[cvIndex], pWeights[cv]);
+				}
+
+			}  // ~for vertex
+		}  // ~omp parallel
 
 		return tessValues;
 	}
@@ -1373,11 +1383,18 @@ struct MultiLayerDataEvaluator{
 		ExtMeshProp<DATA_OUT> releaseLayers() {
 			for (size_t i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 				auto& layer = (*this)[i];
-				auto layerPtr = std::shared_ptr<DATA_IN[]>(std::move(layer));
-				// Transfer the layer ownership and record the evaluated data size,
-				// so that GetLayerSize/GetLayerSpan are valid on the returned
-				// ExtMeshProp
-				outBuffers.SetLayer(i, reinterpret_pointer_cast<DATA_OUT[]>(layerPtr), dataSize);
+				if (!layer)
+					continue;
+				if constexpr (std::is_same_v<DATA_IN, FloatAdapter>) {
+					// Convert FloatAdapter[] to float[] by copy
+					auto floatLayer = std::make_shared<float[]>(dataSize);
+					for (size_t j = 0; j < dataSize; ++j)
+						floatLayer[j] = layer[j].x;
+					outBuffers.SetLayer(i, std::move(floatLayer), dataSize);
+				} else {
+					auto layerPtr = std::shared_ptr<DATA_IN[]>(std::move(layer));
+					outBuffers.SetLayer(i, std::move(layerPtr), dataSize);
+				}
 			}
 			return outBuffers;
 		}
@@ -1406,25 +1423,36 @@ struct MultiLayerDataEvaluator{
 		// layer. Eventually, the buffers have to be passed to ExtTriangleMesh
 		// constructor, which takes ownership. In that way, they will be released.
 
-		using DATA_IN = std::remove_pointer_t<std::invoke_result_t<EXTRACTOR, u_int>>;
-		using DATA_BUFFER = std::unique_ptr<DATA_IN[]>;
+		using RAW_DATA = std::remove_pointer_t<std::invoke_result_t<EXTRACTOR, u_int>>;
 
-		// Return float* if DATA is FloatAdapter
-		// (for Alpha and AOV)
-		using DATA_OUT = std::conditional_t<
-			std::is_same_v<DATA_IN, FloatAdapter>, float, DATA_IN
+		// Float data (alphas, AOVs) need FloatAdapter for the subdivision
+		// evaluator, which requires Clear()/AddWithWeight()
+		using DATA_IN = std::conditional_t<
+			std::is_same_v<RAW_DATA, float>, FloatAdapter, RAW_DATA
 		>;
+		using DATA_BUFFER = std::unique_ptr<DATA_IN[]>;
+		using DATA_OUT = RAW_DATA;
 
 		// Return object
 		EvaluatedLayers<DATA_BUFFER, DATA_OUT> res(EXTMESH_MAX_DATA_COUNT, coords.size());
 
 		// Treatment
 		for (size_t layer = 0; layer < EXTMESH_MAX_DATA_COUNT; ++layer) {
-			auto* layerDataPtr = getLayerData(layer);
-			if (layerDataPtr) {
-				std::span<DATA_IN> layerDataSpan(layerDataPtr, layerSize);
-				auto interpolatedData = surface.Interpolate(layerDataSpan);
-				res[layer] = surface.Evaluate<DATA_IN>(interpolatedData, coords);
+			auto* rawDataPtr = getLayerData(layer);
+			if (rawDataPtr) {
+				if constexpr (std::is_same_v<RAW_DATA, float>) {
+					// Copy float data into FloatAdapter array
+					auto adapterData = std::make_unique<FloatAdapter[]>(layerSize);
+					for (size_t j = 0; j < layerSize; ++j)
+						adapterData[j] = FloatAdapter(rawDataPtr[j]);
+					std::span<FloatAdapter> layerDataSpan(adapterData.get(), layerSize);
+					auto interpolatedData = surface.Interpolate(layerDataSpan);
+					res[layer] = surface.Evaluate<FloatAdapter>(interpolatedData, coords);
+				} else {
+					std::span<RAW_DATA> layerDataSpan(rawDataPtr, layerSize);
+					auto interpolatedData = surface.Interpolate(layerDataSpan);
+					res[layer] = surface.Evaluate<RAW_DATA>(interpolatedData, coords);
+				}
 			}
 		}
 		return res;
@@ -1500,13 +1528,11 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	auto tessCols = evaluator.evaluate(extractorCols);
 
 	// Evaluate Alphas
-	auto extractorAlphas = [&srcMesh](u_int layer)
-		{ return (FloatAdapter*) srcMesh.GetAlphas(layer).get(); };
+	auto extractorAlphas = [&srcMesh](u_int layer) { return srcMesh.GetAlphas(layer).get(); };
 	auto tessAlphas = evaluator.evaluate(extractorAlphas);
 
 	// Evaluate AOVs
-	auto extractorAOVs = [&srcMesh](u_int layer)
-		{ return (FloatAdapter*) srcMesh.GetVertexAOVs(layer).get(); };
+	auto extractorAOVs = [&srcMesh](u_int layer) { return srcMesh.GetVertexAOVs(layer).get(); };
 	auto tessAOVs = evaluator.evaluate(extractorAOVs);
 
 	// Allocate the new mesh and release buffers (transfer ownership to new
