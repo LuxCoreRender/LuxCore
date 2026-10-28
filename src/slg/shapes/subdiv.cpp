@@ -973,8 +973,16 @@ struct Surface {
 		// Step #1 - Initialize with initial (coarse) vertices
 		#pragma omp parallel for
 		for (int vertex = 0; vertex < numCoarseVertices; ++vertex) {
-			int face = topology.GetVertexFaces(vertex)[0];  // Choose first face (arbitrary)
-			tessCoords[vertex] = getVertexLocalCoords(face, vertex);
+			auto vertexFaces = topology.GetVertexFaces(vertex);
+			if (vertexFaces.size() > 0) {
+				// Choose first face (arbitrary)
+				int face = vertexFaces[0];
+				tessCoords[vertex] = getVertexLocalCoords(face, vertex);
+			} else {
+				// Isolated vertex (not referenced by any face) — assign
+				// a default coordinate; it won't appear in any triangle
+				tessCoords[vertex] = LocalCoords(0, 0.f, 0.f);
+			}
 		}
 		offset = numCoarseVertices;
 
