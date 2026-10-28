@@ -55,7 +55,7 @@ public:
 		GetInsideTex().AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
+	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) override {
 		updtex(borderTex, oldTex, newTex);
 		updtex(insideTex, oldTex, newTex);
 	}

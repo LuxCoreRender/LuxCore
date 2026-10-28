@@ -395,6 +395,12 @@ if(LUXCORE_TESTS)
   add_subdirectory(pyunittests)
 endif()
 
+option(LUXCORE_SUBDIVISION_TESTS "Build native subdivision regression test" OFF)
+if(LUXCORE_SUBDIVISION_TESTS)
+  enable_testing()
+  add_subdirectory(tests/subdivision)
+endif()
+
 ################################################################################
 #
 # Pack

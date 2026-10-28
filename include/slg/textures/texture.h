@@ -126,11 +126,8 @@ inline bool operator==(std::reference_wrapper<slg::Texture> lhs, const slg::Text
 }
 
 template <typename T>
-void updtex(T texture, TextureConstRef oldTex, TextureRef newTex) {}
-
-template<>
-inline void updtex<>(
-	TexturePtr texture,
+inline void updtex(
+	luxrays::observer_ptr<T> &texture,
 	const TextureConstRef oldTex,
 	TextureRef newTex
 ) {
@@ -139,9 +136,9 @@ inline void updtex<>(
 	}
 }
 
-template<>
-inline void updtex<>(
-	std::reference_wrapper<Texture> texture,
+template <typename T>
+inline void updtex(
+	std::reference_wrapper<T> &texture,
 	const TextureConstRef oldTex,
 	TextureRef newTex
 ) {

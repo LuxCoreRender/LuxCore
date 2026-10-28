@@ -18,6 +18,7 @@
 
 #include <boost/serialization/split_free.hpp>
 #include <boost/serialization/unique_ptr.hpp>
+#include <stdexcept>
 #include "luxrays/usings.h"
 #include "slg/scene/extmeshcache.h"
 
@@ -53,13 +54,24 @@ template<class Archive> void ExtMeshCache::save(Archive &ar, const u_int version
 	ar & size;
 
 	for (u_int i = 0; i < size; ++i) {
-		auto& obj = meshes.objs[i];
-		auto ptr = obj.get();
-		ExtMeshUPtr m{dynamic_cast<ExtMesh *>(ptr)};
-		SDL_LOG("Saving serialized mesh: " << m->GetName());
+		// The cache owns this mesh. Never let a temporary unique_ptr delete it.
+		ExtMesh * const meshPtr = dynamic_cast<ExtMesh *>(meshes.objs[i].get());
+		if (!meshPtr)
+			throw std::runtime_error("Invalid mesh type in ExtMeshCache::save");
 
-		// Save the mesh
-		ar & m;
+		// Keep serializing as unique_ptr to preserve the existing archive format.
+		// This is only a temporary, non-owning alias; release it in all paths.
+		ExtMeshUPtr m(meshPtr);
+		try {
+			SDL_LOG("Saving serialized mesh: " << m->GetName());
+
+			// Save the mesh
+			ar & m;
+		} catch (...) {
+			m.release();
+			throw;
+		}
+		m.release();
 	}
 
 	ar & deleteMeshData;

@@ -56,7 +56,7 @@ public:
 		GetContrastTex().AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
+	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) override {
 		if (&tex.get() == &oldTex)
 			tex = newTex;
 		if (&brightnessTex.get() == &oldTex)

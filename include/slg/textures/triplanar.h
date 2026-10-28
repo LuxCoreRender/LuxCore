@@ -66,7 +66,7 @@ public:
 		GetTexture3().AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
+	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) override {
 		updtex(texX, oldTex, newTex);
 		updtex(texY, oldTex, newTex);
 		updtex(texZ, oldTex, newTex);

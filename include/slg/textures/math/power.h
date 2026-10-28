@@ -53,7 +53,7 @@ public:
 		GetExponent().AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
+	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) override {
 		updtex(base, oldTex, newTex);
 		updtex(exponent, oldTex, newTex);
 	}

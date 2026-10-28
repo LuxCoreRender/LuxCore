@@ -47,6 +47,16 @@
 
 
 namespace {
+
+// Temporary meshes also own auxiliary bevel allocations released by Delete().
+struct SubdivMeshDeleter {
+	void operator()(luxrays::ExtTriangleMesh *mesh) const {
+		if (mesh) {
+			mesh->Delete();
+			delete mesh;
+		}
+	}
+};
 // Everything inside this namespace is local to this translation
 // unit (behaves like static)
 
@@ -110,8 +120,13 @@ BuildBuffer(
 	const int nRefined  // Refined vertex count
 )
 {
+	// The stencil table may include additional local-point stencils that
+	// are not counted in GetLevel(maxLevel).GetNumVertices(). Reserve space
+	// for every stencil output, while also covering the refined vertex copy.
+	const int nStencils = stencilTable->GetNumStencils();
+	const int nEvaluated = (nStencils > nRefined) ? nStencils : nRefined;
     BufferPtr buffer(
-		Osd::CpuVertexBuffer::Create(DIMENSIONS, nCoarse + nRefined)
+		Osd::CpuVertexBuffer::Create(DIMENSIONS, nCoarse + nEvaluated)
 	);
 
 	// Pack the primvar data at the start of the vertex buffer
@@ -225,6 +240,8 @@ ExtTriangleMeshUPtr ApplySubdiv(ExtTriangleMeshRef srcMesh, const u_int maxLevel
 	}
 
 	SDL_LOG("Subdivision - Stencil and patch tables created");
+	SDL_LOG("Subdivision - final vertices: " << nRefinedVerts
+		<< ", total stencil outputs: " << stencilTable->GetNumStencils());
 
 	//--------------------------------------------------------------------------
 	// Set buffers and evaluate primvar from stencils
@@ -293,14 +310,12 @@ nRefinedVerts
 	std::vector<BufferPtr> vertAOVSsBuffers(EXTMESH_MAX_DATA_COUNT);
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh.HasVertexAOV(i)) {
-			for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-				vertAOVSsBuffers[i] = BuildBuffer<1>(
-					stencilTable,
-					(const float *)srcMesh.GetVertexAOVs(i).get(),
-					nCoarseVerts,
-					nRefinedVerts
-				);
-			}
+			vertAOVSsBuffers[i] = BuildBuffer<1>(
+				stencilTable,
+				(const float *)srcMesh.GetVertexAOVs(i).get(),
+				nCoarseVerts,
+				nRefinedVerts
+			);
 		}
 	}
 
@@ -340,10 +355,11 @@ nRefinedVerts
 	ExtMeshProp<UV> newUVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh.HasUVs(i)) {
-			newUVs[i] = std::make_shared<UV[]>(nRefinedVerts);
+			newUVs.AllocateLayer(i, nRefinedVerts);
 
 			const float *refinedUVs = uvsBuffers[i]->BindCpuBuffer() + 2 * nCoarseVerts;
-			std::copy(refinedUVs, refinedUVs + 2 * nRefinedVerts, newUVs[i].get());
+			for (int v = 0; v < nRefinedVerts; ++v)
+				newUVs[i][v] = UV(refinedUVs[2 * v], refinedUVs[2 * v + 1]);
 		} else
 			newUVs[i] = nullptr;
 	}
@@ -352,10 +368,11 @@ nRefinedVerts
 	ExtMeshProp<Spectrum> newCols;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh.HasColors(i)) {
-			newCols[i] = std::make_shared<Spectrum[]>(nRefinedVerts);
+			newCols.AllocateLayer(i, nRefinedVerts);
 
 			const float *refinedCols = colsBuffers[i]->BindCpuBuffer() + 3 * nCoarseVerts;
-			std::copy(refinedCols, refinedCols + 3 * nRefinedVerts, newCols[i].get());
+			for (int v = 0; v < nRefinedVerts; ++v)
+				newCols[i][v] = Spectrum(refinedCols[3 * v], refinedCols[3 * v + 1], refinedCols[3 * v + 2]);
 		} else
 			newCols[i] = nullptr;
 	}
@@ -364,7 +381,7 @@ nRefinedVerts
 	ExtMeshProp<float> newAlphas;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh.HasAlphas(i)) {
-			newAlphas[i] = std::make_shared<float[]>(nRefinedVerts);
+			newAlphas.AllocateLayer(i, nRefinedVerts);
 
 			const float *refinedAlphas = alphasBuffers[i]->BindCpuBuffer() + 1 * nCoarseVerts;
 			std::copy(refinedAlphas, refinedAlphas + 1 * nRefinedVerts, newAlphas[i].get());
@@ -377,9 +394,9 @@ nRefinedVerts
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh.HasVertexAOV(i)) {
 			SDL_LOG("Subdivision (enhanced) - Evaluating AOV layer #" << i);
-			newVertAOVs[i] = std::make_shared<float[]>(nRefinedVerts);
+			newVertAOVs.AllocateLayer(i, nRefinedVerts);
 
-			const float *refinedVertAOVs = alphasBuffers[i]->BindCpuBuffer() + 1 * nCoarseVerts;
+			const float *refinedVertAOVs = vertAOVSsBuffers[i]->BindCpuBuffer() + 1 * nCoarseVerts;
 			std::copy(refinedVertAOVs, refinedVertAOVs + 1 * nRefinedVerts, newVertAOVs[i].get());
 		} else
 			newVertAOVs[i] = nullptr;
@@ -393,6 +410,16 @@ nRefinedVerts
 
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		newMesh->SetVertexAOV(i, newVertAOVs.GetLayer(i), newVertAOVs.GetLayerSize());
+		if (srcMesh.HasTriAOV(i)) {
+			auto values = std::make_shared<float[]>(nRefinedFaces);
+			for (int face = 0; face < nRefinedFaces; ++face) {
+				int parent = face;
+				for (int level = maxLevel; level > 0; --level)
+					parent = refiner->GetLevel(level).GetFaceParentFace(parent);
+				values[face] = srcMesh.GetTriAOVs(i)[parent];
+			}
+			newMesh->SetTriAOV(i, values, nRefinedFaces);
+		}
 	}
 
 	return newMesh;
@@ -568,7 +595,7 @@ struct InterpolatedValues {
 	// - Refined values, ie values at refined vertices and local vertices
 
 	InterpolatedValues(
-		float* p_values,
+		std::shared_ptr<void> p_values,
 		int p_numValues,
 		int p_stride
 	):
@@ -583,7 +610,7 @@ struct InterpolatedValues {
 	}
 
 	// Property members
-	const std::unique_ptr<float[]> values;
+	const std::shared_ptr<void> values;
 	const int numValues;
 	const int stride;
 };
@@ -614,21 +641,14 @@ Vector calculateTriangleNormal(const ExtTriangleMesh &mesh, const Triangle &tri)
 }
 
 // Calculate dihedral angle between two adjacent triangles
-float calculateDihedralAngle(const Vector &normal1, const Vector &normal2,
-                           const Vector &edgeVector) {
+float calculateDihedralAngle(const Vector &normal1, const Vector &normal2) {
     // Calculate the angle between the two face normals
     const float cosAngle = Dot(normal1, normal2);
-    const float angle = acosf(Clamp(cosAngle, -1.0f, 1.0f));
-
-    // Calculate the edge direction (normalized)
-    const Vector edgeDir = Normalize(edgeVector);
-
-    // Determine if the angle is convex or concave using cross product
-    const Vector crossProd = Cross(normal1, normal2);
-    const float sign = Dot(crossProd, edgeDir);
-
-    // Return the angle in the range [0, π]
-    return (sign >= 0) ? angle : M_PI - angle;
+    // Sharpness depends on the magnitude of the normal change, not on whether
+    // the fold is convex or concave. Edge endpoints are sorted by vertex index,
+    // so using their direction to choose angle versus pi-angle makes smooth
+    // geometry acquire arbitrary creases when the vertices are renumbered.
+    return acosf(Clamp(cosAngle, -1.0f, 1.0f));
 }
 
 // Process edges to determine sharpness based on dihedral angles
@@ -637,7 +657,6 @@ void processEdgesForSharpness(const ExtTriangleMesh &mesh,
                              float sharpnessThresholdRadians) {
 
 	auto triangles = mesh.GetTriangles();
-	auto vertices = mesh.GetVertices();
 
     // Clear any existing edge information
     edgeMap.clear();
@@ -696,9 +715,7 @@ void processEdgesForSharpness(const ExtTriangleMesh &mesh,
             const Vector normal1 = calculateTriangleNormal(mesh, tri1);
             const Vector normal2 = calculateTriangleNormal(mesh, tri2);
 
-            // Calculate edge vector
-            const Vector edgeVector = Vector(vertices[v1] - vertices[v0]);
-            const float dihedralAngle = calculateDihedralAngle(normal1, normal2, edgeVector);
+            const float dihedralAngle = calculateDihedralAngle(normal1, normal2);
 
             // Determine sharpness based on threshold
             if (dihedralAngle > sharpnessThresholdRadians) {
@@ -745,7 +762,6 @@ TopologyRefinerPtr createTopologyAdaptiveRefiner(
 	int numVertices,
 	int numFaces,
 	const std::map<std::pair<int, int>, EdgeInfo>& edgeMap,
-	const float sharpnessThresholdRadians,
 	const float creaseWeight,
 	const Far::PatchTableFactory::Options& patchOptions
 ) {
@@ -773,7 +789,7 @@ TopologyRefinerPtr createTopologyAdaptiveRefiner(
 	std::vector<float> creaseWeights;
     for (const auto &edgePair : edgeMap) {
         const EdgeInfo &edge = edgePair.second;
-		if (edge.sharpness > sharpnessThresholdRadians) {
+		if (edge.sharpness > 0.5f) {
 			creases.push_back(edge.v0);
 			creases.push_back(edge.v1);
 			creaseWeights.push_back(creaseWeight);
@@ -843,7 +859,6 @@ struct Surface {
 				srcMesh.GetTotalVertexCount(),
 				srcMesh.GetTotalTriangleCount(),
 				edgeMap,
-				sharpnessThresholdRadians,
 				creaseWeight,
 				patchTableOptions
 			)
@@ -1136,7 +1151,7 @@ struct Surface {
 		}
 
 		return InterpolatedValues(
-			(float*) refinedValues.release(),
+			std::shared_ptr<T[]>(std::move(refinedValues)),
 			numAllRefinedValues,
 			stride
 		);
@@ -1437,6 +1452,110 @@ struct MultiLayerDataEvaluator{
 };
 
 
+// Remove isolated vertices before passing a material-specific mesh to OpenSubdiv.
+// BlendLuxCore can export all original vertex slots while including only triangles
+// belonging to a single material. OpenSubdiv then has no incident face for some
+// vertices; enhanced::Surface::Tessellate() assumes every vertex has one.
+//
+// Triangle order, positions and all per-vertex attributes are preserved; only
+// unreferenced vertex slots are removed and triangle indices are remapped.
+template <typename T>
+std::shared_ptr<T[]> CompactSubdivisionLayer(
+        const std::shared_ptr<T[]> &source,
+        const std::vector<u_int> &newToOld) {
+    auto destination = std::make_shared<T[]>(newToOld.size());
+    for (size_t i = 0; i < newToOld.size(); ++i)
+        destination[i] = source[newToOld[i]];
+    return destination;
+}
+
+ExtTriangleMeshUPtr CompactUnusedSubdivisionVertices(ExtTriangleMeshRef srcMesh) {
+    const u_int oldVertexCount = srcMesh.GetTotalVertexCount();
+    const u_int triangleCount = srcMesh.GetTotalTriangleCount();
+    const auto sourceTriangles = srcMesh.GetTriangles();
+    const u_int unused = std::numeric_limits<u_int>::max();
+
+    std::vector<u_int> oldToNew(oldVertexCount, unused);
+    for (u_int t = 0; t < triangleCount; ++t) {
+        for (u_int corner = 0; corner < 3; ++corner) {
+            const u_int v = sourceTriangles[t].v[corner];
+            if (v >= oldVertexCount)
+                throw std::runtime_error(
+                    "Subdivision (enhanced): triangle references invalid vertex index");
+            oldToNew[v] = 0;
+        }
+    }
+
+    std::vector<u_int> newToOld;
+    newToOld.reserve(oldVertexCount);
+    for (u_int oldIndex = 0; oldIndex < oldVertexCount; ++oldIndex) {
+        if (oldToNew[oldIndex] != unused) {
+            oldToNew[oldIndex] = static_cast<u_int>(newToOld.size());
+            newToOld.push_back(oldIndex);
+        }
+    }
+
+    if (newToOld.size() == oldVertexCount)
+        return nullptr; // No unused vertices: preserve the original fast path.
+    if (newToOld.empty())
+        throw std::runtime_error(
+            "Subdivision (enhanced): input mesh has no referenced vertices");
+
+    const u_int newVertexCount = static_cast<u_int>(newToOld.size());
+    SDL_LOG("Subdivision (enhanced) - Removing unused vertices: "
+            << oldVertexCount << " -> " << newVertexCount);
+
+    VertexBuffer vertices(newVertexCount);
+    TriangleBuffer triangles(triangleCount);
+    NormalBuffer normals;
+    if (srcMesh.HasNormals())
+        normals = NormalBuffer(newVertexCount);
+
+    const auto sourceVertices = srcMesh.GetVertices();
+    const auto &sourceNormals = srcMesh.GetNormals();
+    for (u_int i = 0; i < newVertexCount; ++i) {
+        vertices[i] = sourceVertices[newToOld[i]];
+        if (normals)
+            normals[i] = sourceNormals[newToOld[i]];
+    }
+    for (u_int t = 0; t < triangleCount; ++t) {
+        for (u_int corner = 0; corner < 3; ++corner)
+            triangles[t].v[corner] = oldToNew[sourceTriangles[t].v[corner]];
+    }
+
+    ExtMeshProp<UV> uvs;
+    ExtMeshProp<Spectrum> colors;
+    ExtMeshProp<float> alphas;
+    for (u_int layer = 0; layer < EXTMESH_MAX_DATA_COUNT; ++layer) {
+        if (srcMesh.HasUVs(layer))
+            uvs.SetLayer(layer,
+                CompactSubdivisionLayer(srcMesh.GetUVs(layer), newToOld), newVertexCount);
+        if (srcMesh.HasColors(layer))
+            colors.SetLayer(layer,
+                CompactSubdivisionLayer(srcMesh.GetColors(layer), newToOld), newVertexCount);
+        if (srcMesh.HasAlphas(layer))
+            alphas.SetLayer(layer,
+                CompactSubdivisionLayer(srcMesh.GetAlphas(layer), newToOld), newVertexCount);
+    }
+
+    auto compactMesh = std::make_unique<ExtTriangleMesh>(
+        std::move(vertices), std::move(triangles), std::move(normals),
+        uvs, colors, alphas, srcMesh.GetBevelRadius());
+    compactMesh->SetName(srcMesh.GetName());
+
+    for (u_int layer = 0; layer < EXTMESH_MAX_DATA_COUNT; ++layer) {
+        if (srcMesh.HasVertexAOV(layer)) {
+            compactMesh->SetVertexAOV(layer,
+                CompactSubdivisionLayer(srcMesh.GetVertexAOVs(layer), newToOld),
+                newVertexCount);
+        }
+        // No triangle is removed or reordered, so triangle AOVs may be shared.
+        if (srcMesh.HasTriAOV(layer))
+            compactMesh->SetTriAOV(layer, srcMesh.GetTriAOVs(layer), triangleCount);
+    }
+    return compactMesh;
+}
+
 // Entry point for enhanced subdivision
 ExtTriangleMeshUPtr ApplySubdiv(
 	ExtTriangleMeshRef srcMesh,
@@ -1454,8 +1573,13 @@ ExtTriangleMeshUPtr ApplySubdiv(
 
 	using std::tie;
 
+	// Compact only when this material-specific mesh has unused slots.
+	std::unique_ptr<ExtTriangleMesh, SubdivMeshDeleter> compactSource(
+		CompactUnusedSubdivisionVertices(srcMesh).release());
+	ExtTriangleMeshRef subdivMesh = compactSource ? *compactSource : srcMesh;
+
 	// Create limit surface from base geometry
-	Surface surface(srcMesh, sharpnessThresholdRadians, creaseWeight);
+	Surface surface(subdivMesh, sharpnessThresholdRadians, creaseWeight);
 
 	// Subdivide
 	surface.Subdivide(maxLevel);
@@ -1472,7 +1596,7 @@ ExtTriangleMeshUPtr ApplySubdiv(
 		surface.Tessellate(tessellationRate);
 
 	// Record initial vertex count
-	u_int numMeshVertex = srcMesh.GetTotalVertexCount();
+	u_int numMeshVertex = subdivMesh.GetTotalVertexCount();
 
 	// Evaluate positions and normals
 	VertexBuffer tessPoints;
@@ -1480,7 +1604,7 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	{
 		// Interpolate positions on subdivided surface
 		auto interpolatedPositions =
-			surface.Interpolate(srcMesh.GetVertices());
+			surface.Interpolate(subdivMesh.GetVertices());
 
 		// Evaluate refined (interpolated) positions
 		SDL_LOG("Subdivision (enhanced) - Evaluating positions and normals");
@@ -1492,21 +1616,21 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	MultiLayerDataEvaluator evaluator(surface, numMeshVertex, tessCoords);
 
 	// Evaluate UV
-	auto extractorUV = [&srcMesh](u_int layer) { return srcMesh.GetUVs(layer).get(); };
+	auto extractorUV = [&subdivMesh](u_int layer) { return subdivMesh.GetUVs(layer).get(); };
 	auto tessUVs = evaluator.evaluate(extractorUV);
 
 	// Evaluate Colors
-	auto extractorCols = [&srcMesh](u_int layer) { return srcMesh.GetColors(layer).get(); };
+	auto extractorCols = [&subdivMesh](u_int layer) { return subdivMesh.GetColors(layer).get(); };
 	auto tessCols = evaluator.evaluate(extractorCols);
 
 	// Evaluate Alphas
-	auto extractorAlphas = [&srcMesh](u_int layer)
-		{ return (FloatAdapter*) srcMesh.GetAlphas(layer).get(); };
+	auto extractorAlphas = [&subdivMesh](u_int layer)
+		{ return (FloatAdapter*) subdivMesh.GetAlphas(layer).get(); };
 	auto tessAlphas = evaluator.evaluate(extractorAlphas);
 
 	// Evaluate AOVs
-	auto extractorAOVs = [&srcMesh](u_int layer)
-		{ return (FloatAdapter*) srcMesh.GetVertexAOVs(layer).get(); };
+	auto extractorAOVs = [&subdivMesh](u_int layer)
+		{ return (FloatAdapter*) subdivMesh.GetVertexAOVs(layer).get(); };
 	auto tessAOVs = evaluator.evaluate(extractorAOVs);
 
 	// Allocate the new mesh and release buffers (transfer ownership to new
@@ -1534,6 +1658,14 @@ ExtTriangleMeshUPtr ApplySubdiv(
 		const auto layer = tessAOVs_released.GetLayer(i);
 		if (layer)
 			newMesh->SetVertexAOV(i, layer, size_t(numPoints));
+		if (subdivMesh.HasTriAOV(i)) {
+			// Tessellate emits N*N consecutive triangles for each coarse face.
+			auto values = std::make_shared<float[]>(numTriangles);
+			const int trianglesPerFace = tessellationRate * tessellationRate;
+			for (int face = 0; face < numTriangles; ++face)
+				values[face] = subdivMesh.GetTriAOVs(i)[face / trianglesPerFace];
+			newMesh->SetTriAOV(i, values, numTriangles);
+		}
 	}
 
 	return newMesh;
@@ -1572,10 +1704,10 @@ SubdivShape::SubdivShape(
 	if (maxLevel > 0) {
 
 		// Merge vertices on distance
-		auto srcMeshPtr = merge_before ?
+		std::unique_ptr<ExtTriangleMesh, SubdivMeshDeleter> srcMeshPtr(merge_before ?
 			MergeOnDistanceShape::ApplyMergeOnDistance(
 				rawSrcMesh, std::numeric_limits<float>::min(), true
-			) : nullptr;
+			).release() : nullptr);
 		auto& srcMesh = merge_before ? *srcMeshPtr : rawSrcMesh;
 
 		if (camera && (maxEdgeScreenSize > 0.f)) {
@@ -1624,6 +1756,7 @@ SubdivShape::SubdivShape(
 
 				// Replace old mesh with new one
 				std::swap(mesh, newMesh);
+				newMesh->Delete();
 			}
 		} else {
 			SDL_LOG("Subdividing shape " << srcMesh.GetName() << " at level: " << maxLevel);

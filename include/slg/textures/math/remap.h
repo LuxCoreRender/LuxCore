@@ -60,7 +60,7 @@ public:
 		GetTargetMaxTex().AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
+	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) override {
 		updtex(valueTex, oldTex, newTex);
 		updtex(sourceMinTex, oldTex, newTex);
 		updtex(sourceMaxTex, oldTex, newTex);
