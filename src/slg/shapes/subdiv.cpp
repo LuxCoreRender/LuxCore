@@ -1625,6 +1625,32 @@ SubdivShape::SubdivShape(
 
 				int optimizedLevel =
 					static_cast<int>(std::ceil(std::log2f(edgeScreenSize / maxEdgeScreenSize)));
+
+				// Cap optimizedLevel to avoid excessive tessellation.
+				// Tessellation creates FACE_COUNT * (1<<L)^2 triangles, so we
+				// limit both by int overflow and by a practical triangle count.
+				const u_int faceCount = mesh->GetTotalTriangleCount();
+				const double maxNInt = std::sqrt(
+					static_cast<double>(std::numeric_limits<int>::max()) / faceCount
+				);
+				const int maxIntLevel = static_cast<int>(std::log2(maxNInt));
+				// Practical limit: ~50M tessellated triangles
+				const double maxNPractical = std::sqrt(50.0e6 / faceCount);
+				const int maxPracticalLevel = static_cast<int>(std::log2(maxNPractical));
+				const int maxSafeLevel = std::min(maxIntLevel, maxPracticalLevel);
+				if (optimizedLevel > maxSafeLevel) {
+					SDL_LOG(
+						"Subdividing adapted level capped from " << optimizedLevel
+						<< " to " << maxSafeLevel
+						<< " (face count = " << faceCount << ")"
+					);
+					optimizedLevel = maxSafeLevel;
+				}
+				if (optimizedLevel <= 0) {
+					SDL_LOG("Subdivision - cannot subdivide further "
+						"(face count limit reached)");
+					break;
+				}
 				SDL_LOG("Subdividing adapted level = " << optimizedLevel);
 
 				// Subdivide and re-try
