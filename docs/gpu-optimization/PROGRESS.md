@@ -1321,3 +1321,20 @@ stock 24.67, fork 35.12 (+42%). Stock cold kernel compile took about 125 s.
 Not measured: RTPATHOCL (the viewport engine; `TilePathOCLRenderThread::RenderTileWork`
 runs a fixed `maxdepth * 2 - 1` iterations per frame and reads the film
 back synchronously, T7.5 does not apply there).
+
+### 2026-10-29: addon zip with the repaired wheel, branches pushed
+
+- Pushed to `origin` (github.com/Diginaat): LuxCore `gpu-optimization`,
+  `gpu-opt/T6.3-path-guiding`; BlendLuxCore `gpu-opt-ui` (`357ea393`).
+- Addon zip `D:\REPO\LuxCoreRepo\bench\addon\BlendLuxCoreDiginaat-2.11.1-blender45-gpuopt-c6f1d4407.zip`:
+  `tests/gpu_bench/addon_zip.py <previous zip> <repaired wheel> <out zip>`
+  copies the guiding zip (BlendLuxCore `gpu-opt-ui` + manifest `wheels`
+  entry + `pyluxcore_installation_info.txt` with sha256("pyluxcore==2.11.2"))
+  and replaces only the pyluxcore wheel.
+- Install test without `blc_settings.json` (removed again): `blender
+  --command extension remove blendluxcore`, then `extension install-file -r
+  user_default -e <zip>`. luxloader prints "Fetching wheels from PyPi" but
+  the preset hash matches, so it skips the download and keeps the bundled
+  wheel. Fork pyd loads, LuxMark-LuxBall 35.11 M samples/sec.
+- The older zips in `bench\addon` still hold the plain-named DLLs and fail
+  to import inside Blender.
