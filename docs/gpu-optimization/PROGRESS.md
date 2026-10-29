@@ -1285,3 +1285,39 @@ with guiding on vs off, then merge as opt-in if it wins.
   (`PythonDebugHandler`, `src/pyluxcore/pyluxcore.cpp`), so the "Path
   guiding CDFs rebuilt" lines from the render thread never reach the
   Python log handler (or the Blender log); use luxcoreconsole to see them.
+
+### 2026-10-29: Blender never ran the fork; delvewheel-repaired wheel
+
+The user reported Blender renders at stock speed. Two causes:
+- No `blc_settings.json`, so luxloader used `wheel_source` 0 (PyPI). On
+  2026-10-29 20:19 the installed pyd was the stock one (hash = backup in
+  `bench\blender45-pyluxcore-backup`), wheel 82 MB instead of our 138 MB.
+- With the fork wheel installed, the import fails inside Blender:
+  `OSError: [WinError 127]` on `ctypes.WinDLL(embree4.dll)` in the preload
+  patch. Blender 4.5 already loads its own `tbb12.dll` and `embree4.dll`;
+  plain-named copies bind to those (other versions). The standalone
+  Python 3.11 smoke tests could not see this. All earlier addon zips in
+  `bench\addon` have this problem.
+
+Fix (no source change):
+- `tests/gpu_bench/wheel_input.py <fork wheel> <stock __init__.py> <out.whl>`:
+  fork pyd + pyluxcoretools/test + stock `__init__` body without its
+  delvewheel block, no `pyluxcore.libs`, no `DELVEWHEEL`, RECORD rebuilt.
+- `delvewheel repair --add-path out\install\Release\bin --include
+  LuxOpenImageDenoise_device_cpu.dll --no-mangle
+  LuxOpenImageDenoise_device_cpu.dll -w <dir> <out.whl>` (delvewheel 1.13.2;
+  pip has no network from Python here, the wheels came via PowerShell).
+  The pyd then imports `embree4-0b107c2b….dll`, `tbb12-93d22328….dll` etc.
+- Repaired wheel: `D:\REPO\LuxCoreRepo\bench\addon\wheels\pyluxcore-2.11.2-cp311-cp311-win_amd64.whl`
+  (`gpu-opt/T6.3-path-guiding` at `c6f1d4407`).
+- `%APPDATA%\Blender Foundation\Blender\4.5\config\blendluxcore\blc_settings.json`:
+  `wheel_source` 1, `path_to_wheel` = that wheel. luxloader reinstalls when
+  the wheel hash changes, so a new build only needs the wheel replaced.
+- Blender 5.2 (Python 3.13) still runs stock 2.11.1: no 3.13 fork build.
+
+Check inside Blender 4.5.13 (`blender -b`, pyluxcore script, LuxMark-LuxBall
+800x800, PATHOCL, CUDA + OptiX, 25 s, warm kernel cache, M samples/sec):
+stock 24.67, fork 35.12 (+42%). Stock cold kernel compile took about 125 s.
+Not measured: RTPATHOCL (the viewport engine; `TilePathOCLRenderThread::RenderTileWork`
+runs a fixed `maxdepth * 2 - 1` iterations per frame and reads the film
+back synchronously, T7.5 does not apply there).
