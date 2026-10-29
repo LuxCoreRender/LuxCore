@@ -153,8 +153,10 @@ benchmarking so later builds don't overwrite it.
 ## Git workflow
 
 - Integration branch: `gpu-optimization` (branched from upstream `main` at
-  `ce1d64155`). It holds the docs and merged, verified tasks. `main` stays
-  untouched as the baseline.
+  `ce1d64155`). It holds the docs and merged, verified tasks.
+- Since 2026-10-29 the fork's `main` is fast-forwarded to `gpu-optimization`
+  at each release (user decision). The upstream baseline is the tag
+  `upstream-baseline` (`ce1d64155`); its build is `bench\bin-main`.
 - One branch per task, from `gpu-optimization`: `gpu-opt/<task-id>-<slug>`,
   e.g. `gpu-opt/T2.1-pathstate-array`.
 - Commit messages: Conventional Commits, scope = area, body includes the

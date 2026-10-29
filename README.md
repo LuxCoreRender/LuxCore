@@ -1,3 +1,65 @@
+## LuxCore, CUDA/OptiX GPU-optimized fork (Diginaat)
+
+This is a fork of [LuxCoreRender](https://github.com/LuxCoreRender/LuxCore)
+that makes GPU rendering on NVIDIA cards (CUDA + OptiX, `PATHOCL` engine)
+faster. The default image stays the same as upstream: the renderer is
+still unbiased, and every change that would alter the image is an opt-in
+property that is off by default.
+
+- Tested on Windows 11, NVIDIA RTX 5070 12 GB, CUDA 12.8, OptiX.
+- Blender addon: [Diginaat/BlendLuxCore](https://github.com/Diginaat/BlendLuxCore)
+  (download the zip from its Releases). **For now the addon works only with
+  Blender 4.5 LTS on Windows x64**; Blender 5.x is not supported yet.
+- Plan, measurements and decisions: [`docs/gpu-optimization/`](docs/gpu-optimization/).
+
+### Speed compared to the original LuxCore
+
+Million samples per second on an RTX 5070 (`luxcoreconsole`, `PATHOCL`,
+CUDA + OptiX, median of 3 runs of 30 s, kernels already compiled, adaptive
+sampling off). Original = upstream LuxCore `ce1d64155`.
+
+| Scene | Original LuxCore | This fork | Change |
+|---|---|---|---|
+| LuxBall | 11.94 | 18.00 | +51% |
+| DLSC | 12.37 | 21.59 | +75% |
+| LuxCore2.1Benchmark | 11.16 | 16.00 | +43% |
+| DanishMood | 7.68 | 13.14 | +71% |
+| LynxSpider | 5.39 | 15.38 | +185% |
+
+Inside Blender 4.5 (LuxMark LuxBall, final render, GPU): 24.67 to 35.12
+million samples per second (+42%). The Blender viewport uses another
+engine (`RTPATHOCL`); its speed-up is not measured yet.
+
+### What changed
+
+Faster by default (same image):
+- OptiX: fast-trace BVH build, any-hit disabled, shadow rays stop at the
+  first hit when that is exact.
+- CUDA kernels: full NVRTC optimization, block size per kernel from the
+  occupancy API, 1M paths in flight on cards with more than 10 GB.
+- Wavefront path tracer: per-state work queues built by scans, material
+  sorting where it is faster (chosen at run time), fused path tail kernel.
+- Kernel specialization on by default: kernels are compiled for the
+  material and texture types the scene uses; evaluation stacks and
+  temporaries live in CUDA local memory.
+- Less memory traffic per path: path state in its own array, smaller
+  `HitPoint`, AOV channels written only when the film uses them, GPU Sobol
+  lookup tables.
+- Render loop: queues one batch ahead and reads the film asynchronously
+  (the render thread uses 3-5% of a CPU core instead of a full core).
+- Fixes: the CUDA kernel cache key includes the NVRTC options and version,
+  OpenCL split compile, a kernel cache deadlock on a corrupt cache file.
+
+New, opt-in:
+- GPU light tracing for caustics: with `path.hybridbackforward.enable` the
+  light paths are traced on the GPU too, with guided emission toward
+  specular objects.
+- Path guiding on the GPU: `path.guiding.enable` (experimental, `PATHOCL`).
+- MIS compensation for HDRI lights: `scene.lights.<name>.miscompensation.enable`.
+- Tuning and profiling: `cuda.kernel.maxregisters`, `opencl.kernel.profile.enable`.
+
+---
+
 ### LuxCoreRender
 
 ![LuxCoreRender alt text](https://luxcorerender.org/wp-content/uploads/2017/12/wallpaper_lux_05_rend1b.jpg)

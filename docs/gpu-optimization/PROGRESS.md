@@ -1338,3 +1338,38 @@ back synchronously, T7.5 does not apply there).
   wheel. Fork pyd loads, LuxMark-LuxBall 35.11 M samples/sec.
 - The older zips in `bench\addon` still hold the plain-named DLLs and fail
   to import inside Blender.
+
+### 2026-10-29: first fork release (`main` = `gpu-optimization`)
+
+User decisions: the fork's `main` follows `gpu-optimization`, T6.3 merged
+opt-in, README fork sections, a BlendLuxCore release with the addon zip,
+the addon marked Blender 4.5 only. Upstream baseline: tag
+`upstream-baseline` (`ce1d64155`), build `bench\bin-main`.
+
+A/B upstream vs release build (`bench\bin-release` = `out\install` of
+`c6f1d4407`, same engine code as this merge; `bench.py ab --runs 3
+--halttime 30`, M samples/sec, median; `bench\ab-main-vs-release.txt`):
+
+| Scene | upstream | release | change |
+|---|---|---|---|
+| LuxBall | 11.94 | 18.00 | +50.8% |
+| DLSC | 12.37 | 21.59 | +74.5% |
+| LuxCore2.1Benchmark | 11.16 | 16.00 | +43.4% |
+| DanishMood | 7.68 | 13.14 | +71.1% |
+| LynxSpider | 5.39 | 15.38 | +185.3% |
+
+Image check vs `main-img` (upstream, 128 spp): all 5 pass (candidate RMSE
+0.0025-0.050 vs noise floors 0.021-0.19). Means: LuxBall +0.023%, DLSC
+-0.216%, DanishMood +0.029%, LynxSpider -0.011%, LuxCore2.1Benchmark
+-3.0% (PhotonGI cache variance). With `path.photongi.indirect.enabled 0`
+vs `main-nopgi`: LuxCore2.1Benchmark -0.001%, DanishMood -0.073%, pass.
+
+Addon: BlendLuxCore `blender_manifest.toml` now says name
+`BlendLuxCoreDiginaat`, `blender_version_max = "4.6.0"`, `platforms =
+["windows-x64"]`. `tests/gpu_bench/addon_zip.py` builds the zip from the
+BlendLuxCore HEAD (git archive + manifest `wheels` + install info + the
+wheels). Release zip
+`D:\REPO\LuxCoreRepo\bench\addon\BlendLuxCoreDiginaat-2.11.1-blender45-windows-gpuopt-1.zip`:
+clean remove + `install-file` in Blender 4.5 loads the fork pyd (luxloader
+skips PyPI). `gh` uses `GH_TOKEN` from `git credential fill`: the stored
+token has no `read:org`, so `gh auth login --with-token` refuses it.
