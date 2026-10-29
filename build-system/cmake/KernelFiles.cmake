@@ -58,6 +58,7 @@ set(SLG_KERNELS
     include/slg/cameras/camera_funcs.cl
     include/slg/engines/caches/photongi/pgic_types.cl
     include/slg/engines/caches/photongi/pgic_funcs.cl
+    include/slg/engines/pathoclbase/kernels/pathguiding_funcs.cl
     include/slg/engines/pathoclbase/kernels/pathoclbase_datatypes.cl
     include/slg/engines/pathoclbase/kernels/pathoclbase_funcs.cl
     include/slg/engines/pathoclbase/kernels/pathoclbase_kernels_micro.cl

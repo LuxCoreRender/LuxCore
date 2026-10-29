@@ -19,6 +19,7 @@
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "slg/engines/pathoclbase/compiledscene.h"
+#include "slg/cameras/projective.h"
 
 using namespace std;
 using namespace luxrays;
@@ -48,6 +49,13 @@ void CompiledScene::CompilePathTracer() {
 
 	compiledPathTracer.albedo.specularSetting = (slg::ocl::AlbedoSpecularSetting)pathTracer->albedoSpecularSetting;
 	compiledPathTracer.albedo.specularGlossinessThreshold = pathTracer->albedoSpecularGlossinessThreshold;
+
+	// Path guiding: the cell size follows the distance from the camera
+	// position (the origin for the cameras without one)
+	const ProjectiveCamera *projectiveCamera = dynamic_cast<const ProjectiveCamera *>(&scene.GetCamera());
+	const Point cameraPos = projectiveCamera ? projectiveCamera->orig : Point();
+	ASSIGN_VECTOR(compiledPathTracer.guiding.cameraPos, cameraPos);
+	compiledPathTracer.guiding.cellScale = pathTracer->guidingCellScale;
 }
 
 #endif

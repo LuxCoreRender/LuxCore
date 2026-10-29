@@ -125,11 +125,19 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	emitLightsDistributionBuff = nullptr;
 	lightFilterLUTsBuff = nullptr;
 	lightCastersBuff = nullptr;
+	guidingCellKeysBuff = nullptr;
+	guidingTrainBinsBuff = nullptr;
+	guidingTrainCountsBuff = nullptr;
+	guidingCDFsBuff = nullptr;
+	guidingRecordsBuff = nullptr;
+	guidingPathStatesBuff = nullptr;
+	guidingStateBuff = nullptr;
 
 	// OpenCL kernels
 	initSeedKernel = nullptr;
 	initKernel = nullptr;
 	resetPathQueuesKernel = nullptr;
+	pathGuidingRebuildKernel = nullptr;
 	queuePathsKernel = nullptr;
 	countPathsByMaterialKernel = nullptr;
 	scanPathsByMaterialKernel = nullptr;
@@ -261,6 +269,13 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	intersectionDevice.FreeBuffer(&emitLightsDistributionBuff);
 	intersectionDevice.FreeBuffer(&lightFilterLUTsBuff);
 	intersectionDevice.FreeBuffer(&lightCastersBuff);
+	intersectionDevice.FreeBuffer(&guidingCellKeysBuff);
+	intersectionDevice.FreeBuffer(&guidingTrainBinsBuff);
+	intersectionDevice.FreeBuffer(&guidingTrainCountsBuff);
+	intersectionDevice.FreeBuffer(&guidingCDFsBuff);
+	intersectionDevice.FreeBuffer(&guidingRecordsBuff);
+	intersectionDevice.FreeBuffer(&guidingPathStatesBuff);
+	intersectionDevice.FreeBuffer(&guidingStateBuff);
 
 	started = false;
 

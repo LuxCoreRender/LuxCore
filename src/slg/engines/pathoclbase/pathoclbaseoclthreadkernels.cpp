@@ -150,6 +150,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	}
 	if (renderEngine->lightTaskCount > 0)
 		kernelsParameters.push_back("-D PARAM_LIGHT_TRACING");
+	if (UsePathGuiding())
+		kernelsParameters.push_back("-D PARAM_PATH_GUIDING");
 
 	const string kernelSource = GetKernelSources();
 	const string microKernelSource = slg::ocl::KernelSource_pathoclbase_kernels_micro;
@@ -333,6 +335,13 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		advanceLightPathsKernel.reset();
 	}
 
+	// Path guiding kernels
+	if (UsePathGuiding()) {
+		std::tie(pathGuidingRebuildKernel, pathGuidingRebuildWorkGroupSize) =
+				CompileKernel(intersectionDevice, *programs[0], "PathGuiding_Rebuild");
+	} else
+		pathGuidingRebuildKernel.reset();
+
 	const double tEnd = WallClockTime();
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 
@@ -496,6 +505,15 @@ u_int PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, pgicCausticPhotonsBuff);
 	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, pgicCausticPhotonsBVHNodesBuff);
 
+	// Path guiding
+	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, guidingCellKeysBuff);
+	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, guidingTrainBinsBuff);
+	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, guidingTrainCountsBuff);
+	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, guidingCDFsBuff);
+	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, guidingRecordsBuff);
+	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, guidingPathStatesBuff);
+	intersectionDevice.SetKernelArg(advancePathsKernel, argIndex++, guidingStateBuff);
+
 	return argIndex;
 }
 
@@ -579,6 +597,19 @@ void PathOCLBaseOCLRenderThread::SetKernelArgs() {
 	SetLightTracingKernelArgs(0);
 
 	//--------------------------------------------------------------------------
+	// Path guiding kernels
+	//--------------------------------------------------------------------------
+
+	if (pathGuidingRebuildKernel) {
+		intersectionDevice.SetKernelArg(pathGuidingRebuildKernel, 0, guidingTrainBinsBuff);
+		intersectionDevice.SetKernelArg(pathGuidingRebuildKernel, 1, guidingTrainCountsBuff);
+		intersectionDevice.SetKernelArg(pathGuidingRebuildKernel, 2, guidingCDFsBuff);
+		intersectionDevice.SetKernelArg(pathGuidingRebuildKernel, 3, guidingStateBuff);
+		// The CDF buffer and the training flag are set by
+		// EnqueuePathGuidingRebuild()
+	}
+
+	//--------------------------------------------------------------------------
 	// initKernel
 	//--------------------------------------------------------------------------
 
@@ -592,6 +623,20 @@ void PathOCLBaseOCLRenderThread::EnqueueInitKernel() {
 	intersectionDevice.EnqueueKernel(initKernel,
 			HardwareDeviceRange(renderEngine->taskCount), HardwareDeviceRange(initWorkGroupSize));
 	initPathsPending = true;
+}
+
+void PathOCLBaseOCLRenderThread::EnqueuePathGuidingRebuild(const bool stopTraining) {
+	// The rebuild writes the CDF buffer the paths do not use
+	guidingCDFBuffer ^= 1;
+	{
+		std::unique_lock<std::mutex> lock(renderEngine->setKernelArgsMutex);
+		intersectionDevice.SetKernelArg(pathGuidingRebuildKernel, 4, guidingCDFBuffer);
+		intersectionDevice.SetKernelArg(pathGuidingRebuildKernel, 5, stopTraining ? 0u : 1u);
+	}
+
+	intersectionDevice.EnqueueKernel(pathGuidingRebuildKernel,
+			HardwareDeviceRange(RoundUp<u_int>(PATHGUIDING_CELL_COUNT, pathGuidingRebuildWorkGroupSize)),
+			HardwareDeviceRange(pathGuidingRebuildWorkGroupSize));
 }
 
 void PathOCLBaseOCLRenderThread::EnqueueInitLightPathsKernel() {

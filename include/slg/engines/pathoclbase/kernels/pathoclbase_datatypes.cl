@@ -154,6 +154,48 @@ typedef struct {
 } GPUTaskStats;
 
 //------------------------------------------------------------------------------
+// Path guiding (see pathguiding_funcs.cl)
+//------------------------------------------------------------------------------
+
+// Number of cells of the hash table (a power of 2)
+#define PATHGUIDING_CELL_COUNT (1u << 16)
+// Directional resolution of a cell: PATHGUIDING_DIR_RES x PATHGUIDING_DIR_RES
+// equal area bins (cos(theta) x phi in world space)
+#define PATHGUIDING_DIR_RES 16u
+#define PATHGUIDING_BIN_COUNT (PATHGUIDING_DIR_RES * PATHGUIDING_DIR_RES)
+// Training vertices recorded per path
+#define PATHGUIDING_MAX_RECORDS 8u
+
+// A path vertex recorded for the training: at the splat, the radiance the
+// path gathers after this vertex, times scale, goes to the bin
+typedef struct {
+	// Cell index * PATHGUIDING_BIN_COUNT + bin index
+	unsigned int cellBin;
+	// Luminance of the path radiance when the vertex was recorded
+	float radiance;
+	// 1 / (luminance of the path throughput after the vertex * the pdf of
+	// the sampled direction)
+	float scale;
+} PathGuidingRecord;
+
+// Path guiding state of a path
+typedef struct {
+	// Number of PathGuidingRecord of the path
+	unsigned int recordCount;
+	// The CDF buffer (0 or 1) the current vertex samples, set in
+	// MK_HIT_OBJECT: MK_DL_SAMPLE_BSDF and MK_GENERATE_NEXT_VERTEX_RAY use
+	// the same CDFs even if a rebuild runs between them
+	unsigned int cdfBuffer;
+} PathGuidingPathState;
+
+// guidingState buffer entries
+// 1 while training, 0 after
+#define PATHGUIDING_STATE_TRAINING 0
+// The CDF buffer of the last rebuild
+#define PATHGUIDING_STATE_CDF_BUFFER 1
+#define PATHGUIDING_STATE_SIZE 2
+
+//------------------------------------------------------------------------------
 // Light tracing data types
 //
 // With the hybrid back/forward path tracing, the eye paths skip the caustic

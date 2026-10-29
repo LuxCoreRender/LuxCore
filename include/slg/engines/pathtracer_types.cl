@@ -56,5 +56,13 @@ typedef struct {
 		AlbedoSpecularSetting specularSetting;
 		float specularGlossinessThreshold;
 	} albedo;
+
+	// Path guiding settings (PATHOCL with PARAM_PATH_GUIDING only)
+	struct {
+		// The guiding cells have a size of about distance from cameraPos *
+		// cellScale (see PathGuiding_CellKey())
+		Point cameraPos;
+		float cellScale;
+	} guiding;
 } PathTracer;
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

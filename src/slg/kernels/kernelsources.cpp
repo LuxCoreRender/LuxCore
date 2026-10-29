@@ -183,6 +183,7 @@ string GetPathOCLBaseKernelSources() {
 			slg::ocl::KernelSource_scene_funcs <<
 			slg::ocl::KernelSource_pgic_funcs <<
 			// PathOCL Funcs
+			slg::ocl::KernelSource_pathguiding_funcs <<
 			slg::ocl::KernelSource_pathoclbase_funcs;
 
 	return ssKernel.str();
