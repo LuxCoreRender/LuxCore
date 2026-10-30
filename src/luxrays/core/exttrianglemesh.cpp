@@ -141,9 +141,9 @@ ExtTriangleMesh::ExtTriangleMesh(
 	bevelBVHArrayNodes(nullptr)
 
 {
-	auto meshUVs = ExtMeshProp(mUVs);
-	auto meshCols = ExtMeshProp(mCols);
-	auto meshAlphas = ExtMeshProp(mAlphas);
+	auto meshUVs = ExtMeshProp(mUVs, vertices.Count());
+	auto meshCols = ExtMeshProp(mCols, vertices.Count());
+	auto meshAlphas = ExtMeshProp(mAlphas, vertices.Count());
 
 	Init(std::move(meshNormals), meshUVs, meshCols, meshAlphas);
 }

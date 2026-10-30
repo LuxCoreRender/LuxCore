@@ -1,0 +1,84 @@
+scene.camera.type = "perspective"
+scene.camera.lookat.orig = 5.0 -16.0 5.0
+scene.camera.lookat.target = 0.2 0.2 1.9
+scene.camera.fieldofview = 45
+################################################################################
+scene.textures.vertcol.type = hitpointcolor
+################################################################################
+# Materials
+scene.materials.mat_monkey.type = matte
+scene.materials.mat_monkey.kd = vertcol
+##
+scene.materials.mat_floor.type = matte
+scene.materials.mat_floor.kd = 0.5 0.5 0.5
+################################################################################
+# Lights: sun for key light + point for fill
+scene.lights.sun.type = sun
+scene.lights.sun.dir = -0.3 -0.5 0.8
+scene.lights.sun.turbidity = 2.5
+scene.lights.sun.relsize = 1
+scene.lights.sun.gain = 0.00003 0.00003 0.00003
+##
+scene.lights.fill.type = point
+scene.lights.fill.position = 5 -10 8
+scene.lights.fill.color = 0.1 0.1 0.1
+################################################################################
+# Source mesh: Suzanne monkey (3225 verts / 6296 tris)
+scene.shapes.monkey_ply.type = mesh
+scene.shapes.monkey_ply.ply = scenes/bigmonkey/bigmonkey.ply
+################################################################################
+# Heavy treatment #1: enhanced adaptive subdivision (level 5, fine screen size)
+scene.shapes.monkey_subdiv1.type = subdiv
+scene.shapes.monkey_subdiv1.source = monkey_ply
+scene.shapes.monkey_subdiv1.enhanced = 1
+scene.shapes.monkey_subdiv1.mergebefore = 1
+scene.shapes.monkey_subdiv1.maxlevel = 12
+scene.shapes.monkey_subdiv1.maxedgescreensize = 0.01
+scene.shapes.monkey_subdiv1.sharpnessthreshold = 3.14159
+scene.shapes.monkey_subdiv1.creaseweight = 0.0
+################################################################################
+# Heavy treatment #2: second enhanced subdiv pass (level 3, finer)
+scene.shapes.monkey_subdiv2.type = subdiv
+scene.shapes.monkey_subdiv2.source = monkey_subdiv1
+scene.shapes.monkey_subdiv2.enhanced = 1
+scene.shapes.monkey_subdiv2.maxlevel = 12
+scene.shapes.monkey_subdiv2.maxedgescreensize = 0.005
+scene.shapes.monkey_subdiv2.sharpnessthreshold = 3.14159
+scene.shapes.monkey_subdiv2.creaseweight = 0.0
+################################################################################
+# Heavy treatment #3: third enhanced subdiv pass (level 2, very fine)
+scene.shapes.monkey_subdiv3.type = subdiv
+scene.shapes.monkey_subdiv3.source = monkey_subdiv2
+scene.shapes.monkey_subdiv3.enhanced = 1
+scene.shapes.monkey_subdiv3.maxlevel = 12
+scene.shapes.monkey_subdiv3.maxedgescreensize = 0.002
+scene.shapes.monkey_subdiv3.sharpnessthreshold = 3.14159
+scene.shapes.monkey_subdiv3.creaseweight = 0.0
+################################################################################
+# Heavy treatment #4: strong displacement with high-octave FBM noise
+scene.textures.disptex.type = fbm
+scene.textures.disptex.octaves = 12
+scene.textures.disptex.roughness = 0.7
+##
+scene.shapes.monkey_disp.type = displacement
+scene.shapes.monkey_disp.source = monkey_subdiv3
+scene.shapes.monkey_disp.map = disptex
+scene.shapes.monkey_disp.map.type = height
+scene.shapes.monkey_disp.scale = 0.08
+scene.shapes.monkey_disp.offset = 0.0
+scene.shapes.monkey_disp.normalsmooth = 1
+scene.shapes.monkey_disp.uvindex = 0
+################################################################################
+# Heavy treatment #5: harlequin coloring on the displaced mesh
+scene.shapes.monkey_final.type = harlequin
+scene.shapes.monkey_final.source = monkey_disp
+################################################################################
+# Objects
+scene.objects.obj_monkey.ply = monkey_final
+scene.objects.obj_monkey.material = mat_monkey
+##
+# Floor: large-plane.ply is at Z=0 with normal +Z (Z-up convention = floor)
+scene.objects.obj_floor.ply = scenes/displacement/large-plane.ply
+scene.objects.obj_floor.material = mat_floor
+scene.objects.obj_floor.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  0 0 -0.1 1
+################################################################################
