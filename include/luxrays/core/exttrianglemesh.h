@@ -67,8 +67,11 @@ public:
 	ExtMeshProp() { this->fill(nullptr); }
 
 	// Construct from a single layer of data
-	ExtMeshProp(Layer layer) : ExtMeshProp() {
-		if (layer) (*this)[0] = layer;
+	ExtMeshProp(Layer layer, size_t layerSize = 0) : ExtMeshProp() {
+		if (layer) {
+			(*this)[0] = layer;
+			if (layerSize) _size = layerSize;
+		}
 	}
 
 	// Per-layer
