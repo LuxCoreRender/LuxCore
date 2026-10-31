@@ -76,11 +76,17 @@ jobs:
         if: env.ACT
         uses: actions/checkout@v6
 
+      - name: Set up Clang
+        uses: egor-tensin/setup-clang@v2
+        with:
+          version: latest
+          platform: x64
+
       - name: Install build tools
         shell: bash
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y g++ clang cmake ninja-build libboost-dev
+          sudo apt-get install -y libboost-dev
 
           # On Ubuntu, the clang SPIR-V target delegates to the external
           # SPIRV-LLVM-Translator: install the version matching the clang
@@ -96,8 +102,8 @@ jobs:
           # build-system/spirv): no LuxCoreDeps, no conan, no 'make deps',
           # only the system g++ and clang. The configure fails with a clear
           # error if the clang can not compile OpenCL C in SPIR-V format.
-          cmake -S build-system/spirv -B bake-build -G Ninja
-          cmake --build bake-build
+          cmake -S build-system/spirv -B bake-build
+          cmake --build bake-build -j 4
 
           # Check that the modules have actually been baked
           test -f bake-build/baked/spirvmanifest.txt
