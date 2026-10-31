@@ -32,22 +32,8 @@
 #include <pthread.h>
 #endif
 
-#if (defined(WIN32) && defined(_MSC_VER) && _MSC_VER < 1800)
-#include <float.h>
-#define isnan(a) _isnan(a)
-#define isinf(f) (!_finite((f)))
-#endif
-
-#if defined(WIN32)
-#define isnanf(a) _isnan(a)
-#endif
-
-#if (defined(__GNUC__) && (__GNUC__ > 5))
-template <class T>
-int isnan(T a) { return std::isnan(a); }
-template <class T>
-int isinf(T a) { return std::isinf(a); }
-#endif
+using std::isnan;
+using std::isinf;
 
 #if defined(__APPLE__)
 #include <string>
