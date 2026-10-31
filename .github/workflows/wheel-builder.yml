@@ -91,7 +91,7 @@ jobs:
           # build-system/spirv): no LuxCoreDeps, no conan, no 'make deps',
           # only the system g++ and clang. The configure fails with a clear
           # error if the clang can not compile OpenCL C in SPIR-V format.
-          cmake -S build-system/spirv -B bake-build -G Ninja
+          cmake -S build-system/spirv -B bake-build -G Ninja -DCMAKE_VERBOSE_MAKEFILE=ON
           cmake --build bake-build
 
           # Check that the modules have actually been baked
