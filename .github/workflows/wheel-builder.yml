@@ -5,6 +5,10 @@
 
 name: LuxCore Python Wheels Builder
 
+concurrency:
+  group: luxcore-wheel-builder-${{ github.ref }}
+  cancel-in-progress: false
+
 on:
   workflow_dispatch:
       inputs:
@@ -58,6 +62,7 @@ jobs:
   bake-spirv:
     name: Bake SPIR-V modules
     runs-on: ubuntu-latest
+    timeout-minutes: 90
 
     steps:
       - name: Checkout main repository (standard context)
@@ -107,6 +112,7 @@ jobs:
     name: Build wheel ${{ matrix.os }}-3.${{ matrix.python-minor }}
     needs: [bake-spirv]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
