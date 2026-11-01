@@ -71,7 +71,8 @@ bool OCLDeviceWindow::DrawObjectGUI(const std::unique_ptr<Properties> & props, b
 
 	try {
 		// Get the list of intersection devices
-		const auto& oclDevDescs = *GetOpenCLDeviceDescs();
+		const auto oclDevDescsUPtr = GetOpenCLDeviceDescs();
+		const auto& oclDevDescs = *oclDevDescsUPtr;
 		const vector<string> oclDevDescPrefixs = oclDevDescs.GetAllUniqueSubNames("opencl.device");
 
 		// Get the device selection string
