@@ -132,7 +132,8 @@ void StatsWindow::Draw() {
 		}
 
 		if (ImGui::CollapsingHeader("Intersection devices available", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
-			const auto& props = *GetOpenCLDeviceDescs();
+			const auto devDescsUPtr = GetOpenCLDeviceDescs();
+			const auto& props = *devDescsUPtr;
 			const vector<string>  prefixs = props.GetAllUniqueSubNames("opencl.device");
 
 			// Print device info

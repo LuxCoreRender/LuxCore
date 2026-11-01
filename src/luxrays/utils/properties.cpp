@@ -800,7 +800,7 @@ Properties::Properties(Properties&& other) noexcept :
 Properties& Properties::operator=(Properties&& other) noexcept {
 	if (this != &other) {
 		names = std::move(other.names);
-		props = std::move(props);
+		props = std::move(other.props);
 	}
 	return *this;
 }
