@@ -123,6 +123,11 @@ template<class T> inline T Lerp(float t, T v1, T v2) {
 	return v1 + t * (v2 - v1);
 }
 
+template<class T> inline T Lerp(double t, T v1, T v2) {
+	// Linear interpolation
+	return v1 + t * (v2 - v1);
+}
+
 template<class T> inline T LerpWithStep(float t, T v1, T v2, float step) {
 	const float lerp = Lerp(t, v1, v2);
 
@@ -139,6 +144,12 @@ template<class T> inline T Cerp(float t, T v0, T v1, T v2, T v3) {
 			t * (v2 - v0 +
 				t * (2.f * v0 - 5.f * v1 + 4.f * v2 - v3 +
 					t * (3.f * (v1 - v2) + v3 - v0)));
+}
+
+template<class T> inline T NonLerp(T a, T b, T w, T p) {
+	const T c1 = pow(a, p);
+	const T c2 = pow(b, p);
+	return ((pow(w, p) - c1) / (c2 - c1));
 }
 
 template<class T> inline T Clamp(T val, T low, T high) {

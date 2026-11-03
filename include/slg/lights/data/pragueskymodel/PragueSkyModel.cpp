@@ -8,6 +8,8 @@
 #include <cstring>
 
 #include "PragueSkyModel.h"
+#include "luxrays/core/geometry/vector.h"
+using namespace luxrays;
 
 /////////////////////////////////////////////////////////////////////////////////////
 // Constants
@@ -279,9 +281,9 @@ double doubleFromHalf(const uint16 half) {
 
 
 /////////////////////////////////////////////////////////////////////////////////////
-// Vector3 operations
+// Vector3 operations --> replaced by luxrays::Vector functions
 /////////////////////////////////////////////////////////////////////////////////////
-
+/*
 double dot(const PragueSkyModel::Vector3& v1, const PragueSkyModel::Vector3& v2) {
     return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
 }
@@ -293,22 +295,23 @@ double magnitude(const PragueSkyModel::Vector3& vector) {
 PragueSkyModel::Vector3 normalize(const PragueSkyModel::Vector3& vector) {
     return vector / magnitude(vector);
 }
-
+*/
 
 /////////////////////////////////////////////////////////////////////////////////////
 // Helper functions
 /////////////////////////////////////////////////////////////////////////////////////
-
+/*
 double lerpPrague(const double from, const double to, const double factor) {
     return (1.0 - factor) * from + factor * to;
-}
+} // Replaced by Lerp from luxrays/utils.h
 
 double nonlerp(const double a, const double b, const double w, const double p) {
     const double c1 = pow(a, p);
     const double c2 = pow(b, p);
     return ((pow(w, p) - c1) / (c2 - c1));
-}
+} // implemented instead in luxrays/utils.h as NonLerp
 
+*/
 
 /////////////////////////////////////////////////////////////////////////////////////
 // Data reading
@@ -734,14 +737,14 @@ PragueSkyModel::AvailableData PragueSkyModel::getAvailableData() const {
 // Filling the Parameters structure
 /////////////////////////////////////////////////////////////////////////////////////
 
-PragueSkyModel::Parameters PragueSkyModel::computeParameters(const Vector3& viewpoint,
-                                                             const Vector3& viewDirection,
+PragueSkyModel::Parameters PragueSkyModel::computeParameters(const Vector& viewpoint,
+                                                             const Vector& viewDirection,
                                                              const double   groundLevelSolarElevationAtOrigin,
                                                              const double   groundLevelSolarAzimuthAtOrigin,
                                                              const double   visibility,
                                                              const double   albedo) const {
     assert(viewpoint.z >= 0.0);
-    assert(magnitude(viewDirection) > 0.0);
+    assert(viewDirection.Length() > 0.0);
     assert(visibility >= 0.0);
     assert(albedo >= 0.0 && albedo <= 1.0);
 
@@ -751,14 +754,14 @@ PragueSkyModel::Parameters PragueSkyModel::computeParameters(const Vector3& view
 
     // Shift viewpoint about safety altitude up
 
-    const Vector3 centerOfTheEarth   = Vector3(0.0, 0.0, -PLANET_RADIUS);
-    Vector3       toViewpoint        = viewpoint - centerOfTheEarth;
-    Vector3       toViewpointN       = normalize(toViewpoint);
-    const double  distanceToView     = magnitude(toViewpoint) + SAFETY_ALTITUDE;
-    Vector3       toShiftedViewpoint = toViewpointN * distanceToView;
-    Vector3       shiftedViewpoint   = centerOfTheEarth + toShiftedViewpoint;
+    const Vector  centerOfTheEarth   = Vector(0.0, 0.0, -PLANET_RADIUS);
+    Vector        toViewpoint        = viewpoint - centerOfTheEarth;
+    Vector        toViewpointN       = Normalize(toViewpoint);
+    const double  distanceToView     = toViewpoint.Length() + SAFETY_ALTITUDE;
+    Vector        toShiftedViewpoint = toViewpointN * distanceToView;
+    Vector        shiftedViewpoint   = centerOfTheEarth + toShiftedViewpoint;
 
-    Vector3 viewDirectionN = normalize(viewDirection);
+    Vector viewDirectionN = Normalize(viewDirection);
 
     // Compute altitude of viewpoint
 
@@ -767,7 +770,7 @@ PragueSkyModel::Parameters PragueSkyModel::computeParameters(const Vector3& view
 
     // Direction to sun
 
-    Vector3 directionToSunN;
+    Vector directionToSunN;
     directionToSunN.x = cos(groundLevelSolarAzimuthAtOrigin) * cos(groundLevelSolarElevationAtOrigin);
     directionToSunN.y = sin(groundLevelSolarAzimuthAtOrigin) * cos(groundLevelSolarElevationAtOrigin);
     directionToSunN.z = sin(groundLevelSolarElevationAtOrigin);
@@ -775,30 +778,30 @@ PragueSkyModel::Parameters PragueSkyModel::computeParameters(const Vector3& view
     // Solar elevation at viewpoint (more precisely, solar elevation at the point
     // on the ground directly below viewpoint)
 
-    const double dotZenithSun = dot(toViewpointN, directionToSunN);
+    const double dotZenithSun = Dot(toViewpointN, directionToSunN);
     params.elevation          = 0.5 * PI - acos(dotZenithSun);
 
     // Altitude-corrected view direction
 
-    Vector3 correctViewN;
+    Vector correctViewN;
     if (distanceToView > PLANET_RADIUS) {
-        Vector3 lookAt = shiftedViewpoint + viewDirectionN;
+        Vector lookAt = shiftedViewpoint + viewDirectionN;
 
         const double correction =
             sqrt(distanceToView * distanceToView - PLANET_RADIUS * PLANET_RADIUS) / distanceToView;
 
-        Vector3 toNewOrigin = toViewpointN * (distanceToView - correction);
-        Vector3 newOrigin   = centerOfTheEarth + toNewOrigin;
-        Vector3 correctView = lookAt - newOrigin;
+        Vector toNewOrigin = toViewpointN * (distanceToView - correction);
+        Vector newOrigin   = centerOfTheEarth + toNewOrigin;
+        Vector correctView = lookAt - newOrigin;
 
-        correctViewN = normalize(correctView);
+        correctViewN = Normalize(correctView);
     } else {
         correctViewN = viewDirectionN;
     }
 
     // Sun angle (gamma) - no correction
 
-    double dotProductSun = dot(viewDirectionN, directionToSunN);
+    double dotProductSun = Dot(viewDirectionN, directionToSunN);
     params.gamma         = acos(dotProductSun);
 
     // Shadow angle - requires correction
@@ -807,22 +810,22 @@ PragueSkyModel::Parameters PragueSkyModel::computeParameters(const Vector3& view
     const double effectiveAzimuth   = groundLevelSolarAzimuthAtOrigin;
     const double shadowAngle        = effectiveElevation + PI * 0.5;
 
-    Vector3 shadowDirectionN = Vector3(cos(shadowAngle) * cos(effectiveAzimuth),
+    Vector shadowDirectionN = Vector(cos(shadowAngle) * cos(effectiveAzimuth),
                                        cos(shadowAngle) * sin(effectiveAzimuth),
                                        sin(shadowAngle));
 
-    const double dotProductShadow = dot(correctViewN, shadowDirectionN);
+    const double dotProductShadow = Dot(correctViewN, shadowDirectionN);
     params.shadow                 = acos(dotProductShadow);
 
     // Zenith angle (theta) - corrected version stored in otherwise unused zero
     // angle
 
-    double cosThetaCor = dot(correctViewN, toViewpointN);
+    double cosThetaCor = Dot(correctViewN, toViewpointN);
     params.zero        = acos(cosThetaCor);
 
     // Zenith angle (theta) - uncorrected version goes outside
 
-    double cosTheta = dot(viewDirectionN, toViewpointN);
+    double cosTheta = Dot(viewDirectionN, toViewpointN);
     params.theta    = acos(cosTheta);
 
     return params;
@@ -1120,7 +1123,7 @@ PragueSkyModel::InterpolationParameter PragueSkyModel::getInterpolationParameter
     param.factor = 0.0;
     if (param.index < paramCount - 1) {
         param.factor =
-            nonlerp(double(param.index) / paramCount, double(param.index + 1) / paramCount, value, power);
+            NonLerp(double(param.index) / paramCount, double(param.index + 1) / paramCount, value, double(power));
         param.factor = std::clamp(param.factor, 0.0, 1.0);
     }
     return param;
@@ -1204,14 +1207,14 @@ double PragueSkyModel::reconstructTrans(const int                     visibility
 
     // Perform bi-linear interpolation
     if (transParams.distance.factor > 0.f) {
-        transmittance[0] = lerpPrague(transmittance[0], transmittance[1], transParams.distance.factor);
-        transmittance[1] = lerpPrague(transmittance[2], transmittance[3], transParams.distance.factor);
+        transmittance[0] = Lerp(transParams.distance.factor, transmittance[0], transmittance[1]);
+        transmittance[1] = Lerp(transParams.distance.factor, transmittance[2], transmittance[3]);
     }
     transmittance[0] = std::max(transmittance[0], 0.0);
 
     if (transParams.altitude.factor > 0.f) {
         transmittance[1] = std::max(transmittance[1], 0.0);
-        transmittance[0] = lerpPrague(transmittance[0], transmittance[1], transParams.altitude.factor);
+        transmittance[0] = Lerp(transParams.altitude.factor, transmittance[0], transmittance[1]);
     }
 
     assert(transmittance[0] >= 0.0);
@@ -1229,7 +1232,7 @@ double PragueSkyModel::interpolateTrans(const int                     visibility
     if (altitudeParam.factor > 0.0) {
         const double transHigh =
             reconstructTrans(visibilityIndex, altitudeParam.index + 1, transParams, channelIndex);
-        trans = lerpPrague(trans, transHigh, altitudeParam.factor);
+        trans = Lerp(altitudeParam.factor, trans, transHigh);
     }
 
     return trans;
@@ -1267,7 +1270,7 @@ double PragueSkyModel::transmittance(const Parameters& params,
         const double transHigh =
             interpolateTrans(visibilityParam.index + 1, altitudeParam, transParams, channelIndex);
 
-        trans = lerpPrague(trans, transHigh, visibilityParam.factor);
+        trans = Lerp(visibilityParam.factor, trans, transHigh);
     }
 
     // Transmittance is stored as a square root. Needs to be restored here.

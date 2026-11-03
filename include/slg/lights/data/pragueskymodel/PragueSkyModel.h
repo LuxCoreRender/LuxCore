@@ -6,7 +6,10 @@
 #include <vector>
 #include <cmath>
 
-double lerpPrague(const double from, const double to, const double factor);
+#include "luxrays/usings.h"
+#include "luxrays/utils/utils.h"
+
+//double lerpPrague(const double from, const double to, const double factor);
 
 /// Implementation of the physically-based sky model presented by Wilkie et al. [2021]
 /// (https://cgg.mff.cuni.cz/publications/skymodel-2021/) and Vevoda et al. [2022]. Improves on previous work
@@ -95,6 +98,9 @@ public:
     };
 
     /// A simple 3D vector implementation. Provides some basic operations.
+    /*
+    // Replaced by existing luxrays::Vector, all functionality is already provided
+    // (except isZero which isn't being used anyways)
     class Vector3 {
     public:
         double x, y, z;
@@ -124,6 +130,7 @@ public:
 
         bool isZero() const { return x == 0.0 && y == 0.0 && z == 0.0; }
     };
+    */
 
     /// Structure holding all parameters necessary for querying the model.
     struct Parameters {
@@ -324,8 +331,8 @@ public:
     /// supports altitude from [0, 15000] m, elevation from [-0.073, PI/2] rad, azimuth from [0, PI] rad, visibility
     /// from [20, 131.8] km, and albedo from [0, 1]. Values outside range of the used dataset are clamped to the
     /// nearest supported value.
-    Parameters computeParameters(const Vector3& viewPoint,
-                                 const Vector3& viewDirection,
+    Parameters computeParameters(const luxrays::Vector& viewPoint,
+                                 const luxrays::Vector& viewDirection,
                                  const double   groundLevelSolarElevationAtOrigin,
                                  const double   groundLevelSolarAzimuthAtOrigin,
                                  const double   visibility,
@@ -426,7 +433,7 @@ private:
                                                                        metadata);
 
             /// Interpolate between the two
-            return lerpPrague(resultLow, resultHigh, controlParameters.interpolationFactor[TLevel]);
+            return luxrays::Lerp(controlParameters.interpolationFactor[TLevel], resultLow, resultHigh);
         }
     }
 

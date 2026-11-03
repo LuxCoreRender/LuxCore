@@ -100,8 +100,8 @@ void SunLight3::Preprocess() {
 	// The model assumes a frame with the Z axis pointing up and the observer
 	// at the origin: look at the center of the sun disc
 	const auto params = model->computeParameters(
-		PragueSkyModel::Vector3(0.0, 0.0, (double)altitude),
-		PragueSkyModel::Vector3((double)localSunEvalDir.x, (double)localSunEvalDir.y, (double)localSunEvalDir.z),
+		Vector(0.0, 0.0, (double)altitude),
+		Vector((double)localSunEvalDir.x, (double)localSunEvalDir.y, (double)localSunEvalDir.z),
 		evaluationElevation, localSunAzimuth, (double)visibility, (double)groundAlbedo);
 
 	// Evaluate the sun radiance (disc radiance after atmospheric

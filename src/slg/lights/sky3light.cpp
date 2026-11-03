@@ -64,8 +64,8 @@ Spectrum SkyLight3::ComputeSkyRadiance(const Vector &w) const {
 	const Vector localDir = Normalize(Inverse(lightToWorld) * w);
 
 	const auto params = model->computeParameters(
-		PragueSkyModel::Vector3(0.0, 0.0, (double)altitude),
-		PragueSkyModel::Vector3((double)localDir.x, (double)localDir.y, (double)localDir.z),
+		Vector(0.0, 0.0, (double)altitude),
+		Vector((double)localDir.x, (double)localDir.y, (double)localDir.z),
 		localSunElevation, localSunAzimuth, (double)visibility, (double)groundAlbedo);
 
 	// Sky radiance only: the direct sun disc is provided by the dedicated
