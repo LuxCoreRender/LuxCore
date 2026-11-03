@@ -11,6 +11,8 @@
 #include "luxrays/core/geometry/vector.h"
 using namespace luxrays;
 
+namespace {
+
 /////////////////////////////////////////////////////////////////////////////////////
 // Constants
 /////////////////////////////////////////////////////////////////////////////////////
@@ -312,6 +314,8 @@ double nonlerp(const double a, const double b, const double w, const double p) {
 } // implemented instead in luxrays/utils.h as NonLerp
 
 */
+
+} // namespace
 
 /////////////////////////////////////////////////////////////////////////////////////
 // Data reading
@@ -836,10 +840,14 @@ PragueSkyModel::Parameters PragueSkyModel::computeParameters(const Vector& viewp
 // Model evaluation for sky radiance and polarisation
 /////////////////////////////////////////////////////////////////////////////////////
 
+namespace {
+
 /// Evaluates piecewise linear approximation
 double evalPL(const std::vector<float>::const_iterator coefs, const double factor) {
     return (double(coefs[1]) - double(coefs[0])) * factor + double(coefs[0]);
 }
+
+} // namespace
 
 std::vector<float>::const_iterator PragueSkyModel::getCoefficients(const std::vector<float>& dataset,
                                                                    const int totalCoefsSingleConfig,
@@ -1062,6 +1070,8 @@ std::vector<float>::const_iterator PragueSkyModel::getCoefficientsTransBase(cons
            (size_t(d) * aDim + a) * rankTrans;
 }
 
+namespace {
+
 /// Intersects the given ray (assuming rayPosX == 0) with a circle at origin with the given radius.
 /// \return In the case the ray intersects the circle, distance to the circle is returned, otherwise the
 ///         function returns negative number.
@@ -1114,6 +1124,8 @@ std::tuple<double, double> isectToAltitudeDistance(const double isectX, const do
 
     return std::make_tuple(altitude, distance);
 }
+
+} // namespace
 
 PragueSkyModel::InterpolationParameter PragueSkyModel::getInterpolationParameterTrans(const double value,
                                                                                       const int    paramCount,
