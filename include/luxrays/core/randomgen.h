@@ -57,6 +57,10 @@ public:
 		delete[] buf;
 	}
 
+	// buf is owned: copying would double-free it
+	RandomGenerator(const RandomGenerator &) = delete;
+	RandomGenerator &operator=(const RandomGenerator &) = delete;
+
 	unsigned long uintValue() {
 		// Repopulate buffer if necessary
 		if (bufid == RAN_BUFFER_AMOUNT) {

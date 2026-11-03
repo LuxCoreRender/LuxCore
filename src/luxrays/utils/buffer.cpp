@@ -62,7 +62,10 @@ Buffer<TYPE, SUBTYPE, PAD>::Buffer(std::span<TYPE const> objs) {
 
 template< typename TYPE, typename SUBTYPE, std::array PAD >
 Buffer<TYPE, SUBTYPE, PAD>::Buffer(std::span<SUBTYPE const> subobjs) {
-	Allocate(subobjs.size() * sizeof(SUBTYPE) / sizeof(TYPE) );
+	// Round up to a whole number of TYPE objects, so that the whole subobjs
+	// span fits in the buffer even when its byte size is not a multiple of
+	// sizeof(TYPE)
+	Allocate((subobjs.size() * sizeof(SUBTYPE) + sizeof(TYPE) - 1) / sizeof(TYPE) );
 	std::copy(subobjs.begin(), subobjs.end(), asSubType.begin());
 }
 
@@ -157,8 +160,9 @@ Buffer<TYPE, SUBTYPE, PAD> Buffer<TYPE, SUBTYPE, PAD>::Share(const Buffer &from)
 template< typename TYPE, typename SUBTYPE, std::array PAD >
 void Buffer<TYPE, SUBTYPE, PAD>::Set(const Buffer<TYPE, SUBTYPE, PAD>& from) {
 	// Check memory and adapt if necessary
+	// (Allocate takes a count of TYPE elements, not a size in bytes)
 	if (effectiveSize != from.effectiveSize) {
-		Allocate(from.effectiveSize);
+		Allocate(from.Count());
 	}
 
 	// Copy, in parallel for the large buffers
@@ -190,9 +194,11 @@ template< typename TYPE, typename SUBTYPE, std::array PAD >
 void Buffer<TYPE, SUBTYPE, PAD>::Set(std::span<const SUBTYPE> from) {
 	// Check memory and adapt if necessary
 	const size_t from_size = from.size() * sizeof(SUBTYPE);  // from_size in bytes
-	assert(from_size % sizeof(TYPE) == 0);
-	if (effectiveSize != from_size) {
-		const size_t count = from_size / sizeof(TYPE);
+	// Round up to a whole number of TYPE objects, so that the whole from span
+	// fits in the buffer even when its byte size is not a multiple of
+	// sizeof(TYPE)
+	if (effectiveSize < from_size) {
+		const size_t count = (from_size + sizeof(TYPE) - 1) / sizeof(TYPE);
 		Allocate(count);
 	}
 

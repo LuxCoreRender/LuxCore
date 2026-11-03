@@ -533,8 +533,14 @@ void AddArrayElement(void *elem)
 {
 	if (curArray->nelems >= curArray->allocated) {
 		curArray->allocated = 2 * curArray->allocated + 1;
-		curArray->array = realloc(curArray->array,
+		// Use a temporary: on failure realloc returns NULL and the original
+		// block is left untouched (assigning directly would leak it and then
+		// memcpy below would write through NULL)
+		void *newArray = realloc(curArray->array,
 			curArray->allocated * curArray->elementSize);
+		if (!newArray)
+			throw std::runtime_error("Out of memory in AddArrayElement()");
+		curArray->array = newArray;
 	}
 	char *next = static_cast<char *>(curArray->array) +
 		curArray->nelems * curArray->elementSize;
@@ -549,7 +555,8 @@ ParamArray *ArrayDup(ParamArray *ra)
 	ret->allocated = ra->allocated;
 	ret->nelems = ra->nelems;
 	ret->array = malloc(ra->nelems * ra->elementSize);
-	memcpy(ret->array, ra->array, ra->nelems * ra->elementSize);
+	if (ra->nelems)
+		memcpy(ret->array, ra->array, ra->nelems * ra->elementSize);
 	return ret;
 }
 
@@ -2234,8 +2241,12 @@ yyreduce:
 	memcpy(arg, (yyvsp[0].ribarray)->array, (yyvsp[0].ribarray)->nelems * (yyvsp[0].ribarray)->elementSize);
 	if (CPS >= CPAL) {
 		CPAL = 2 * CPAL + 1;
-		CP = static_cast<ParamListElem *>(realloc(CP,
-			CPAL * sizeof(ParamListElem)));
+		// Use a temporary: on failure realloc returns NULL and the original
+		// block is left untouched (assigning directly would leak it)
+		void *newCP = realloc(CP, CPAL * sizeof(ParamListElem));
+		if (!newCP)
+			throw std::runtime_error("Out of memory while parsing a parameter list");
+		CP = static_cast<ParamListElem *>(newCP);
 	}
 	CPT(CPS) = (yyvsp[-1].string);
 	CPA(CPS) = arg;

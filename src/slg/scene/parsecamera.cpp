@@ -235,6 +235,7 @@ CameraUPtr Scene::CreateCamera(const Properties &props) {
 			transforms.push_back(Transform(mat));
 		}
 
+		delete camera->motionSystem;
 		camera->motionSystem = new MotionSystem(times, transforms);
 	}
 	

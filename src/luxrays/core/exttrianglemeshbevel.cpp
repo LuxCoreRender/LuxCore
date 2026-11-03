@@ -434,10 +434,12 @@ void ExtTriangleMesh::PreprocessBevel() {
 
 		//cout << "ExtTriangleMesh " << this->GetName() << " bevel cylinders count: " << bevelCyls.size() << endl;
 
-		auto bevelCylinders = std::make_unique<BevelCylinder[]>(bevelCyls.size());
+		// Assign the members (unique_ptr move-assignment also frees any
+		// previously allocated arrays, so a re-preprocess does not leak)
+		bevelCylinders = std::make_unique<BevelCylinder[]>(bevelCyls.size());
 		std::copy(bevelCyls.begin(), bevelCyls.end(), bevelCylinders.get());
 
-		auto bevelBoundingCylinders = std::make_unique<BevelBoundingCylinder[]>(boundingCyls.size());
+		bevelBoundingCylinders = std::make_unique<BevelBoundingCylinder[]>(boundingCyls.size());
 		copy(boundingCyls.begin(), boundingCyls.end(), bevelBoundingCylinders.get());
 
 		//----------------------------------------------------------------------
@@ -474,10 +476,8 @@ void ExtTriangleMesh::PreprocessBevel() {
 		u_int nNodes;
 		bevelBVHArrayNodes = luxrays::buildembreebvh::BuildEmbreeBVH<4>(RTC_BUILD_QUALITY_HIGH, prims, &nNodes);
 	} else {
-		delete[] bevelCylinders;
-		bevelCylinders = nullptr;
-		delete[] bevelBoundingCylinders;
-		bevelBoundingCylinders = nullptr;
+		bevelCylinders.reset();
+		bevelBoundingCylinders.reset();
 	}
 	
 	//const double endTotal = WallClockTime();

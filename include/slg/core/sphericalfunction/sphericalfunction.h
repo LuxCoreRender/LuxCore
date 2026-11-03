@@ -105,6 +105,10 @@ public:
 			delete funcs[i];
 	}
 
+	// funcs are owned: copying would double-free them
+	CompositeSphericalFunction(const CompositeSphericalFunction &) = delete;
+	CompositeSphericalFunction &operator=(const CompositeSphericalFunction &) = delete;
+
 	void Add(const SphericalFunction *aFunc) {
 		funcs.push_back(aFunc);
 	}
@@ -125,9 +129,13 @@ private:
  */
 class SampleableSphericalFunction : public SphericalFunction {
 public:
-	SampleableSphericalFunction(const SphericalFunction *aFunc, 
+	SampleableSphericalFunction(const SphericalFunction *aFunc,
 		const u_int xRes = 512, const u_int yRes = 256);
 	~SampleableSphericalFunction();
+
+	// func is owned: copying would double-free it
+	SampleableSphericalFunction(const SampleableSphericalFunction &) = delete;
+	SampleableSphericalFunction &operator=(const SampleableSphericalFunction &) = delete;
 
 	virtual luxrays::Spectrum Evaluate(const float phi, const float theta) const;
 
