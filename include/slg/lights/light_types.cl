@@ -118,21 +118,22 @@ typedef struct {
 	Transform light2World;
 	Spectrum gain, temperatureScale;
 
-	union {
-		SunLightParam sun;
-		SkyLight2Param sky2;
-		InfiniteLightParam infinite;
-		PointLightParam point;
-		MapPointLightParam mapPoint;
-		SpotLightParam spot;
-		ProjectionLightParam projection;
-		ConstantInfiniteLightParam constantInfinite;
-		SharpDistantLightParam sharpDistant;
-		DistantLightParam distant;
-		LaserLightParam laser;
-		SphereLightParam sphere;
-		MapSphereLightParam mapSphere;
-	};
+	// Note: this is not a union (anymore) because the unions in buffer
+	// layouts are not supported by all the OpenCL compilers (e.g. clspv,
+	// used to run the kernels over Vulkan, doesn't)
+	SunLightParam sun;
+	SkyLight2Param sky2;
+	InfiniteLightParam infinite;
+	PointLightParam point;
+	MapPointLightParam mapPoint;
+	SpotLightParam spot;
+	ProjectionLightParam projection;
+	ConstantInfiniteLightParam constantInfinite;
+	SharpDistantLightParam sharpDistant;
+	DistantLightParam distant;
+	LaserLightParam laser;
+	SphereLightParam sphere;
+	MapSphereLightParam mapSphere;
 } NotIntersectableLightSource;
 
 typedef struct {
@@ -154,10 +155,11 @@ typedef struct {
 	BSDFEvent visibility;
 	int isDirectLightSamplingEnabled;
 	
-	union {
-		NotIntersectableLightSource notIntersectable;
-		TriangleLightParam triangle;
-	};
+	// Note: this is not a union (anymore) because the unions in buffer
+	// layouts are not supported by all the OpenCL compilers (e.g. clspv,
+	// used to run the kernels over Vulkan, doesn't)
+	NotIntersectableLightSource notIntersectable;
+	TriangleLightParam triangle;
 } LightSource;
 
 //------------------------------------------------------------------------------

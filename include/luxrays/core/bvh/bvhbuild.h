@@ -31,11 +31,70 @@
 #include "luxrays/core/trianglemesh.h"
 #include "luxrays/utils/atomic.h"
 
+#include <cstddef>
+
 namespace luxrays {
 
 // OpenCL data types
 namespace ocl {
-#include "luxrays/core/bvh/bvhbuild_types.cl"
+
+// Note: these definitions duplicate the ones of
+// luxrays/core/bvh/bvhbuild_types.cl (used by the OpenCL kernels): the
+// host side keeps the (handy) union views while the kernels need a
+// union-free layout because the unions in buffer layouts are not
+// supported by all the OpenCL compilers (e.g. clspv, used to run the
+// kernels over Vulkan). The static_asserts below check that the two
+// layouts stay in sync.
+
+typedef struct {
+	union {
+		struct {
+			// I can not use BBox here because objects with a constructor
+			// are not allowed inside an union.
+			float bboxMin[3];
+			float bboxMax[3];
+		} bvhNode;
+		struct {
+			unsigned int v[3];
+			unsigned int meshIndex, triangleIndex;
+		} triangleLeaf;
+		struct {
+			unsigned int leafIndex;
+			unsigned int transformIndex, motionIndex; // transformIndex or motionIndex have to be NULL_INDEX (i.e. only one can be used)
+			unsigned int meshOffsetIndex;
+		} bvhLeaf; // Used by MBVH
+	};
+	// Most significant bit is used to mark leafs
+	unsigned int nodeData;
+	int pad0; // To align to float4
+} BVHArrayNode;
+
+static_assert(sizeof(BVHArrayNode) == 32, "out of sync with bvhbuild_types.cl");
+static_assert(offsetof(BVHArrayNode, nodeData) == 24, "out of sync with bvhbuild_types.cl");
+
+typedef struct {
+	union {
+		// I can not use BBox/Point/Normal here because objects with a
+		// constructor are not allowed inside an union.
+		struct {
+			float bboxMin[3];
+			float bboxMax[3];
+		} bvhNode;
+		struct {
+			unsigned int entryIndex;
+		} entryLeaf;
+	};
+	// Most significant bit is used to mark leafs
+	unsigned int nodeData;
+	int pad; // To align to float4
+} IndexBVHArrayNode;
+
+static_assert(sizeof(IndexBVHArrayNode) == 32, "out of sync with bvhbuild_types.cl");
+static_assert(offsetof(IndexBVHArrayNode, nodeData) == 24, "out of sync with bvhbuild_types.cl");
+
+#define IndexBVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
+#define IndexBVHNodeData_GetSkipIndex(nodeData) ((nodeData) & 0x7fffffffu)
+
 }
 
 #define BVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)

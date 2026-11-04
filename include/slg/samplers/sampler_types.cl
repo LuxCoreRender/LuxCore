@@ -126,20 +126,21 @@ typedef enum {
 
 typedef struct {
 	SamplerType type;
-	union {
-		struct {
-			float adaptiveStrength, adaptiveUserImportanceWeight;
-			unsigned int bucketSize, tileSize, superSampling, overlapping;
-		} random;
-		struct {
-			float adaptiveStrength, adaptiveUserImportanceWeight;
-			unsigned int bucketSize, tileSize, superSampling, overlapping;
-		} sobol;
-		struct {
-			float largeMutationProbability, imageMutationRange;
-			unsigned int maxRejects;
-		} metropolis;
-	};
+	// Note: this is not a union (anymore) because the unions in buffer
+	// layouts are not supported by all the OpenCL compilers (e.g. clspv,
+	// used to run the kernels over Vulkan, doesn't)
+	struct {
+		float adaptiveStrength, adaptiveUserImportanceWeight;
+		unsigned int bucketSize, tileSize, superSampling, overlapping;
+	} random;
+	struct {
+		float adaptiveStrength, adaptiveUserImportanceWeight;
+		unsigned int bucketSize, tileSize, superSampling, overlapping;
+	} sobol;
+	struct {
+		float largeMutationProbability, imageMutationRange;
+		unsigned int maxRejects;
+	} metropolis;
 } Sampler;
 
 #define SOBOL_BITS 32

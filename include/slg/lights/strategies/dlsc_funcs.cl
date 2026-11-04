@@ -37,7 +37,7 @@ OPENCL_FORCE_INLINE __global const DLSCacheEntry* restrict DirectLightSamplingCa
 		const uint nodeData = node->nodeData;
 		if (IndexBVHNodeData_IsLeaf(nodeData)) {
 			// It is a leaf, check the entry
-			__global const DLSCacheEntry* restrict entry = &dlscAllEntries[node->entryLeaf.entryIndex];
+			__global const DLSCacheEntry* restrict entry = &dlscAllEntries[IndexBVHArrayNode_EntryIndex(*node)];
 
 			const float distance2 = DistanceSquared(p, VLOAD3F(&entry->p.x));
 			if ((distance2 < nearestDistance2) &&
@@ -54,9 +54,9 @@ OPENCL_FORCE_INLINE __global const DLSCacheEntry* restrict DirectLightSamplingCa
 			++currentNode;
 		} else {
 			// It is a node, check the bounding box
-			if (p.x >= node->bvhNode.bboxMin[0] && p.x <= node->bvhNode.bboxMax[0] &&
-					p.y >= node->bvhNode.bboxMin[1] && p.y <= node->bvhNode.bboxMax[1] &&
-					p.z >= node->bvhNode.bboxMin[2] && p.z <= node->bvhNode.bboxMax[2])
+			if (p.x >= IndexBVHArrayNode_BBoxMin(*node, 0) && p.x <= IndexBVHArrayNode_BBoxMax(*node, 0) &&
+					p.y >= IndexBVHArrayNode_BBoxMin(*node, 1) && p.y <= IndexBVHArrayNode_BBoxMax(*node, 1) &&
+					p.z >= IndexBVHArrayNode_BBoxMin(*node, 2) && p.z <= IndexBVHArrayNode_BBoxMax(*node, 2))
 				++currentNode;
 			else {
 				// I don't need to use IndexBVHNodeData_GetSkipIndex() here because

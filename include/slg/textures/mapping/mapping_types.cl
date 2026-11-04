@@ -37,10 +37,10 @@ typedef enum {
 
 typedef struct {
     RandomMappingSeedType seedType;
-	union {
-		unsigned int triAOVIndex;
-		unsigned int objectIDOffset;
-	};
+	// Note: not a union (anymore): the unions in buffer layouts are not
+	// supported by all the OpenCL compilers (e.g. clspv, over Vulkan)
+	unsigned int triAOVIndex;
+	unsigned int objectIDOffset;
 	float uvRotationMin, uvRotationMax, uvRotationStep;
 	float uScaleMin, uScaleMax;
 	float vScaleMin, vScaleMax;
@@ -53,10 +53,10 @@ typedef struct {
 typedef struct {
 	TextureMapping2DType type;
 	unsigned int dataIndex;
-	union {
-		UVMapping2DParam uvMapping2D;
-		UVRandomMapping2DParam uvRandomMapping2D;
-	};
+	// Note: not a union (anymore): the unions in buffer layouts are not
+	// supported by all the OpenCL compilers (e.g. clspv, over Vulkan)
+	UVMapping2DParam uvMapping2D;
+	UVRandomMapping2DParam uvRandomMapping2D;
 } TextureMapping2D;
 
 //------------------------------------------------------------------------------
@@ -73,10 +73,10 @@ typedef struct {
 
 typedef struct {
 	RandomMappingSeedType seedType;
-	union {
-		unsigned int triAOVIndex;
-		unsigned int objectIDOffset;
-	};
+	// Note: not a union (anymore): the unions in buffer layouts are not
+	// supported by all the OpenCL compilers (e.g. clspv, over Vulkan)
+	unsigned int triAOVIndex;
+	unsigned int objectIDOffset;
 	float xRotationMin, xRotationMax, xRotationStep;
 	float yRotationMin, yRotationMax, yRotationStep;
 	float zRotationMin, zRotationMax, zRotationStep;
@@ -93,11 +93,11 @@ typedef struct {
 typedef struct {
 	TextureMapping3DType type;
 	Transform worldToLocal;
-	union {
-		UVMapping3DParam uvMapping3D;
-		// GlobalMapping3D has no additional parameters
-		// LocalMapping3D has no additional parameters
-		LocalRandomMapping3DParam localRandomMapping;
-	};
+	// Note: not a union (anymore): the unions in buffer layouts are not
+	// supported by all the OpenCL compilers (e.g. clspv, over Vulkan)
+	UVMapping3DParam uvMapping3D;
+	// GlobalMapping3D has no additional parameters
+	// LocalMapping3D has no additional parameters
+	LocalRandomMapping3DParam localRandomMapping;
 } TextureMapping3D;
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4
