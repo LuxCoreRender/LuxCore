@@ -38,6 +38,8 @@
 #include "slg/lights/projectionlight.h"
 #include "slg/lights/sharpdistantlight.h"
 #include "slg/lights/sky2light.h"
+#include "slg/lights/sky3light.h"
+#include "slg/lights/sun3light.h"
 #include "slg/lights/spotlight.h"
 #include "slg/lights/sunlight.h"
 #include "slg/lights/trianglelight.h"
@@ -364,8 +366,8 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_IL;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &il.lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &il.lightToWorld.mInv, sizeof(float[4][4]));
+				std::copy_n(&il.lightToWorld.m.m[0][0], 16, &oclLight->notIntersectable.light2World.m.m[0][0]);
+				std::copy_n(&il.lightToWorld.mInv.m[0][0], 16, &oclLight->notIntersectable.light2World.mInv.m[0][0]);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, il.gain);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, il.GetTemperatureScale());
 
@@ -408,8 +410,8 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_IL_SKY2;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &sl.lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &sl.lightToWorld.mInv, sizeof(float[4][4]));
+				std::copy_n(&sl.lightToWorld.m.m[0][0], 16, &oclLight->notIntersectable.light2World.m.m[0][0]);
+				std::copy_n(&sl.lightToWorld.mInv.m[0][0], 16, &oclLight->notIntersectable.light2World.mInv.m[0][0]);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sl.gain);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, sl.GetTemperatureScale());
 
@@ -462,6 +464,53 @@ void CompiledScene::CompileLights() {
 				oclLight->notIntersectable.sky2.distributionOffset = size;
 				break;
 			}
+			case TYPE_IL_SKY3: {
+				auto& sl = static_cast<const SkyLight3&>(l);
+
+				// LightSource data
+				oclLight->type = slg::ocl::TYPE_IL_SKY3;
+
+				// NotIntersectableLightSource data
+				std::copy_n(&sl.lightToWorld.m.m[0][0], 16, &oclLight->notIntersectable.light2World.m.m[0][0]);
+				std::copy_n(&sl.lightToWorld.mInv.m[0][0], 16, &oclLight->notIntersectable.light2World.mInv.m[0][0]);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sl.gain);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, sl.GetTemperatureScale());
+
+				// SkyLight3 data
+				auto [dist, visibilityMapCache] = sl.GetPreprocessedData(
+						&oclLight->notIntersectable.sky3.absoluteUpDir.x,
+						oclLight->notIntersectable.sky3.scaledGroundColor.c,
+						&oclLight->notIntersectable.sky3.hasGround);
+
+				oclLight->notIntersectable.sky3.useVisibilityMapCache = false;
+				if (sl.useVisibilityMapCache && visibilityMapCache) {
+					if (elvcAllEntries.size() > 0) {
+						SLG_LOG("WARNING: OpenCL rendering supports only one EnvLightVisibilityCache");
+					} else {
+						using optmapcache_t = EnvLightVisibilityCacheConstPtr;
+						CompileELVC(visibilityMapCache);
+
+						oclLight->notIntersectable.sky3.useVisibilityMapCache = true;
+					}
+				}
+
+				oclLight->notIntersectable.sky3.imageMapIndex = scene.GetImageMaps().GetImageMapIndex(*sl.radianceMap);
+
+				auto [skyDistribution, distributionSize] = CompileDistribution2D(dist);
+				// distributionSize is expressed in bytes while I'm working with float
+				const u_int distributionSize4 = distributionSize / sizeof(float);
+
+				// Copy the Distribution2D data in the right place
+				const u_int size = envLightDistributions.size();
+				envLightDistributions.resize(size + distributionSize4);
+				std::copy_n(
+					skyDistribution.begin(),
+					distributionSize4,
+					envLightDistributions.begin() + size
+				);
+				oclLight->notIntersectable.sky3.distributionOffset = size;
+				break;
+			}
 			case TYPE_SUN: {
 				auto& sl = static_cast<const SunLight&>(l);
 
@@ -469,8 +518,8 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_SUN;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &sl.lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &sl.lightToWorld.mInv, sizeof(float[4][4]));
+				std::copy_n(&sl.lightToWorld.m.m[0][0], 16, &oclLight->notIntersectable.light2World.m.m[0][0]);
+				std::copy_n(&sl.lightToWorld.mInv.m[0][0], 16, &oclLight->notIntersectable.light2World.mInv.m[0][0]);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sl.gain);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, sl.GetTemperatureScale());
 
@@ -486,6 +535,34 @@ void CompiledScene::CompileLights() {
 				oclLight->notIntersectable.sun.relSize= sl.relSize;
 				break;
 			}
+			case TYPE_SUN3: {
+				auto& sl = static_cast<const SunLight3&>(l);
+
+				// LightSource data
+				oclLight->type = slg::ocl::TYPE_SUN3;
+
+				// NotIntersectableLightSource data
+				std::copy_n(&sl.lightToWorld.m.m[0][0], 16, &oclLight->notIntersectable.light2World.m.m[0][0]);
+				std::copy_n(&sl.lightToWorld.mInv.m[0][0], 16, &oclLight->notIntersectable.light2World.mInv.m[0][0]);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sl.gain);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, sl.GetTemperatureScale());
+
+				// SunLight3 data (the same SunLightParam layout is used by the
+				// OpenCL/CUDA kernels)
+				sl.GetPreprocessedData(
+						&oclLight->notIntersectable.sun.absoluteDir.x,
+						&oclLight->notIntersectable.sun.x.x,
+						&oclLight->notIntersectable.sun.y.x,
+						&oclLight->notIntersectable.sun.cosThetaMax,
+						&oclLight->notIntersectable.sun.sin2ThetaMax);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.sun.color, sl.color);
+				// The turbidity field (not used by the kernels) is reused to
+				// store the cosThetaHorizon used by the sun3 kernels for the
+				// horizon occultation test
+				oclLight->notIntersectable.sun.turbidity = sl.cosThetaHorizon;
+				oclLight->notIntersectable.sun.relSize = sl.relSize;
+				break;
+			}
 			case TYPE_POINT: {
 				auto& pl = static_cast<const PointLight&>(l);
 
@@ -493,8 +570,8 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_POINT;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &pl.lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &pl.lightToWorld.mInv, sizeof(float[4][4]));
+				std::copy_n(&pl.lightToWorld.m.m[0][0], 16, &oclLight->notIntersectable.light2World.m.m[0][0]);
+				std::copy_n(&pl.lightToWorld.mInv.m[0][0], 16, &oclLight->notIntersectable.light2World.mInv.m[0][0]);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, pl.gain);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, pl.GetTemperatureScale());
 
@@ -512,8 +589,8 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_MAPPOINT;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &mpl.lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &mpl.lightToWorld.mInv, sizeof(float[4][4]));
+				std::copy_n(&mpl.lightToWorld.m.m[0][0], 16, &oclLight->notIntersectable.light2World.m.m[0][0]);
+				std::copy_n(&mpl.lightToWorld.mInv.m[0][0], 16, &oclLight->notIntersectable.light2World.mInv.m[0][0]);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, mpl.gain);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, mpl.GetTemperatureScale());
 
@@ -549,8 +626,8 @@ void CompiledScene::CompileLights() {
 					&oclLight->notIntersectable.spot.cosFalloffStart,
 					&alignedWorld2Light);
 
-				memcpy(&oclLight->notIntersectable.light2World.m, &alignedWorld2Light->m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &alignedWorld2Light->mInv, sizeof(float[4][4]));
+				std::copy_n(&alignedWorld2Light->m.m[0][0], 16, &oclLight->notIntersectable.light2World.m.m[0][0]);
+				std::copy_n(&alignedWorld2Light->mInv.m[0][0], 16, &oclLight->notIntersectable.light2World.mInv.m[0][0]);
 				break;
 			}
 			case TYPE_PROJECTION: {
@@ -581,10 +658,10 @@ void CompiledScene::CompileLights() {
 					&oclLight->notIntersectable.projection.screenY1,
 					&alignedWorld2Light, &lightProjection);
 
-				memcpy(&oclLight->notIntersectable.light2World.m, &alignedWorld2Light->m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &alignedWorld2Light->mInv, sizeof(float[4][4]));
+				std::copy_n(&alignedWorld2Light->m.m[0][0], 16, &oclLight->notIntersectable.light2World.m.m[0][0]);
+				std::copy_n(&alignedWorld2Light->mInv.m[0][0], 16, &oclLight->notIntersectable.light2World.mInv.m[0][0]);
 
-				memcpy(&oclLight->notIntersectable.projection.lightProjection.m, &lightProjection->m, sizeof(float[4][4]));
+				std::copy_n(&lightProjection->m.m[0][0], 16, &oclLight->notIntersectable.projection.lightProjection.m[0][0]);
 				break;
 			}
 			case TYPE_IL_CONSTANT: {
@@ -594,8 +671,8 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_IL_CONSTANT;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &cil.lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &cil.lightToWorld.mInv, sizeof(float[4][4]));
+				std::copy_n(&cil.lightToWorld.m.m[0][0], 16, &oclLight->notIntersectable.light2World.m.m[0][0]);
+				std::copy_n(&cil.lightToWorld.mInv.m[0][0], 16, &oclLight->notIntersectable.light2World.mInv.m[0][0]);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, cil.gain);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, cil.GetTemperatureScale());
 
@@ -624,8 +701,8 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_SHARPDISTANT;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &sdl.lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &sdl.lightToWorld.mInv, sizeof(float[4][4]));
+				std::copy_n(&sdl.lightToWorld.m.m[0][0], 16, &oclLight->notIntersectable.light2World.m.m[0][0]);
+				std::copy_n(&sdl.lightToWorld.mInv.m[0][0], 16, &oclLight->notIntersectable.light2World.mInv.m[0][0]);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sdl.gain);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, sdl.GetTemperatureScale());
 
@@ -641,8 +718,8 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_DISTANT;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &dl.lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &dl.lightToWorld.mInv, sizeof(float[4][4]));
+				std::copy_n(&dl.lightToWorld.m.m[0][0], 16, &oclLight->notIntersectable.light2World.m.m[0][0]);
+				std::copy_n(&dl.lightToWorld.mInv.m[0][0], 16, &oclLight->notIntersectable.light2World.mInv.m[0][0]);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, dl.gain);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, dl.GetTemperatureScale());
 
@@ -663,8 +740,8 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_LASER;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &ll.lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &ll.lightToWorld.mInv, sizeof(float[4][4]));
+				std::copy_n(&ll.lightToWorld.m.m[0][0], 16, &oclLight->notIntersectable.light2World.m.m[0][0]);
+				std::copy_n(&ll.lightToWorld.mInv.m[0][0], 16, &oclLight->notIntersectable.light2World.mInv.m[0][0]);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, ll.gain);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, ll.GetTemperatureScale());
 
@@ -684,8 +761,8 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_SPHERE;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &sl.lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &sl.lightToWorld.mInv, sizeof(float[4][4]));
+				std::copy_n(&sl.lightToWorld.m.m[0][0], 16, &oclLight->notIntersectable.light2World.m.m[0][0]);
+				std::copy_n(&sl.lightToWorld.mInv.m[0][0], 16, &oclLight->notIntersectable.light2World.mInv.m[0][0]);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sl.gain);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, sl.GetTemperatureScale());
 
@@ -705,8 +782,8 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_MAPSPHERE;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &msl.lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &msl.lightToWorld.mInv, sizeof(float[4][4]));
+				std::copy_n(&msl.lightToWorld.m.m[0][0], 16, &oclLight->notIntersectable.light2World.m.m[0][0]);
+				std::copy_n(&msl.lightToWorld.mInv.m[0][0], 16, &oclLight->notIntersectable.light2World.mInv.m[0][0]);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, msl.gain);
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, msl.GetTemperatureScale());
 

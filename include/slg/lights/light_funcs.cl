@@ -357,6 +357,111 @@ OPENCL_FORCE_INLINE float3 Sky2Light_Illuminate(__global const LightSource *sky2
 }
 
 //------------------------------------------------------------------------------
+// Sky3Light
+//
+// The radiance of the sky dome (direct sun included) is not evaluated with
+// the Prague Sky Model on the GPU: it comes from the lat-long ImageMap baked
+// during the light preprocessing.
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE float3 Sky3Light_ComputeRadiance(__global const LightSource *sky3Light, const float3 w
+		IMAGEMAPS_PARAM_DECL) {
+	if (sky3Light->notIntersectable.sky3.hasGround &&
+			(dot(w, VLOAD3F(&sky3Light->notIntersectable.sky3.absoluteUpDir.x)) < 0.f)) {
+		// Lower hemisphere
+		return VLOAD3F(sky3Light->notIntersectable.sky3.scaledGroundColor.c);
+	} else {
+		// Upper hemisphere: baked radiance map lookup
+		float u, v;
+		EnvLightSource_ToLatLongMapping(w, &u, &v, NULL);
+
+		__global const ImageMap *imageMap = &imageMapDescs[sky3Light->notIntersectable.sky3.imageMapIndex];
+		return ImageMap_GetSpectrum(
+			imageMap,
+			u, v
+			IMAGEMAPS_PARAM);
+	}
+}
+
+OPENCL_FORCE_INLINE float3 Sky3Light_GetRadiance(__global const LightSource *sky3Light,
+		__global const BSDF *bsdf, const float3 dir, float *directPdfA
+		LIGHTS_PARAM_DECL) {
+	const float3 w = -dir;
+	float u, v, latLongMappingPdf;
+	EnvLightSource_ToLatLongMapping(w, &u, &v, &latLongMappingPdf);
+	if (latLongMappingPdf == 0.f)
+		return BLACK;
+
+	if (!bsdf)
+		*directPdfA = 0.f;
+	else if (sky3Light->notIntersectable.sky3.useVisibilityMapCache &&
+			EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
+		*directPdfA = EnvLightVisibilityCache_Pdf(bsdf, u, v LIGHTS_PARAM) * latLongMappingPdf;
+	} else {
+		__global const float *skyLightDist = &envLightDistribution[sky3Light->notIntersectable.sky3.distributionOffset];
+
+		const float distPdf = Distribution2D_Pdf(skyLightDist, u, v);
+		*directPdfA = distPdf * latLongMappingPdf;
+	}
+
+	return Sky3Light_ComputeRadiance(sky3Light, w
+			IMAGEMAPS_PARAM);
+}
+
+OPENCL_FORCE_INLINE float3 Sky3Light_Illuminate(__global const LightSource *sky3Light,
+		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
+		const float sceneRadius,
+		__global const BSDF *bsdf, const float time, const float u0, const float u1,
+		__global Ray *shadowRay, float *directPdfW
+		LIGHTS_PARAM_DECL) {
+	float2 sampleUV;
+	float distPdf;
+	if (sky3Light->notIntersectable.sky3.useVisibilityMapCache &&
+			EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
+		EnvLightVisibilityCache_Sample(bsdf, u0, u1, &sampleUV, &distPdf LIGHTS_PARAM);
+	} else {
+		__global const float *skyLightDistribution = &envLightDistribution[sky3Light->notIntersectable.sky3.distributionOffset];
+
+		Distribution2D_SampleContinuous(skyLightDistribution, u0, u1, &sampleUV, &distPdf);
+	}
+
+	if (distPdf == 0.f)
+			return BLACK;
+
+	float3 shadowRayDir;
+	float latLongMappingPdf;
+	EnvLightSource_FromLatLongMapping(sampleUV.x, sampleUV.y, &shadowRayDir, &latLongMappingPdf);
+	if (latLongMappingPdf == 0.f)
+		return BLACK;
+
+	const float3 worldCenter = MAKE_FLOAT3(worldCenterX, worldCenterY, worldCenterZ);
+	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
+
+	const float3 pSurface = BSDF_GetRayOrigin(bsdf, shadowRayDir);
+	const float3 toCenter = worldCenter - pSurface;
+	const float centerDistance = dot(toCenter, toCenter);
+	const float approach = dot(toCenter, shadowRayDir);
+	const float shadowRayDistance = approach + sqrt(max(0.f, envRadius * envRadius -
+		centerDistance + approach * approach));
+
+	const float3 emisPoint = pSurface + shadowRayDistance * shadowRayDir;
+	const float3 emisNormal = normalize(worldCenter - emisPoint);
+
+	const float cosAtLight = dot(emisNormal, -shadowRayDir);
+	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
+
+	*directPdfW = distPdf * latLongMappingPdf;
+
+	// Setup the shadow ray
+	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
+	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
+
+	return Sky3Light_ComputeRadiance(sky3Light, shadowRayDir
+			IMAGEMAPS_PARAM);
+}
+
+//------------------------------------------------------------------------------
 // SunLight
 //------------------------------------------------------------------------------
 
@@ -412,6 +517,70 @@ OPENCL_FORCE_INLINE float3 SunLight_Illuminate(__global const LightSource *sunLi
 	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return VLOAD3F(sunLight->notIntersectable.sun.color.c);
+}
+
+//------------------------------------------------------------------------------
+// Sun3Light
+//
+// Same as SunLight, but the part of the sun disc below the local horizon is
+// occulted by the planet (per ray, so a partially set sun disc is rendered
+// cut at the horizon). SunLight3 reuses the SunLightParam layout: the turbidity
+// field (not used by the kernels) holds cosThetaHorizon.
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE float3 Sun3Light_GetRadiance(__global const LightSource *sun3Light,
+		__global const BSDF *bsdf, const float3 dir, float *directPdfA) {
+	const float3 up = normalize(Transform_ApplyVector(
+			&sun3Light->notIntersectable.light2World, MAKE_FLOAT3(0.f, 0.f, 1.f)));
+
+	// The part of the sun disc below the local horizon is occulted by the
+	// planet
+	if (dot(-dir, up) < sun3Light->notIntersectable.sun.turbidity)
+		return BLACK;
+
+	return SunLight_GetRadiance(sun3Light, bsdf, dir, directPdfA);
+}
+
+OPENCL_FORCE_INLINE float3 Sun3Light_Illuminate(__global const LightSource *sun3Light,
+		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
+		const float sceneRadius,
+		__global const BSDF *bsdf, const float time, const float u0, const float u1,
+		__global Ray *shadowRay, float *directPdfW) {
+
+	const float3 up = normalize(Transform_ApplyVector(
+			&sun3Light->notIntersectable.light2World, MAKE_FLOAT3(0.f, 0.f, 1.f)));
+
+	const float cosThetaMax = sun3Light->notIntersectable.sun.cosThetaMax;
+	const float3 sunDir = VLOAD3F(&sun3Light->notIntersectable.sun.absoluteDir.x);
+	const float3 shadowRayDir = UniformSampleCone(u0, u1, cosThetaMax, VLOAD3F(&sun3Light->notIntersectable.sun.x.x), VLOAD3F(&sun3Light->notIntersectable.sun.y.x), sunDir);
+
+	// Check if the point can be inside the sun cone of light
+	const float cosAtLight = dot(sunDir, shadowRayDir);
+	if (cosAtLight <= cosThetaMax)
+		return BLACK;
+
+	// The part of the sun disc below the local horizon is occulted by the
+	// planet
+	if (dot(shadowRayDir, up) < sun3Light->notIntersectable.sun.turbidity)
+		return BLACK;
+
+	const float3 worldCenter = MAKE_FLOAT3(worldCenterX, worldCenterY, worldCenterZ);
+	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
+
+	const float3 pSurface = BSDF_GetRayOrigin(bsdf, worldCenter - VLOAD3F(&bsdf->hitPoint.p.x));
+	const float3 toCenter = worldCenter - pSurface;
+	const float centerDistance = dot(toCenter, toCenter);
+	const float approach = dot(toCenter, shadowRayDir);
+	const float shadowRayDistance = approach + sqrt(max(0.f, envRadius * envRadius -
+		centerDistance + approach * approach));
+
+	*directPdfW = UniformConePdf(cosThetaMax);
+
+	// Setup the shadow ray
+	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
+	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
+
+	return VLOAD3F(sun3Light->notIntersectable.sun.color.c);
 }
 
 //------------------------------------------------------------------------------
@@ -978,8 +1147,17 @@ OPENCL_FORCE_NOT_INLINE float3 EnvLight_GetRadiance(__global const LightSource *
 					bsdf,
 					dir, directPdfA
 					LIGHTS_PARAM);
+		case TYPE_IL_SKY3:
+			return Sky3Light_GetRadiance(light,
+					bsdf,
+					dir, directPdfA
+					LIGHTS_PARAM);
 		case TYPE_SUN:
 			return SunLight_GetRadiance(light,
+					bsdf,
+					dir, directPdfA);
+		case TYPE_SUN3:
+			return Sun3Light_GetRadiance(light,
 					bsdf,
 					dir, directPdfA);
 		case TYPE_SHARPDISTANT:
@@ -1033,8 +1211,21 @@ OPENCL_FORCE_INLINE float3 Light_Illuminate(
 					bsdf, time, u0, u1,
 					shadowRay, directPdfW
 					LIGHTS_PARAM);
+		case TYPE_IL_SKY3:
+			return Sky3Light_Illuminate(
+					light,
+					worldCenterX, worldCenterY, worldCenterZ, envRadius,
+					bsdf, time, u0, u1,
+					shadowRay, directPdfW
+					LIGHTS_PARAM);
 		case TYPE_SUN:
 			return SunLight_Illuminate(
+					light,
+					worldCenterX, worldCenterY, worldCenterZ, envRadius,
+					bsdf, time, u0, u1,
+					shadowRay, directPdfW);
+		case TYPE_SUN3:
+			return Sun3Light_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
 					bsdf, time, u0, u1,
@@ -1107,7 +1298,9 @@ OPENCL_FORCE_INLINE bool Light_IsEnvOrIntersectable(__global const LightSource *
 		case TYPE_IL_CONSTANT:
 		case TYPE_IL:
 		case TYPE_IL_SKY2:
+		case TYPE_IL_SKY3:
 		case TYPE_SUN:
+		case TYPE_SUN3:
 		case TYPE_TRIANGLE:
 			return true;
 		case TYPE_SPHERE:
