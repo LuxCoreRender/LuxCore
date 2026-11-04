@@ -257,8 +257,8 @@ void ExtTriangleMesh::Delete() {
 	vertAOV.DeleteAll();
 	triAOV.DeleteAll();
 
-	delete[] bevelCylinders;
-	delete[] bevelBoundingCylinders;
+	bevelCylinders.reset();
+	bevelBoundingCylinders.reset();
 }
 
 void ExtTriangleMesh::ComputeNormals() {
@@ -567,7 +567,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::Merge(
 				throw runtime_error("Error in ExtTriangleMesh::Merge(): trying to merge meshes with different type of triangle AOV definitions");
 			if (mesh0.HasTriAOV(dataIndex)) {
 				for (u_int i = 0; i < mesh.GetTotalTriangleCount(); ++i)
-					meshTriAOV[dataIndex][i + vIndex] = mesh.GetTriAOV(i, dataIndex);
+					meshTriAOV[dataIndex][i + iIndex] = mesh.GetTriAOV(i, dataIndex);
 			}
 		}
 

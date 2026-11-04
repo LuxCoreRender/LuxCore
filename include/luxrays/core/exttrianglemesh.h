@@ -650,8 +650,8 @@ public:
 	ExtMeshProp<float> vertAOV; // Vertex AOV
 	ExtMeshProp<float> triAOV; // Triangle AOV
 
-	BevelCylinder *bevelCylinders;
-	BevelBoundingCylinder *bevelBoundingCylinders;
+	std::unique_ptr<BevelCylinder[]> bevelCylinders;
+	std::unique_ptr<BevelBoundingCylinder[]> bevelBoundingCylinders;
 	std::unique_ptr<luxrays::ocl::IndexBVHArrayNode[]> bevelBVHArrayNodes;
 };
 

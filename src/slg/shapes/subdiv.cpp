@@ -338,7 +338,8 @@ nRefinedVerts
 	ExtMeshProp<UV> newUVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh.HasUVs(i)) {
-			newUVs[i] = std::make_shared<UV[]>(nRefinedVerts);
+			// AllocateLayer also records the layer size in _size
+			newUVs.AllocateLayer(i, nRefinedVerts);
 
 			const float *refinedUVs = uvsBuffers[i]->BindCpuBuffer() + 2 * nCoarseVerts;
 			std::copy(refinedUVs, refinedUVs + 2 * nRefinedVerts, newUVs[i].get());
@@ -350,7 +351,7 @@ nRefinedVerts
 	ExtMeshProp<Spectrum> newCols;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh.HasColors(i)) {
-			newCols[i] = std::make_shared<Spectrum[]>(nRefinedVerts);
+			newCols.AllocateLayer(i, nRefinedVerts);
 
 			const float *refinedCols = colsBuffers[i]->BindCpuBuffer() + 3 * nCoarseVerts;
 			std::copy(refinedCols, refinedCols + 3 * nRefinedVerts, newCols[i].get());
@@ -362,7 +363,7 @@ nRefinedVerts
 	ExtMeshProp<float> newAlphas;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh.HasAlphas(i)) {
-			newAlphas[i] = std::make_shared<float[]>(nRefinedVerts);
+			newAlphas.AllocateLayer(i, nRefinedVerts);
 
 			const float *refinedAlphas = alphasBuffers[i]->BindCpuBuffer() + 1 * nCoarseVerts;
 			std::copy(refinedAlphas, refinedAlphas + 1 * nRefinedVerts, newAlphas[i].get());
@@ -375,7 +376,7 @@ nRefinedVerts
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh.HasVertexAOV(i)) {
 			SDL_LOG("Subdivision (enhanced) - Evaluating AOV layer #" << i);
-			newVertAOVs[i] = std::make_shared<float[]>(nRefinedVerts);
+			newVertAOVs.AllocateLayer(i, nRefinedVerts);
 
 			const float *refinedVertAOVs = vertAOVSsBuffers[i]->BindCpuBuffer() + 1 * nCoarseVerts;
 			std::copy(refinedVertAOVs, refinedVertAOVs + 1 * nRefinedVerts, newVertAOVs[i].get());

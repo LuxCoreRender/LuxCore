@@ -613,6 +613,9 @@ void DirectLightSamplingCache::LoadPersistentCache(const std::string &fileName) 
 	sif.GetArchive() >> params;
 
 	sif.GetArchive() >> cacheEntries;
+	// Free any previously loaded BVH before deserializing into the pointer
+	delete cacheEntriesBVH;
+	cacheEntriesBVH = nullptr;
 	sif.GetArchive() >> cacheEntriesBVH;
 
 	visibilityParticles.clear();
