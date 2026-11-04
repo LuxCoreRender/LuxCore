@@ -112,8 +112,7 @@ EnvLightVisibilityCache::EnvLightVisibilityCache(
 	scene(scn),
 	envLight(envl),
 	luminanceMapImage(std::move(li)),
-	params(p),
-	cacheEntriesBVH(nullptr)
+	params(p)
 {
 	assert (luminanceMapImage);
 
@@ -124,7 +123,7 @@ EnvLightVisibilityCache::EnvLightVisibilityCache(
 EnvLightVisibilityCache::EnvLightVisibilityCache(SceneConstRef scn, const EnvLightSource *envl,
 		const u_int width, const u_int height, const ELVCParams &p) :
 		scene(scn), envLight(envl), luminanceMapImage(nullptr), params(p),
-		cacheEntriesBVH(nullptr), mapWidth(width), mapHeight(height) {
+		mapWidth(width), mapHeight(height) {
 }
 
 void EnvLightVisibilityCache::ParamsEvaluation() {
@@ -159,9 +158,7 @@ void EnvLightVisibilityCache::ParamsEvaluation() {
 	SLG_LOG("EnvLightVisibilityCache samples per tile: " << params.map.tileSampleCount);
 }
 
-EnvLightVisibilityCache::~EnvLightVisibilityCache() {
-	delete cacheEntriesBVH;
-}
+EnvLightVisibilityCache::~EnvLightVisibilityCache() {}
 
 bool EnvLightVisibilityCache::IsCacheEnabled(const BSDF &bsdf) const {
 	return !bsdf.IsDelta();
@@ -731,7 +728,7 @@ void EnvLightVisibilityCache::Build() {
 
 	if (cacheEntries.size() > 0) {
 		SLG_LOG("EnvLightVisibilityCache building cache entries BVH");
-		cacheEntriesBVH = new ELVCBvh(&cacheEntries, params.visibility.lookUpRadius,
+		cacheEntriesBVH = std::make_unique<ELVCBvh>(&cacheEntries, params.visibility.lookUpRadius,
 				params.visibility.lookUpNormalAngle);
 
 		if (luminanceMapImage)
@@ -899,9 +896,8 @@ void EnvLightVisibilityCache::LoadPersistentCache(const std::string &fileName) {
 	sif.GetArchive() >> params;
 
 	sif.GetArchive() >> cacheEntries;
-	// Free any previously loaded BVH before deserializing into the pointer
-	delete cacheEntriesBVH;
-	cacheEntriesBVH = nullptr;
+	// Free any previously loaded BVH before deserializing into it
+	cacheEntriesBVH.reset();
 	sif.GetArchive() >> cacheEntriesBVH;
 
 	visibilityParticles.clear();

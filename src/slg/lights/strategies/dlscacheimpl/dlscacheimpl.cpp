@@ -47,12 +47,10 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 DirectLightSamplingCache::DirectLightSamplingCache(const DLSCParams &p) :
-		params(p), cacheEntriesBVH(nullptr) {
+		params(p) {
 }
 
-DirectLightSamplingCache::~DirectLightSamplingCache() {
-	delete cacheEntriesBVH;
-}
+DirectLightSamplingCache::~DirectLightSamplingCache() {}
 
 bool DirectLightSamplingCache::IsCacheEnabled(const BSDF &bsdf) const {
 	const BSDFEvent eventTypes = bsdf.GetEventTypes();
@@ -325,7 +323,7 @@ void DirectLightSamplingCache::ComputeCacheEntryReceivedLuminance(
 	}
 }
 
-void DirectLightSamplingCache::BuildCacheEntryLightDistribution(const u_int entryIndex, const DLSCBvh &bvh, SceneConstRef scene) {
+void DirectLightSamplingCache::BuildCacheEntryLightDistribution(const u_int entryIndex, DLSCBvhConstRef bvh, SceneConstRef scene) {
 
 	DLSCacheEntry &entry = cacheEntries[entryIndex];
 	std::vector<float> entryReceivedLuminance(scene.GetLightSources().GetSize(), 0.f);
@@ -541,7 +539,7 @@ void DirectLightSamplingCache::Build(SceneConstRef scn) {
 
 	if (cacheEntries.size() > 0) {
 		SLG_LOG("DirectLightSamplingCache building cache entries BVH");
-		cacheEntriesBVH = new DLSCBvh(&cacheEntries, params.visibility.lookUpRadius,
+		cacheEntriesBVH = std::make_unique<DLSCBvh>(&cacheEntries, params.visibility.lookUpRadius,
 				params.visibility.lookUpNormalAngle);
 	} else
 		SLG_LOG("WARNING: DirectLightSamplingCache has an empty cache");
@@ -613,9 +611,8 @@ void DirectLightSamplingCache::LoadPersistentCache(const std::string &fileName) 
 	sif.GetArchive() >> params;
 
 	sif.GetArchive() >> cacheEntries;
-	// Free any previously loaded BVH before deserializing into the pointer
-	delete cacheEntriesBVH;
-	cacheEntriesBVH = nullptr;
+	// Free any previously loaded BVH before deserializing into it
+	cacheEntriesBVH.reset();
 	sif.GetArchive() >> cacheEntriesBVH;
 
 	visibilityParticles.clear();
