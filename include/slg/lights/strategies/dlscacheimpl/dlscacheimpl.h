@@ -167,7 +167,7 @@ public:
 
 	bool IsCacheEnabled(const BSDF &bsdf) const;
 	const DLSCParams &GetParams() const { return params; }
-	const DLSCBvh *GetBVH() const { return cacheEntriesBVH; }
+	DLSCBvhConstPtr GetBVH() const { return luxrays::make_observer(cacheEntriesBVH); }
 
 	void Build(SceneConstRef scene);
 	
@@ -184,7 +184,7 @@ private:
 	void TraceVisibilityParticles(SceneConstRef);
 	void InitCacheEntry(const u_int entryIndex);
 	void ComputeCacheEntryReceivedLuminance(const u_int entryIndex, SceneConstRef);
-	void BuildCacheEntryLightDistribution(const u_int entryIndex, const DLSCBvh &bvh, SceneConstRef);
+	void BuildCacheEntryLightDistribution(const u_int entryIndex, DLSCBvhConstRef bvh, SceneConstRef);
 	void BuildCacheEntries(SceneConstRef scene);
 
 	void DebugExport(const std::string &fileName, const float sphereRadius) const;
@@ -201,7 +201,7 @@ private:
 
 	// Used during the rendering phase
 	std::vector<DLSCacheEntry> cacheEntries;
-	DLSCBvh *cacheEntriesBVH;
+	DLSCBvhUPtr cacheEntriesBVH;
 };
 
 }

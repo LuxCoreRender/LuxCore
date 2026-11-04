@@ -38,8 +38,7 @@ FilmSampleSplatter::FilmSampleSplatter(const FilterUPtr& flt) : filter(flt) {
 	}
 }
 
-FilmSampleSplatter::~FilmSampleSplatter() {
-}
+FilmSampleSplatter::~FilmSampleSplatter() {}
 
 void FilmSampleSplatter::AtomicSplatSample(FilmConstRef film, const SampleResult &sampleResult, const float weight) const {
 	const u_int *subRegion = film.GetSubRegion();
@@ -71,7 +70,7 @@ void FilmSampleSplatter::AtomicSplatSample(FilmConstRef film, const SampleResult
 		// Compute sample's raster extent
 		const float dImageX = sampleResult.filmX - .5f;
 		const float dImageY = sampleResult.filmY - .5f;
-		const FilterLUT *filterLUT = filterLUTs->GetLUT(dImageX - floorf(sampleResult.filmX), dImageY - floorf(sampleResult.filmY));
+		const FilterLUTConstPtr filterLUT = filterLUTs->GetLUT(dImageX - floorf(sampleResult.filmX), dImageY - floorf(sampleResult.filmY));
 		auto lut = filterLUT->GetLUT().begin();
 
 		const int x0 = Floor2Int(dImageX - filter->xWidth * .5f + .5f);

@@ -68,7 +68,7 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache& dlscLightStrategy) 
 	dlscNormalCosAngle = cosf(Radians(dlscLightStrategy.GetEntryNormalAngle()));
 
 	// Compile all cache entries
-	auto bvh = dlscLightStrategy.GetBVH();
+	const DLSCBvhConstPtr bvh = dlscLightStrategy.GetBVH();
 	if (bvh) {
 		const std::vector<DLSCacheEntry> *allEntries = bvh->GetAllEntries();
 		const u_int entriesCount = allEntries->size();
@@ -215,7 +215,7 @@ void CompiledScene::CompileELVC(EnvLightVisibilityCacheRPtr visibilityMapCache) 
 	elvcNormalCosAngle = cosf(Radians(visibilityMapCache->GetParams().visibility.lookUpNormalAngle));
 
 	// Compile all cache entries
-	auto* bvh = visibilityMapCache->GetBVH();
+	const ELVCBvhConstPtr bvh = visibilityMapCache->GetBVH();
 	if (bvh) {
 		const std::vector<ELVCacheEntry> *allEntries = bvh->GetAllEntries();
 		const u_int entriesCount = allEntries->size();

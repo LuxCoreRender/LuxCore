@@ -67,7 +67,7 @@ public:
 
 	// Used for OpenCL data translation
 	const luxrays::Distribution1DRPtr GetLightsDistribution() const { return distributionStrategy->GetLightsDistribution(); }
-	const DLSCBvh *GetBVH() const { return DLSCache.GetBVH(); }
+	DLSCBvhConstPtr GetBVH() const { return DLSCache.GetBVH(); }
 	bool UseRTMode() const { return useRTMode; }
 	float GetEntryRadius() const { return DLSCache.GetParams().visibility.lookUpRadius; }
 	float GetEntryNormalAngle() const { return DLSCache.GetParams().visibility.lookUpNormalAngle; }
