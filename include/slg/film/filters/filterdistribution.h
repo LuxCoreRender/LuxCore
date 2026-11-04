@@ -88,11 +88,11 @@ class FilterLUTs {
 public:
 	FilterLUTs(const Filter &filter, const size_t size);
 
-	const FilterLUT *GetLUT(const float x, const float y) const {
+	FilterLUTConstPtr GetLUT(const float x, const float y) const {
 		const int ix = luxrays::Max<unsigned int>(0, luxrays::Min<unsigned int>(luxrays::Floor2Int(lutsSize * (x + 0.5f)), lutsSize - 1));
 		const int iy = luxrays::Max<unsigned int>(0, luxrays::Min<unsigned int>(luxrays::Floor2Int(lutsSize * (y + 0.5f)), lutsSize - 1));
 
-		return luts[ix + iy * lutsSize].get();
+		return FilterLUTConstPtr(luts[ix + iy * lutsSize].get());
 	}
 
 private:

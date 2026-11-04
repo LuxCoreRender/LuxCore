@@ -55,7 +55,7 @@ public:
 
 private:
 	const FilterUPtr& filter;  // Nota: pixelFilter is provided by RenderEngine
-	std::unique_ptr<FilterLUTs> filterLUTs;
+	FilterLUTsUPtr filterLUTs;
 
 	// Null singleton instance
 };
