@@ -111,6 +111,12 @@ public:
 		luxrays::Spectrum *connectionThroughput, const luxrays::Spectrum *pathThroughput = nullptr,
 		SampleResult *sampleResult = nullptr, const bool backTracing = false) const;
 
+	// Returns the volume including the origin of the ray (the default world
+	// volume, if any, when the origin is not inside a volume). It requires the
+	// data set.
+	VolumeConstPtr GetPointVolume(const luxrays::Ray &ray) const;
+	void UpdateLightVolumes();
+
 	void PreprocessCamera(const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion);
 	void Preprocess(luxrays::Context & ctx,
 		const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion,
