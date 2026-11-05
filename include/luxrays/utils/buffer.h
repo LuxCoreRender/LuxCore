@@ -37,6 +37,11 @@ inline constexpr auto NOPAD = std::array<std::byte,0>();
 // - Underlying objects of main objects, known as SUBTYPE: float, size_t etc.
 // - bytes 
 //
+// The underlying storage is always shared (held by a shared_ptr): copying a
+// Buffer shares the storage, it does NOT duplicate the content (like a
+// shared_ptr). Use Set() when a deep copy is needed. As a consequence, shared
+// content must never be modified in place (use copy-on-write, see IsShared()).
+//
 // To spare compile time, the template is delibaretely intended not to
 // be implicitely instantiable.
 // Definition and instantiations are in cpp file
@@ -56,20 +61,15 @@ public:
 	explicit Buffer(std::span<const TYPE>);
 	explicit Buffer(std::span<const SUBTYPE>);
 
-	// Move is ok
+	// Copy and move are ok: a copy shares the storage, it does not
+	// duplicate the content. Use Set() to deep-copy the content.
+	inline Buffer(const Buffer&) = default;
+	inline Buffer& operator=(const Buffer&) = default;
 	inline Buffer(Buffer&&) = default;
 	inline Buffer& operator=(Buffer&&) = default;
 
-	// No copy allowed
-	Buffer(Buffer&) = delete;
-	Buffer& operator=(Buffer&) = delete;
-
 	// Allocate internal container for count objects of type TYPE
 	void Allocate(std::size_t count);
-
-	// Returns a Buffer sharing the storage of 'from', without copying the
-	// content: the shared content must never be modified afterwards
-	static Buffer Share(const Buffer &from);
 
 	// Getters
 	std::span<TYPE> GetObjects() const;
@@ -103,6 +103,10 @@ public:
 
 	// Emptiness
 	explicit operator bool() const noexcept;
+
+	// True if the storage is shared with other Buffer objects:
+	// shared content must never be modified in place (use copy-on-write)
+	bool IsShared() const noexcept { return data.use_count() > 1; }
 
 
 private:

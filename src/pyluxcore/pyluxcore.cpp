@@ -1512,7 +1512,7 @@ static std::optional<luxrays::ExtMeshProp<T>> propCopy(
 static void Scene_DefineMeshExt3(
 	  const SceneImplPtr & scene,
 	  const std::string &meshName,
-    const py_float_array p,
+    const py::object &p,  // points ndarray, or the name of an existing mesh to share the points from
 	  const py::array_t<triangle_underlying_type, py::array::c_style > tri,
     const std::optional<py_float_array> n,
     const std::optional<std::vector<py_float_array>> uv_layers,
@@ -1522,10 +1522,24 @@ static void Scene_DefineMeshExt3(
 ) {
 	// TODO Release GIL when possible
 
-	// Points
-	auto points = dataCopyBuffer< float, 3, luxrays::VertexBuffer > (
-		p, meshName, "Points"
-	);
+	// Points: either a new buffer, or shared from an existing mesh (given by
+	// name). A Buffer copy shares the storage, so building the mesh with the
+	// sharing ctor on *sharedPoints never duplicates the point data.
+	luxrays::VertexBuffer points;
+	const luxrays::VertexBuffer *sharedPoints = &points;
+	if (py::isinstance<py::str>(p)) {
+		const std::string srcMeshName = py::cast<std::string>(p);
+		auto &srcMesh = scene->GetSlgScene().GetExtMeshes().GetExtMesh(srcMeshName);
+		auto *srcTriMesh = dynamic_cast<luxrays::ExtTriangleMesh *>(&srcMesh);
+		if (!srcTriMesh)
+			throw std::runtime_error("Scene.DefineMeshExt: mesh '" + srcMeshName +
+				"' used as points source is not a triangle mesh");
+		sharedPoints = &srcTriMesh->GetVertexBuffer();
+	} else {
+		points = dataCopyBuffer< float, 3, luxrays::VertexBuffer > (
+			py::cast<py_float_array>(p), meshName, "Points"
+		);
+	}
 
 	// Triangles
 	auto triangles = dataCopyBuffer< luxrays::Triangle::subtype_t, 3, luxrays::TriangleBuffer> (
@@ -1542,13 +1556,13 @@ static void Scene_DefineMeshExt3(
 	auto meshUVs = propCopy<luxrays::UV, 2>(uv_layers, "UVs", meshName);
 	auto meshCols = propCopy<luxrays::Spectrum, 3>(color_layers, "colors", meshName);
 	auto meshAlphas = propCopy<float, 1>(alpha_layers, "alphas", meshName);
-	assert(not bool(meshUVs) or meshUVs->GetLayerSize() == points.Count());
-	assert(not bool(meshCols) or meshCols->GetLayerSize() == points.Count());
-	assert(not bool(meshAlphas) or meshAlphas->GetLayerSize() == points.Count());
+	assert(not bool(meshUVs) or meshUVs->GetLayerSize() == sharedPoints->Count());
+	assert(not bool(meshCols) or meshCols->GetLayerSize() == sharedPoints->Count());
+	assert(not bool(meshAlphas) or meshAlphas->GetLayerSize() == sharedPoints->Count());
 
-	// Create Mesh
+	// Create Mesh (sharing ctor: the vertex buffer storage is shared, not copied)
 	auto newMesh = std::make_unique<luxrays::ExtTriangleMesh>(
-		std::move(points),
+		*sharedPoints,
 		std::move(triangles),
 		std::move(normals),
 		meshUVs,
@@ -2549,7 +2563,9 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def(
 		"DefineMeshExt",
 		&Scene_DefineMeshExt3,
-		"Define an extended mesh from Numpy arrays",
+		"Define an extended mesh from Numpy arrays. 'points' can also be the "
+		"name of an existing mesh, in which case its point buffer is shared "
+		"(not copied) with the new mesh",
 		py::arg("name"),
 		py::arg("points"),
 		py::arg("triangles"),

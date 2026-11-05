@@ -345,11 +345,6 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 			Property(propName + ".enhanced")(false)
 		).Get<bool>();
 
-		// Apply merge on distance beforehand
-		const bool mergeBefore = props.Get(
-			Property(propName + ".mergebefore")(false)
-		).Get<bool>();
-
 		const float sharpnessThresholdRadians = props.Get(Property(propName + ".sharpnessthreshold")(0.512)).Get<double>();
 		const float creaseWeight = props.Get(Property(propName + ".creaseweight")(10.0)).Get<double>();
 
@@ -360,7 +355,6 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 			maxLevel,
 			maxEdgeScreenSize,
 			subdivEnhanced,
-			mergeBefore,
 			sharpnessThresholdRadians,
 			creaseWeight
 		);

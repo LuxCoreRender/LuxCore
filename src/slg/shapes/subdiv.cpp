@@ -39,7 +39,6 @@
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/subdiv.h"
-#include "slg/shapes/merge_on_distance.h"
 #include "slg/cameras/camera.h"
 #include "slg/scene/scene.h"
 
@@ -1574,11 +1573,10 @@ ExtTriangleMeshUPtr ApplySubdiv(
 
 SubdivShape::SubdivShape(
 	CameraConstPtr camera,
-	ExtTriangleMeshRef rawSrcMesh,
+	ExtTriangleMeshRef srcMesh,
 	const u_int maxLevel,
 	const float maxEdgeScreenSize,
 	const bool enhanced,
-	const bool merge_before,
 	const float sharpnessThresholdRadians,
 	const float creaseWeight
 ) {
@@ -1592,13 +1590,6 @@ SubdivShape::SubdivShape(
 	}
 
 	if (maxLevel > 0) {
-
-		// Merge vertices on distance
-		auto srcMeshPtr = merge_before ?
-			MergeOnDistanceShape::ApplyMergeOnDistance(
-				rawSrcMesh, std::numeric_limits<float>::min(), true
-			) : nullptr;
-		auto& srcMesh = merge_before ? *srcMeshPtr : rawSrcMesh;
 
 		if (camera && (maxEdgeScreenSize > 0.f)) {
 			SDL_LOG("Subdividing shape " << srcMesh.GetName()
@@ -1659,7 +1650,6 @@ SubdivShape::SubdivShape(
 					*mesh,
 					optimizedLevel,
 					enhanced,
-					merge_before,
 					sharpnessThresholdRadians,
 					creaseWeight
 				);
@@ -1676,16 +1666,16 @@ SubdivShape::SubdivShape(
 		} else {
 			SDL_LOG("Subdividing shape " << srcMesh.GetName() << " at level: " << maxLevel);
 
-			mesh = ApplySubdiv(srcMesh, maxLevel, enhanced, merge_before, sharpnessThresholdRadians, creaseWeight);
+			mesh = ApplySubdiv(srcMesh, maxLevel, enhanced, sharpnessThresholdRadians, creaseWeight);
 		}
 	} else {
 		// Nothing to do, just make a copy
 		SDL_LOG("Subdivision: level=0 - Skipping");
-		mesh = rawSrcMesh.Copy();
+		mesh = srcMesh.Copy();
 	}
 
 	if (maxLevel > 0) {
-		SDL_LOG("Subdivided shape from " << rawSrcMesh.GetTotalTriangleCount() << " to " << mesh->GetTotalTriangleCount() << " faces");
+		SDL_LOG("Subdivided shape from " << srcMesh.GetTotalTriangleCount() << " to " << mesh->GetTotalTriangleCount() << " faces");
 	}
 
 	// For some debugging
@@ -1753,7 +1743,6 @@ ExtTriangleMeshUPtr SubdivShape::ApplySubdiv(
 	ExtTriangleMeshRef srcMesh,
 	const u_int maxLevel,
 	const bool enhanced,
-	const bool merge_before,
 	const float sharpnessThresholdRadians,
 	const float creaseWeight
 ) {

@@ -309,6 +309,27 @@ public:
 		std::optional<ExtMeshProp<float>> meshAlphas,
 		const float bRadius = 0.f
 	);
+	// Sharing constructors: the vertex buffer is copied, i.e. its storage is
+	// shared with the source buffer (the point data is not duplicated), e.g.
+	// between the submeshes of a same source mesh
+	ExtTriangleMesh(
+		const VertexBuffer &sharedVertices,
+		TriangleBuffer&& meshTris,
+		NormalBuffer&& meshNormals,
+		std::optional<std::span<UV>> meshUVs,
+		std::optional<std::span<Spectrum>> meshCols,
+		std::optional<std::span<float>> meshAlphas,
+		const float bRadius = 0.f
+	);
+	ExtTriangleMesh(
+		const VertexBuffer &sharedVertices,
+		TriangleBuffer&& meshTris,
+		NormalBuffer&& meshNormals,
+		std::optional<ExtMeshProp<UV>> meshUVs,
+		std::optional<ExtMeshProp<Spectrum>> meshCols,
+		std::optional<ExtMeshProp<float>> meshAlphas,
+		const float bRadius = 0.f
+	);
 	~ExtTriangleMesh() { };
 	virtual void Delete();
 
