@@ -140,21 +140,6 @@ std::span<TYPE> Buffer<TYPE, SUBTYPE, PAD>::Subset(std::size_t offset, std::size
 	return asType.subspan(offset, count);
 }
 
-// Share: build a Buffer sharing the storage of 'from', without copying the
-// content
-template< typename TYPE, typename SUBTYPE, std::array PAD >
-Buffer<TYPE, SUBTYPE, PAD> Buffer<TYPE, SUBTYPE, PAD>::Share(const Buffer &from) {
-	Buffer res;
-
-	res.data = from.data;
-	res.totalSize = from.totalSize;
-	res.effectiveSize = from.effectiveSize;
-	res.asType = from.asType;
-	res.asSubType = from.asSubType;
-
-	return res;
-}
-
 // Set: Copy 'from' into 'this'
 // Realloc if needed
 template< typename TYPE, typename SUBTYPE, std::array PAD >

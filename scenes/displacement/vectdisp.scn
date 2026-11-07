@@ -29,7 +29,6 @@ scene.shapes.sphereply.ply = sphere.ply
 #scene.shapes.sphereply.ply = plane.ply
 ##
 scene.shapes.spheresubdiv.type = subdiv
-scene.shapes.spheresubdiv.enhanced = 1
 scene.shapes.spheresubdiv.source = sphereply
 scene.shapes.spheresubdiv.maxlevel = 4
 ##

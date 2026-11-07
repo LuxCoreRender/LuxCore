@@ -49,6 +49,7 @@
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
 #include "luxcore/pyluxcore/pyluxcoreforblender.h"
+#include "slg/utils/group_by_equivalence.h"
 #include "luxcore/pyluxcore/pyluxcoreutils.h"
 
 using namespace luxcore;
@@ -120,6 +121,35 @@ static void LuxCore_SetLogHandler(py::object &logHandler) {
 static const char *LuxCoreVersion() {
   static const char *luxCoreVersion = LUXCORE_VERSION;
   return luxCoreVersion;
+}
+
+// Union-find over [0, num_elements) given pairs of equivalent elements
+// (parallel C++ implementation, slg::equiv::GroupByEquivalence).
+// Returns an int32 array with the component label of each element.
+static py::array_t<int> union_find_labels(
+	const size_t num_elements,
+	const py::array_t<uint32_t, py::array::c_style> &pairs
+) {
+	if (pairs.ndim() != 2 || pairs.shape(1) != 2)
+		throw std::runtime_error("union_find: pairs must be a [n, 2] uint32 array");
+	if (num_elements > std::numeric_limits<uint32_t>::max())
+		throw std::runtime_error("union_find: num_elements too large");
+
+	std::vector<slg::equiv::Relation> rel;
+	rel.reserve(pairs.shape(0));
+	auto p = pairs.unchecked<2>();
+	for (size_t i = 0; i < (size_t)pairs.shape(0); ++i)
+		rel.emplace_back(p(i, 0), p(i, 1));
+
+	// Flat per-element labels directly (no Classes structure)
+	std::vector<uint32_t> labels = slg::equiv::GroupByEquivalenceLabels(
+		num_elements, std::span<const slg::equiv::Relation>(rel));
+
+	py::array_t<int> out(num_elements);
+	auto l = out.mutable_unchecked<1>();
+	for (size_t i = 0; i < num_elements; ++i)
+		l[i] = static_cast<int>(labels[i]);
+	return out;
 }
 
 static py::list GetOpenCLDeviceList() {
@@ -1512,7 +1542,7 @@ static std::optional<luxrays::ExtMeshProp<T>> propCopy(
 static void Scene_DefineMeshExt3(
 	  const SceneImplPtr & scene,
 	  const std::string &meshName,
-    const py_float_array p,
+    const py::object &p,  // points ndarray, or the name of an existing mesh to share the points from
 	  const py::array_t<triangle_underlying_type, py::array::c_style > tri,
     const std::optional<py_float_array> n,
     const std::optional<std::vector<py_float_array>> uv_layers,
@@ -1522,10 +1552,24 @@ static void Scene_DefineMeshExt3(
 ) {
 	// TODO Release GIL when possible
 
-	// Points
-	auto points = dataCopyBuffer< float, 3, luxrays::VertexBuffer > (
-		p, meshName, "Points"
-	);
+	// Points: either a new buffer, or shared from an existing mesh (given by
+	// name). A Buffer copy shares the storage, so building the mesh with the
+	// sharing ctor on *sharedPoints never duplicates the point data.
+	luxrays::VertexBuffer points;
+	const luxrays::VertexBuffer *sharedPoints = &points;
+	if (py::isinstance<py::str>(p)) {
+		const std::string srcMeshName = py::cast<std::string>(p);
+		auto &srcMesh = scene->GetSlgScene().GetExtMeshes().GetExtMesh(srcMeshName);
+		auto *srcTriMesh = dynamic_cast<luxrays::ExtTriangleMesh *>(&srcMesh);
+		if (!srcTriMesh)
+			throw std::runtime_error("Scene.DefineMeshExt: mesh '" + srcMeshName +
+				"' used as points source is not a triangle mesh");
+		sharedPoints = &srcTriMesh->GetVertexBuffer();
+	} else {
+		points = dataCopyBuffer< float, 3, luxrays::VertexBuffer > (
+			py::cast<py_float_array>(p), meshName, "Points"
+		);
+	}
 
 	// Triangles
 	auto triangles = dataCopyBuffer< luxrays::Triangle::subtype_t, 3, luxrays::TriangleBuffer> (
@@ -1542,13 +1586,13 @@ static void Scene_DefineMeshExt3(
 	auto meshUVs = propCopy<luxrays::UV, 2>(uv_layers, "UVs", meshName);
 	auto meshCols = propCopy<luxrays::Spectrum, 3>(color_layers, "colors", meshName);
 	auto meshAlphas = propCopy<float, 1>(alpha_layers, "alphas", meshName);
-	assert(not bool(meshUVs) or meshUVs->GetLayerSize() == points.Count());
-	assert(not bool(meshCols) or meshCols->GetLayerSize() == points.Count());
-	assert(not bool(meshAlphas) or meshAlphas->GetLayerSize() == points.Count());
+	assert(not bool(meshUVs) or meshUVs->GetLayerSize() == sharedPoints->Count());
+	assert(not bool(meshCols) or meshCols->GetLayerSize() == sharedPoints->Count());
+	assert(not bool(meshAlphas) or meshAlphas->GetLayerSize() == sharedPoints->Count());
 
-	// Create Mesh
+	// Create Mesh (sharing ctor: the vertex buffer storage is shared, not copied)
 	auto newMesh = std::make_unique<luxrays::ExtTriangleMesh>(
-		std::move(points),
+		*sharedPoints,
 		std::move(triangles),
 		std::move(normals),
 		meshUVs,
@@ -2183,6 +2227,14 @@ PYBIND11_MODULE(pyluxcore, m) {
 
   m.def("Version", LuxCoreVersion, "Returns the LuxCore version");
 
+  // Generic union-find (parallel C++ implementation): given num_elements
+  // elements [0, num_elements) and pairs of equivalent elements, returns an
+  // int32 array with the class (component) label of each element
+  m.def("union_find", &union_find_labels,
+	  "Union-find over integer elements: returns the component label of each "
+	  "element [0, num_elements), given pairs of equivalent elements",
+	  py::arg("num_elements"), py::arg("pairs"));
+
   m.def("Init", &LuxCore_Init);
   m.def("Init", &LuxCore_InitDefaultHandler);
   m.def("SetLogHandler", &LuxCore_SetLogHandler);
@@ -2549,7 +2601,9 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def(
 		"DefineMeshExt",
 		&Scene_DefineMeshExt3,
-		"Define an extended mesh from Numpy arrays",
+		"Define an extended mesh from Numpy arrays. 'points' can also be the "
+		"name of an existing mesh, in which case its point buffer is shared "
+		"(not copied) with the new mesh",
 		py::arg("name"),
 		py::arg("points"),
 		py::arg("triangles"),

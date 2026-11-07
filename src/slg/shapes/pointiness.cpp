@@ -24,7 +24,6 @@
 #include "slg/shapes/pointiness.h"
 #include "luxrays/utils/buffer.h"
 #include "slg/scene/scene.h"
-#include "slg/shapes/merge_on_distance.h"
 
 using namespace std;
 using namespace luxrays;
@@ -71,17 +70,13 @@ protected:
 	const Point *verts_;
 };
 
-PointinessShape::PointinessShape(ExtTriangleMeshRef rawSrcMesh, const u_int destAOVIndex) {
-	// rawSrcMesh is source mesh before merge-on-distance
-	SDL_LOG("Pointiness shape " << rawSrcMesh.GetName());
+PointinessShape::PointinessShape(ExtTriangleMeshRef srcMesh, const u_int destAOVIndex) {
+	// The source mesh is expected to be already welded (BlendLuxCore welds
+	// coincident vertices at export); use a mergeondistance shape first for
+	// meshes with split vertices (e.g. raw PLY files)
+	SDL_LOG("Pointiness shape " << srcMesh.GetName());
 
 	const double startTime = WallClockTime();
-
-	// Merge vertices on distance
-	auto srcMeshPtr = MergeOnDistanceShape::ApplyMergeOnDistance(
-		rawSrcMesh, std::numeric_limits<float>::min(), true
-	);
-	auto& srcMesh = *srcMeshPtr;
 
 	const u_int originalVertCount = srcMesh.GetTotalVertexCount();
 	const u_int triCount = srcMesh.GetTotalTriangleCount();

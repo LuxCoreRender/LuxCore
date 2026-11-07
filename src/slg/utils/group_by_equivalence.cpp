@@ -206,20 +206,37 @@ public:
 	}
 };
 
-// Build the classes from a final UnionFind: flatten the trees (single
-// threaded: the union-find is not used concurrently anymore), then count
-// the class sizes, prefix sum and fill (CSR): no hashing and no per class
-// allocation until the final slicing. The elements end up in ascending
-// order inside each class.
-slg::equiv::Classes BuildClassesFromUnionFind(const UnionFind& uf, const size_t numElements) {
-	if (numElements == 0)
-		return {};
+// Normalize a relation span: unordered pairs (min, max), duplicates removed,
+// sorted by the packed key so that unions touch spatially local parents
+// (cache locality) and redundant unions are skipped
+slg::equiv::RelationVector NormalizeRelations(slg::equiv::RelationSpan relation) {
+	slg::equiv::RelationVector keys;
+	keys.reserve(relation.size());
+	for (const auto& [a, b] : relation) {
+		const uint32_t lo = std::min(a, b);
+		const uint32_t hi = std::max(a, b);
+		keys.emplace_back(lo, hi);
+	}
+	tbb::parallel_sort(keys.begin(), keys.end(),
+		[](const slg::equiv::Relation &x, const slg::equiv::Relation &y) {
+			return ((uint64_t(x.first) << 32) | x.second) <
+				   ((uint64_t(y.first) << 32) | y.second);
+		});
+	keys.erase(std::unique(keys.begin(), keys.end()), keys.end());
+	return keys;
+}
 
-	// The roots of the elements and the root flags, in one parallel
-	// pass: the reduce is over, so the parent trees are read only and
-	// every element can walk to its root from any thread (the serial
-	// version halved the paths along the way, which would race)
-	ScalableVector<uint32_t> rootOfElement(numElements);
+// The roots of the elements and their dense class ids, shared by the
+// classes and labels builds: one parallel pass walks every element to its
+// root (the reduce is over, so the parent trees are read only), then a
+// parallel scan assigns the dense class ids over the root flags
+size_t ComputeRootsAndClassIds(const UnionFind& uf, const size_t numElements,
+		ScalableVector<uint32_t> &rootOfElement,
+		ScalableVector<uint32_t> &classIdOfRoot) {
+	if (numElements == 0)
+		return 0;
+
+	rootOfElement.resize(numElements);
 	ScalableVector<unsigned char> isRoot(numElements, 0);
 	tbb::parallel_for(size_t(0), numElements, [&](size_t i) {
 		const uint32_t root = static_cast<uint32_t>(uf.findRoot(i));
@@ -271,10 +288,39 @@ slg::equiv::Classes BuildClassesFromUnionFind(const UnionFind& uf, const size_t 
 		}
 	};
 
-	ScalableVector<uint32_t> classIdOfRoot(numElements);
+	classIdOfRoot.resize(numElements);
 	DenseClassIdScan classIdScan(classIdOfRoot, isRoot);
 	tbb::parallel_scan(tbb::blocked_range<size_t>(0, numElements, 16384), classIdScan);
-	const size_t classCount = classIdScan.getCount();
+	return classIdScan.getCount();
+}
+
+// Build the labels from a final UnionFind: labels[i] = dense class id of the
+// root of i. No histogram/scatter/slicing: cheaper than building Classes
+// when only the per-element component label is needed.
+ScalableVector<uint32_t> BuildLabelsFromUnionFind(const UnionFind& uf, const size_t numElements) {
+	ScalableVector<uint32_t> rootOfElement;
+	ScalableVector<uint32_t> classIdOfRoot;
+	const size_t classCount = ComputeRootsAndClassIds(uf, numElements, rootOfElement, classIdOfRoot);
+
+	ScalableVector<uint32_t> labels(numElements);
+	tbb::parallel_for(size_t(0), numElements, [&](size_t i) {
+		labels[i] = classIdOfRoot[rootOfElement[i]];
+	});
+	return labels;
+}
+
+// Build the classes from a final UnionFind: flatten the trees (single
+// threaded: the union-find is not used concurrently anymore), then count
+// the class sizes, prefix sum and fill (CSR): no hashing and no per class
+// allocation until the final slicing. The elements end up in ascending
+// order inside each class.
+slg::equiv::Classes BuildClassesFromUnionFind(const UnionFind& uf, const size_t numElements) {
+	if (numElements == 0)
+		return {};
+
+	ScalableVector<uint32_t> rootOfElement;
+	ScalableVector<uint32_t> classIdOfRoot;
+	const size_t classCount = ComputeRootsAndClassIds(uf, numElements, rootOfElement, classIdOfRoot);
 
 	// The scatter of the elements into the class segments: the fixed
 	// chunk boundary pattern over the dense class ids (count, prefix,
@@ -421,14 +467,17 @@ Classes GroupByEquivalence(size_t numElements, size_t iterationCount,
 
 // Version for direct ranges: relation is a span of Relation pairs
 Classes GroupByEquivalence(size_t numElements, RelationSpan relation) {
+	// Normalize first: dedup + sort (also speeds up the grouping itself)
+	RelationVector normalized = NormalizeRelations(relation);
+
 	// Use parallel_reduce with ParallelGroupByEquivalence
 	static tbb::affinity_partitioner tbb_partitioner;
 
-	const size_t relationSize = relation.size();
+	const size_t relationSize = normalized.size();
 	const size_t grain = GroupingGrain(relationSize);
 
 	ParallelGroupByEquivalence<RelationSpan> solver(
-		numElements, std::move(relation));
+		numElements, std::span<const Relation>(normalized));
 
 	tbb::parallel_reduce(
 		tbb::blocked_range<size_t>(0, relationSize, grain),
@@ -437,6 +486,29 @@ Classes GroupByEquivalence(size_t numElements, RelationSpan relation) {
 	);
 
 	return BuildClassesFromUnionFind(solver.getResult(), numElements);
+}
+
+// Labels variant: flat per-element class labels, no Classes structure
+std::vector<uint32_t> GroupByEquivalenceLabels(size_t numElements, RelationSpan relation) {
+	// Normalize first: dedup + sort (also speeds up the grouping itself)
+	RelationVector normalized = NormalizeRelations(relation);
+
+	static tbb::affinity_partitioner tbb_partitioner;
+
+	const size_t relationSize = normalized.size();
+	const size_t grain = GroupingGrain(relationSize);
+
+	ParallelGroupByEquivalence<RelationSpan> solver(
+		numElements, std::span<const Relation>(normalized));
+
+	tbb::parallel_reduce(
+		tbb::blocked_range<size_t>(0, relationSize, grain),
+		solver,
+		tbb_partitioner
+	);
+
+	ScalableVector<uint32_t> labels = BuildLabelsFromUnionFind(solver.getResult(), numElements);
+	return std::vector<uint32_t>(labels.begin(), labels.end());
 }
 
 

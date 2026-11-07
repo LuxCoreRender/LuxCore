@@ -30,7 +30,6 @@ scene.shapes.monkey_ply.ply = scenes/bigmonkey/bigmonkey.ply
 # Heavy treatment #1: enhanced adaptive subdivision (level 5, fine screen size)
 scene.shapes.monkey_subdiv1.type = subdiv
 scene.shapes.monkey_subdiv1.source = monkey_ply
-scene.shapes.monkey_subdiv1.enhanced = 1
 scene.shapes.monkey_subdiv1.mergebefore = 1
 scene.shapes.monkey_subdiv1.maxlevel = 12
 scene.shapes.monkey_subdiv1.maxedgescreensize = 0.01
@@ -40,7 +39,6 @@ scene.shapes.monkey_subdiv1.creaseweight = 0.0
 # Heavy treatment #2: second enhanced subdiv pass (level 3, finer)
 scene.shapes.monkey_subdiv2.type = subdiv
 scene.shapes.monkey_subdiv2.source = monkey_subdiv1
-scene.shapes.monkey_subdiv2.enhanced = 1
 scene.shapes.monkey_subdiv2.maxlevel = 12
 scene.shapes.monkey_subdiv2.maxedgescreensize = 0.005
 scene.shapes.monkey_subdiv2.sharpnessthreshold = 3.14159
@@ -49,7 +47,6 @@ scene.shapes.monkey_subdiv2.creaseweight = 0.0
 # Heavy treatment #3: third enhanced subdiv pass (level 2, very fine)
 scene.shapes.monkey_subdiv3.type = subdiv
 scene.shapes.monkey_subdiv3.source = monkey_subdiv2
-scene.shapes.monkey_subdiv3.enhanced = 1
 scene.shapes.monkey_subdiv3.maxlevel = 12
 scene.shapes.monkey_subdiv3.maxedgescreensize = 0.002
 scene.shapes.monkey_subdiv3.sharpnessthreshold = 3.14159

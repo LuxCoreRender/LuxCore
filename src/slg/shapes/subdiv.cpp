@@ -39,7 +39,7 @@
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/subdiv.h"
-#include "slg/shapes/merge_on_distance.h"
+#include "slg/shapes/tessellate.h"
 #include "slg/cameras/camera.h"
 #include "slg/scene/scene.h"
 
@@ -65,425 +65,6 @@ using NormalArrayPtr = std::unique_ptr<Normal[]>;
 using TriangleArrayPtr = std::unique_ptr<Triangle[]>;
 
 
-//////////////////////////
-//  Simple subdivision  //
-//////////////////////////
-
-// This is a "simple" implementation (not so simple, however), with the
-// following characteristics:
-// - Subdivision is uniform (no special focus on singularities)
-// - Tessellation is directly derivated from subdivision.
-// - Implementation is partly mono-threaded
-
-namespace simple {
-
-struct Edge {
-	Edge(const u_int v0Index, const u_int v1Index) {
-		if (v0Index <= v1Index) {
-			vIndex[0] = v0Index;
-			vIndex[1] = v1Index;
-		} else {
-			vIndex[0] = v1Index;
-			vIndex[1] = v0Index;
-		}
-	}
-
-	bool operator==(const Edge &edge) const {
-		return (vIndex[0] == edge.vIndex[0]) && (vIndex[1] == edge.vIndex[1]);
-	}
-
-	u_int vIndex[2];
-};
-
-class EdgeHashFunction {
-public:
-	size_t operator()(const Edge &edge) const {
-		return (edge.vIndex[0] * 0x1f1f1f1fu) ^ edge.vIndex[1];
-	}
-};
-
-template <int DIMENSIONS> static BufferPtr
-BuildBuffer(
-	StencilTablePtr& stencilTable,  // Stencil table
-	const float *data,  // Primvar data
-	const int nCoarse,  // Coarse vertex count
-	const int nRefined  // Refined vertex count
-)
-{
-    BufferPtr buffer(
-		Osd::CpuVertexBuffer::Create(DIMENSIONS, nCoarse + nRefined)
-	);
-
-	// Pack the primvar data at the start of the vertex buffer
-	// and update every time primvar data changes
-	buffer->UpdateData(data, 0, nCoarse);
-
-    Osd::BufferDescriptor desc(0, DIMENSIONS, DIMENSIONS);
-    Osd::BufferDescriptor newDesc(nCoarse * DIMENSIONS, DIMENSIONS, DIMENSIONS);
-
-	// Refine points (coarsePoints -> refinedPoints)
-	OSD_EVALUATOR::EvalStencils(
-		buffer.get(),
-		desc,
-		buffer.get(),
-		newDesc,
-		stencilTable.get()
-	);
-
-	return buffer;
-}
-
-
-static Far::TopologyRefiner * createFarTopologyRefiner(ExtTriangleMeshConstRef);
-
-static ExtTriangleMeshUPtr ApplySubdivAdaptive(
-	ExtTriangleMeshRef srcMesh,
-	const u_int maxLevel
-);
-
-static ExtTriangleMeshUPtr ApplyAdaptiveSubdiv(
-	ExtTriangleMeshRef srcMesh,
-	const u_int maxLevel
-);
-
-
-
-ExtTriangleMeshUPtr ApplySubdiv(ExtTriangleMeshRef srcMesh, const u_int maxLevel) {
-	//--------------------------------------------------------------------------
-	// Refine topology
-	//--------------------------------------------------------------------------
-	// https://graphics.pixar.com/opensubdiv/docs/osd_tutorial_0.html
-
-	// Set-up refiner
-	std::unique_ptr<Far::TopologyRefiner> refiner(createFarTopologyRefiner(srcMesh));
-
-	// Refine the topology up to 'maxlevel'
-	SDL_LOG("Subdivision - Refining (uniform)");
-	Far::TopologyRefiner::UniformOptions refiner_options(maxLevel);
-	refiner_options.fullTopologyInLastLevel = true;
-	refiner->RefineUniform(refiner_options);
-
-	Far::TopologyLevel const& refFirstLevel = refiner->GetLevel(0);
-	Far::TopologyLevel const& refLastLevel = refiner->GetLevel(maxLevel);
-
-	// Check validity
-	if (refiner->GetMaxLevel() < maxLevel) {
-		SDL_LOG("WARNING - SUBDIVISION FAILURE");
-		SDL_LOG("'maxlevel' may be too high, please check. Continuing with input mesh...");
-		return srcMesh.Copy();
-	}
-
-	// Get topology constants
-	const int nCoarseVerts = refFirstLevel.GetNumVertices(); // Coarse vertex count
-	const int nCoarseFaces = refFirstLevel.GetNumFaces(); // Coarse face count
-	const int nRefinedVerts = refLastLevel.GetNumVertices(); // Refined vertex count
-	const int nRefinedFaces = refLastLevel.GetNumFaces(); // Coarse face count
-	const int totalVertsCount = nCoarseVerts + nRefinedVerts;  // Total vertex count
-
-	SDL_LOG("Subdivision - Refined vertices: " << nRefinedVerts);
-	SDL_LOG("Subdivision - Refined triangles: " << nRefinedFaces);
-
-
-	//--------------------------------------------------------------------------
-	// Create stencil and patch tables
-	//--------------------------------------------------------------------------
-
-	StencilTablePtr stencilTable;
-	PatchTablePtr patchTable;
-
-	{
-		// Create stencil table
-		Far::StencilTableFactory::Options stencilOptions;
-		stencilOptions.generateOffsets = true;
-		stencilOptions.generateIntermediateLevels = false;
-		stencilOptions.maxLevel = maxLevel;
-
-		stencilTable = StencilTablePtr(
-			Far::StencilTableFactory::Create(*refiner, stencilOptions)
-		);
-
-		// Create patch table
-		Far::PatchTableFactory::Options patchOptions;
-		patchOptions.SetEndCapType(
-				Far::PatchTableFactory::Options::ENDCAP_BSPLINE_BASIS
-		);
-
-		patchTable = PatchTablePtr(Far::PatchTableFactory::Create(*refiner, patchOptions));
-
-		// Append local point stencils
-		const auto *localPointStencilTable = patchTable->GetLocalPointStencilTable();
-		if (localPointStencilTable) {
-			StencilTablePtr combinedTable(
-				Far::StencilTableFactory::AppendLocalPointStencilTable(
-					*refiner, stencilTable.get(), localPointStencilTable
-				)
-			);
-			if (combinedTable) {
-				std::swap(stencilTable, combinedTable);
-			}
-		}
-	}
-
-	SDL_LOG("Subdivision - Stencil and patch tables created");
-
-	//--------------------------------------------------------------------------
-	// Set buffers and evaluate primvar from stencils
-	//--------------------------------------------------------------------------
-
-
-	// Vertices
-	auto vertsBuffer = BuildBuffer<3>(
-		stencilTable,
-		srcMesh.GetVerticesAsFloats().data(),
-		nCoarseVerts,
-		nRefinedVerts
-	);
-
-	// Normals
-    BufferPtr normsBuffer;
-	if (srcMesh.HasNormals()) {
-        normsBuffer = BuildBuffer<3>(
-			stencilTable,
-			reinterpret_cast<float *>(srcMesh.GetNormals().Data()),
-			nCoarseVerts,
-			nRefinedVerts
-		);
-	}
-
-	// UVs
-	std::vector<BufferPtr> uvsBuffers(EXTMESH_MAX_DATA_COUNT);
-	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-		if (srcMesh.HasUVs(i)) {
-			uvsBuffers[i] = BuildBuffer<2>(
-				stencilTable,
-				(const float *)srcMesh.GetUVs(i).get(),
-				nCoarseVerts,
-nRefinedVerts
-			);
-		}
-	}
-
-	// Colors
-	std::vector<BufferPtr> colsBuffers(EXTMESH_MAX_DATA_COUNT);
-	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-		if (srcMesh.HasColors(i)) {
-			colsBuffers[i] = BuildBuffer<3>(
-				stencilTable,
-				(const float *)srcMesh.GetColors(i).get(),
-				nCoarseVerts,
-				nRefinedVerts
-			);
-		}
-	}
-
-	// Alphas
-	std::vector<BufferPtr> alphasBuffers(EXTMESH_MAX_DATA_COUNT);
-	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-		if (srcMesh.HasAlphas(i)) {
-			alphasBuffers[i] = BuildBuffer<1>(
-				stencilTable,
-				(const float *)srcMesh.GetAlphas(i).get(),
-				nCoarseVerts,
-				nRefinedVerts
-			);
-		}
-	}
-
-	// VertAOVs
-	std::vector<BufferPtr> vertAOVSsBuffers(EXTMESH_MAX_DATA_COUNT);
-	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-		if (srcMesh.HasVertexAOV(i)) {
-			vertAOVSsBuffers[i] = BuildBuffer<1>(
-				stencilTable,
-				(const float *)srcMesh.GetVertexAOVs(i).get(),
-				nCoarseVerts,
-				nRefinedVerts
-			);
-		}
-	}
-
-	SDL_LOG("Subdivision - Buffers built");
-
-	//--------------------------------------------------------------------------
-	// Build the new mesh
-	//--------------------------------------------------------------------------
-
-	// New triangles
-	TriangleBuffer newTris(nRefinedFaces);
-	for (int face = 0; face < nRefinedFaces; ++face) {
-		Vtr::ConstIndexArray faceVerts = refLastLevel.GetFaceVertices(face);
-		for (u_int vertex = 0; vertex < 3; ++vertex) {
-			newTris[face].v[vertex] = faceVerts[vertex];
-		}
-	}
-
-	// New vertices
-	VertexBuffer newVerts(nRefinedVerts);
-	const float *refinedVerts = vertsBuffer->BindCpuBuffer() + 3 * nCoarseVerts;
-	newVerts.Set(std::span<const float>(refinedVerts, size_t(3 * nRefinedVerts)));
-
-	// New normals
-	NormalBuffer newNorms;
-	if (srcMesh.HasNormals()) {
-		newNorms.Allocate(nRefinedVerts);
-		const float *refinedNorms = normsBuffer->BindCpuBuffer() + 3 * nCoarseVerts;
-		std::copy_n(
-			refinedNorms,
-			3 * nRefinedVerts,
-			newNorms.GetSubObjects().begin()
-		);
-	}
-
-	// New UVs
-	ExtMeshProp<UV> newUVs;
-	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-		if (srcMesh.HasUVs(i)) {
-			// AllocateLayer also records the layer size in _size
-			newUVs.AllocateLayer(i, nRefinedVerts);
-
-			const float *refinedUVs = uvsBuffers[i]->BindCpuBuffer() + 2 * nCoarseVerts;
-			std::copy(refinedUVs, refinedUVs + 2 * nRefinedVerts, newUVs[i].get());
-		} else
-			newUVs[i] = nullptr;
-	}
-
-	// New colors
-	ExtMeshProp<Spectrum> newCols;
-	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-		if (srcMesh.HasColors(i)) {
-			newCols.AllocateLayer(i, nRefinedVerts);
-
-			const float *refinedCols = colsBuffers[i]->BindCpuBuffer() + 3 * nCoarseVerts;
-			std::copy(refinedCols, refinedCols + 3 * nRefinedVerts, newCols[i].get());
-		} else
-			newCols[i] = nullptr;
-	}
-
-	// New alphas
-	ExtMeshProp<float> newAlphas;
-	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-		if (srcMesh.HasAlphas(i)) {
-			newAlphas.AllocateLayer(i, nRefinedVerts);
-
-			const float *refinedAlphas = alphasBuffers[i]->BindCpuBuffer() + 1 * nCoarseVerts;
-			std::copy(refinedAlphas, refinedAlphas + 1 * nRefinedVerts, newAlphas[i].get());
-		} else
-			newAlphas[i] = nullptr;
-	}
-
-	// New vertAOVs
-	ExtMeshProp<float> newVertAOVs;
-	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-		if (srcMesh.HasVertexAOV(i)) {
-			SDL_LOG("Subdivision (enhanced) - Evaluating AOV layer #" << i);
-			newVertAOVs.AllocateLayer(i, nRefinedVerts);
-
-			const float *refinedVertAOVs = vertAOVSsBuffers[i]->BindCpuBuffer() + 1 * nCoarseVerts;
-			std::copy(refinedVertAOVs, refinedVertAOVs + 1 * nRefinedVerts, newVertAOVs[i].get());
-		} else
-			newVertAOVs[i] = nullptr;
-	}
-
-	// Allocate the new mesh
-	ExtTriangleMeshUPtr newMesh = std::make_unique<ExtTriangleMesh>(
-		std::move(newVerts), std::move(newTris), std::move(newNorms),
-		newUVs, newCols, newAlphas
-	);
-
-	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-		newMesh->SetVertexAOV(i, newVertAOVs.GetLayer(i), newVertAOVs.GetLayerSize());
-	}
-
-	return newMesh;
-}
-
-static Far::TopologyRefiner* createFarTopologyRefiner(ExtTriangleMeshConstRef srcMesh)
-{
-	// Set topology descriptor
-	Far::TopologyDescriptor desc;
-	desc.numVertices = srcMesh.GetTotalVertexCount();
-	desc.numFaces = srcMesh.GetTotalTriangleCount();
-	std::vector<int> vertPerFace(desc.numFaces, 3);
-	desc.numVertsPerFace = &vertPerFace[0];
-	//desc.vertIndicesPerFace = reinterpret_cast<const int *>(srcMesh.GetTriangles());
-	desc.vertIndicesPerFace = reinterpret_cast<const int *>(srcMesh.GetTrianglesAsInts().data());
-
-	// Look for mesh boundary edges
-	std::unordered_map<Edge, u_int, EdgeHashFunction> edgesMap;
-	const auto triCount = srcMesh.GetTotalTriangleCount();
-	const TriangleBuffer tris(srcMesh.GetTriangles());
-
-	// Count how many times an edge is shared
-	for (u_int i = 0; i < triCount; ++i) {
-		const Triangle &tri = tris[i];
-
-		const Edge edge0(tri.v[0], tri.v[1]);
-		if (edgesMap.find(edge0) != edgesMap.end())
-			edgesMap[edge0] += 1;
-		else
-			edgesMap[edge0] = 1;
-
-		const Edge edge1(tri.v[1], tri.v[2]);
-		if (edgesMap.find(edge1) != edgesMap.end())
-			edgesMap[edge1] += 1;
-		else
-		   edgesMap[edge1] = 1;
-
-		const Edge edge2(tri.v[2], tri.v[0]);
-		if (edgesMap.find(edge2) != edgesMap.end())
-		   edgesMap[edge2] += 1;
-		else
-			edgesMap[edge2] = 1;
-	}
-
-	std::vector<bool> isBoundaryVertex(srcMesh.GetTotalVertexCount(), false);
-	std::vector<Far::Index> cornerVertexIndices;
-	std::vector<float> cornerWeights;
-	for (auto em : edgesMap) {
-		if (em.second == 1) {
-			// It is a boundary edge
-
-			const Edge &e = em.first;
-
-			if (!isBoundaryVertex[e.vIndex[0]]) {
-				cornerVertexIndices.push_back(e.vIndex[0]);
-				cornerWeights.push_back(10.f);
-				isBoundaryVertex[e.vIndex[0]] = true;
-			}
-
-			if (!isBoundaryVertex[e.vIndex[1]]) {
-				cornerVertexIndices.push_back(e.vIndex[1]);
-				cornerWeights.push_back(10.f);
-				isBoundaryVertex[e.vIndex[1]] = true;
-			}
-		}
-	}
-
-	// Initialize TopologyDescriptor corners if I have some
-	if (cornerVertexIndices.size() > 0) {
-		assert(cornerVertexIndices.size() <= std::numeric_limits<int>::max());
-		desc.numCorners = cornerVertexIndices.size();
-		desc.cornerVertexIndices = &cornerVertexIndices[0];
-		desc.cornerWeights = &cornerWeights[0];
-	}
-
-	// Set topology refiner factory's type & options
-	Sdc::SchemeType type = Sdc::SCHEME_LOOP;
-	Sdc::Options options;
-	options.SetVtxBoundaryInterpolation(Sdc::Options::VTX_BOUNDARY_EDGE_AND_CORNER);
-
-	// Instantiate a Far::TopologyRefiner from the descriptor
-	using RefinerFactory = Far::TopologyRefinerFactory<Far::TopologyDescriptor>;
-	auto *refiner = RefinerFactory::Create(
-		desc,
-		RefinerFactory::Options(type, options)
-	);
-
-	return refiner;
-}
-
-}  // ~namespace simple
-
 ////////////////////////////////////////////////////////////////////////////
 //						Enhanced mode
 //
@@ -505,48 +86,6 @@ static Far::TopologyRefiner* createFarTopologyRefiner(ExtTriangleMeshConstRef sr
 
 namespace enhanced {
 
-
-// Storage of local coordinates (coordinates in a given face) during
-// tessellation, in the form (face, x, y).
-struct LocalCoords {
-	int face = -1;
-	float x = 0.f;
-	float y = 0.f;
-
-	LocalCoords() {}
-
-	LocalCoords(int p_face, float p_x, float p_y):
-		face(p_face),
-		x(p_x),
-		y(p_y)
-	{ }
-
-	LocalCoords(int p_face, int p_i, int p_j, int N):
-		face(p_face),
-		x(float(p_i) / float(N)),
-		y(float(p_j) / float(N))
-	{ }
-
-	// Avoid unexpected use of LocalCoords(int, float, float)
-	// with implicit conversion
-	LocalCoords(int, int, int) = delete;
-
-	// Interpolating constructor
-	LocalCoords(LocalCoords p0, LocalCoords p1, u_int weight, u_int total) {
-		assert(p0.face == p1.face);
-		assert(weight <= total);
-
-		face = p0.face;
-
-		float weight_f = float(weight);
-		float total_f = float(total);
-		x = (weight_f * p1.x + (total_f - weight_f) * p0.x) / total_f;
-		y = (weight_f * p1.y + (total_f - weight_f) * p0.y) / total_f;
-	}
-};
-
-
-typedef std::vector<LocalCoords> CoordVector;
 
 // Adapter for float values in subdiv buffer The main adaptation consists in
 // addition of Clear and AddWithWeight methods
@@ -895,201 +434,12 @@ struct Surface {
 	/// @param N Tessellation rate: each edge will be subdivided into N
 	/// sub-edges
 	///
+	/// Tessellate input mesh: delegates to the standalone tessellation
+	/// (TessellateShape API), called directly on this refiner
 	std::tuple<CoordVector, TriangleBuffer, int, int>
 	Tessellate (const size_t N) {
-		// This is triforce tessellation.
-
-		// Allocate outputs
-		CoordVector tessCoords;
-		int numTriangles = getTesselTriangleCount(N);
-		int numPoints = getTesselPosCount(N);
-		TriangleBuffer tessTris(numTriangles);
-
-		// Some constants
-		const auto& topology = refiner->GetLevel(0);
-		const size_t FACE_COUNT = topology.GetNumFaces();
-		const int FACE_SIZE = 3;  // Of course (triangles)...
-
-		// Check
-		SDL_LOG(
-			"Subdivision (enhanced) - Tessellating with factor N = "
-			<< N
-		);
-		if (FACE_COUNT * N * N >= std::numeric_limits<int>::max()) {
-			throw std::runtime_error(
-				"FACE_COUNT * N * N > numeric limit ("
-				+ ToString(std::numeric_limits<int>::max())
-				+ ")"
-			);
-		}
-
-		// Useful variables and constants
-		int offset;
-
-		// Number of coarse vertices
-		const int numCoarseVertices = topology.GetNumVertices();
-
-		// Number of interior points in an edge
-		const int numEdgeInteriorPoints = N - 1;
-
-		// Number of interior points in a triangle
-		const int numTriangleInteriorPoints = (N - 1) * (N - 2) / 2;
-
-		// Number of coords to be computed
-		const int numCoords =
-			topology.GetNumVertices()
-			+ numEdgeInteriorPoints * topology.GetNumEdges()
-			+ numTriangleInteriorPoints * topology.GetNumFaces();
-
-		// Size tessCoords
-		tessCoords.resize(numCoords);
-
-		// Get vertex local coordinates in given face
-		auto getVertexLocalCoords = [&topology](int face, int vertex) {
-			auto faceVertices = topology.GetFaceVertices(face);
-			if (vertex == faceVertices[0]) {
-				return LocalCoords(face, 0.f, 0.f);
-			} else if (vertex == faceVertices[1]) {
-				return LocalCoords(face, 1.f, 0.f);
-			} else if (vertex == faceVertices[2]) {
-				return LocalCoords(face, 0.f, 1.f);
-			}
-
-			throw std::runtime_error("Error in getVertexLocalCoords");
-		};
-
-		// Step #1 - Initialize with initial (coarse) vertices
-		#pragma omp parallel for
-		for (int vertex = 0; vertex < numCoarseVertices; ++vertex) {
-			auto vertexFaces = topology.GetVertexFaces(vertex);
-			if (vertexFaces.size() > 0) {
-				// Choose first face (arbitrary)
-				int face = vertexFaces[0];
-				tessCoords[vertex] = getVertexLocalCoords(face, vertex);
-			} else {
-				// Isolated vertex (not referenced by any face) — assign
-				// a default coordinate; it won't appear in any triangle
-				tessCoords[vertex] = LocalCoords(0, 0.f, 0.f);
-			}
-		}
-		offset = numCoarseVertices;
-
-		// Step #2 - Add edge vertices
-		#pragma omp parallel for
-		for (int edge = 0; edge < topology.GetNumEdges(); ++edge) {
-			// Find face
-			int face = topology.GetEdgeFaces(edge)[0];
-			// Find edge vertices.
-			auto edgeVerts = topology.GetEdgeVertices(edge);
-			int v0 = edgeVerts[0];
-			int v1 = edgeVerts[1];
-
-			LocalCoords c0 = getVertexLocalCoords(face, v0);
-			LocalCoords c1 = getVertexLocalCoords(face, v1);
-
-			for (int i = 1; i < N; ++i) {  // Only edge interior vertices, not extremities
-				LocalCoords coords(c0, c1, i, N);  // Interpolate from c0 and c1
-				tessCoords[offset + edge * numEdgeInteriorPoints + i - 1 ] = coords;
-			}
-		}
-		offset = numCoarseVertices + numEdgeInteriorPoints * topology.GetNumEdges();
-
-		// Step #3 - Add interior points
-		#pragma omp parallel for
-		for (int f = 0; f < FACE_COUNT; ++f) {  // for each face
-			const auto faceVertices = topology.GetFaceVertices(f);
-			const auto faceEdges = topology.GetFaceEdges(f);
-			assert(faceVertices.size() == 3);
-
-			// If (i,j) are local coordinates, and edge length is N,
-			// we have in the triangle: i >= 0, j >= 0, i + j <= N
-			// We then consider k so that i + j + k = N.
-			// If we are on an edge, i * j * k == 0.
-			// If we are on a vertex, i == N or j == N or k == N.
-			// In the face (triangle), after tessellation, we'll have N² points.
-			// Some of them will be shared with other faces, we'll have to deal
-			// with that.
-
-			std::vector<int> pointMap;  // Map points between local numeration and global one
-
-			for (int j = 0; j <= N ; ++j) {
-				for (int i = 0; i <= N - j; ++i) {
-					int k = N - i - j;
-					int vertex;  // Output
-					// Find point type: vertex, edge point, interior point
-					if (i == N || j == N || k == N) {  // Vertex
-						// Vertex point in initial triangle
-						vertex = faceVertices[(i + 2 * j) / N];
-					} else if (i == 0 || j == 0 || k == 0) {  // Edge
-						// Find edge vertices
-						int v0, v1, pos;
-						// Find edge
-						if (i == 0) {
-							v0 = faceVertices[0];
-							v1 = faceVertices[2];
-							pos = j;
-						} else if (j == 0) {
-							v0 = faceVertices[0];
-							v1 = faceVertices[1];
-							pos = i;
-						} else if (k == 0) {
-							v0 = faceVertices[1];
-							v1 = faceVertices[2];
-							pos = j;
-						}
-						int edge = topology.FindEdge(v0, v1);
-						auto edgeVertices = topology.GetEdgeVertices(edge);
-						if (v0 != edgeVertices[0]) {
-							pos = N - pos;
-							std::swap(v0, v1);
-						}
-						vertex = numCoarseVertices + edge * numEdgeInteriorPoints + (pos - 1);
-
-					} else { // Interior point
-						int idx = offset
-							+ numTriangleInteriorPoints * f
-							+ numTriangleInteriorPoints - (N - j) * (N - j - 1) / 2
-							+ i - 1;
-						// Create position
-						tessCoords[idx] = LocalCoords(f, i, j, N);
-						// Record point in map
-						vertex = idx;
-					}
-
-					pointMap.push_back(vertex);
-				}  // ~for j
-			}  // ~for i
-
-			// Create triangles
-
-			// Lambda to get a point in the pointMap, given (i, j)
-			auto pnt = [N, &pointMap](int i, int j) {
-				int idx = (2 * N + 3 - j) * j / 2 + i;
-				return pointMap[idx];
-			};
-
-			int idxTri = f * N * N;
-
-			// Up triangles
-			for (int j = 0; j < N; ++j) {
-				for (int i = 0; i < N - j; ++i, ++idxTri) {
-					tessTris[idxTri] = Triangle(pnt(i, j), pnt(i + 1, j), pnt(i, j + 1));
-					//tessTris[idxTri] = Triangle(pnt(i, j), pnt(i, j +1), pnt(i+1, j));
-				}
-			}
-			// Down triangles
-			for (int j = 0; j < N; ++j) {
-				for (int i = 0; i < N - j - 1; ++i, ++idxTri) {
-					tessTris[idxTri] = Triangle(pnt(i, j + 1), pnt(i + 1, j), pnt(i + 1, j + 1));
-					//tessTris[idxTri] = Triangle(pnt(i, j + 1), pnt(i + 1, j + 1), pnt(i + 1, j));
-				}
-			}
-
-		}  // ~for face
-
-		return std::make_tuple(std::move(tessCoords), std::move(tessTris), numPoints, numTriangles);
-
-	}  // ~Tessellate
+		return TessellateTopology(*refiner, N);
+	}
 
 
 	template <typename T>
@@ -1136,27 +486,12 @@ struct Surface {
 
 	// Get number of positions after N-tessellation
 	int getTesselPosCount(int N) const {
-		const auto& topology = refiner->GetLevel(0);
-
-		// Number of interior points in an edge
-		const int numEdgeInteriorPoints = N - 1;
-
-		// Number of interior points in a triangle
-		const int numTriangleInteriorPoints = (N - 1) * (N - 2) / 2;
-
-		// Number of coords to be computed
-		const int numCoords =
-			topology.GetNumVertices()
-			+ numEdgeInteriorPoints * topology.GetNumEdges()
-			+ numTriangleInteriorPoints * topology.GetNumFaces();
-
-		return numCoords;
+		return GetTessellationPosCount(refiner->GetLevel(0), N);
 	}
 
 	// Get number of triangles after N-tessellation
 	int getTesselTriangleCount(int N) const {
-		const auto& topology = refiner->GetLevel(0);
-		return topology.GetNumFaces() * N * N;
+		return GetTessellationTriangleCount(refiner->GetLevel(0), N);
 	}
 
 	///
@@ -1574,11 +909,9 @@ ExtTriangleMeshUPtr ApplySubdiv(
 
 SubdivShape::SubdivShape(
 	CameraConstPtr camera,
-	ExtTriangleMeshRef rawSrcMesh,
+	ExtTriangleMeshRef srcMesh,
 	const u_int maxLevel,
 	const float maxEdgeScreenSize,
-	const bool enhanced,
-	const bool merge_before,
 	const float sharpnessThresholdRadians,
 	const float creaseWeight
 ) {
@@ -1592,13 +925,6 @@ SubdivShape::SubdivShape(
 	}
 
 	if (maxLevel > 0) {
-
-		// Merge vertices on distance
-		auto srcMeshPtr = merge_before ?
-			MergeOnDistanceShape::ApplyMergeOnDistance(
-				rawSrcMesh, std::numeric_limits<float>::min(), true
-			) : nullptr;
-		auto& srcMesh = merge_before ? *srcMeshPtr : rawSrcMesh;
 
 		if (camera && (maxEdgeScreenSize > 0.f)) {
 			SDL_LOG("Subdividing shape " << srcMesh.GetName()
@@ -1658,8 +984,6 @@ SubdivShape::SubdivShape(
 				auto newMesh = ApplySubdiv(
 					*mesh,
 					optimizedLevel,
-					enhanced,
-					merge_before,
 					sharpnessThresholdRadians,
 					creaseWeight
 				);
@@ -1676,16 +1000,16 @@ SubdivShape::SubdivShape(
 		} else {
 			SDL_LOG("Subdividing shape " << srcMesh.GetName() << " at level: " << maxLevel);
 
-			mesh = ApplySubdiv(srcMesh, maxLevel, enhanced, merge_before, sharpnessThresholdRadians, creaseWeight);
+			mesh = ApplySubdiv(srcMesh, maxLevel, sharpnessThresholdRadians, creaseWeight);
 		}
 	} else {
 		// Nothing to do, just make a copy
 		SDL_LOG("Subdivision: level=0 - Skipping");
-		mesh = rawSrcMesh.Copy();
+		mesh = srcMesh.Copy();
 	}
 
 	if (maxLevel > 0) {
-		SDL_LOG("Subdivided shape from " << rawSrcMesh.GetTotalTriangleCount() << " to " << mesh->GetTotalTriangleCount() << " faces");
+		SDL_LOG("Subdivided shape from " << srcMesh.GetTotalTriangleCount() << " to " << mesh->GetTotalTriangleCount() << " faces");
 	}
 
 	// For some debugging
@@ -1752,8 +1076,6 @@ float SubdivShape::MaxEdgeScreenSize(CameraConstRef camera, ExtTriangleMeshRef s
 ExtTriangleMeshUPtr SubdivShape::ApplySubdiv(
 	ExtTriangleMeshRef srcMesh,
 	const u_int maxLevel,
-	const bool enhanced,
-	const bool merge_before,
 	const float sharpnessThresholdRadians,
 	const float creaseWeight
 ) {
@@ -1765,34 +1087,26 @@ ExtTriangleMeshUPtr SubdivShape::ApplySubdiv(
 	assert(srcMesh.GetTotalVertexCount() <= std::numeric_limits<int>::max());
 	assert(srcMesh.GetTotalTriangleCount() <= std::numeric_limits<int>::max());
 
-	if (enhanced) {
-		SDL_LOG(
-			"Subdivision (enhanced) - Starting - "
-			<< srcMesh.GetTotalVertexCount() << " points / "
-			<< srcMesh.GetTotalTriangleCount() << " triangles"
-		);
+	SDL_LOG(
+		"Subdivision (enhanced) - Starting - "
+		<< srcMesh.GetTotalVertexCount() << " points / "
+		<< srcMesh.GetTotalTriangleCount() << " triangles"
+	);
 
-		return enhanced::ApplySubdiv(
-			srcMesh, maxLevel, sharpnessThresholdRadians, creaseWeight
-		);
-	}
-	else {
-		SDL_LOG("Subdivision - Starting - "
-			<< srcMesh.GetTotalVertexCount() << " points / "
-			<< srcMesh.GetTotalTriangleCount() << " triangles"
-		);
-
-		return simple::ApplySubdiv(srcMesh, maxLevel);
-	}
+	return enhanced::ApplySubdiv(
+		srcMesh, maxLevel, sharpnessThresholdRadians, creaseWeight
+	);
 }
 
 
 SubdivShape::~SubdivShape() {
 }
 
+
+
 ExtTriangleMeshUPtr SubdivShape::RefineImpl(SceneConstRef scene) {
 	return std::move(mesh);
 }
 
 
-// vim: autoindent noexpandtab tabstop=4 shiftwidth=4 foldmethod=syntax
+// vim: autoindent noexpandtab tabstop=4 shiftwidth=4
