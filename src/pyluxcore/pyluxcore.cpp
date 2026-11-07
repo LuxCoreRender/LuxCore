@@ -1548,7 +1548,9 @@ static void Scene_DefineMeshExt3(
     const std::optional<std::vector<py_float_array>> uv_layers,
     const std::optional<std::vector<py_float_array>> color_layers,
     const std::optional<std::vector<py_float_array>> alpha_layers,
-    const std::optional<py_float_array> transformation
+    const std::optional<py_float_array> transformation,
+    const std::optional<py::object> crease_pairs,
+    const std::optional<py::object> crease_weights
 ) {
 	// TODO Release GIL when possible
 
@@ -1601,6 +1603,25 @@ static void Scene_DefineMeshExt3(
 	);
 	newMesh->SetName(meshName);
 
+	// Optional imported creases: flat (v0, v1) vertex index pairs with one
+	// sharpness weight per pair, in OpenSubdiv units (>= 10 = infinite)
+	if (crease_pairs.has_value() && !crease_pairs->is_none()) {
+		std::vector<int> pairs;
+		GetArray<int>(*crease_pairs, pairs, 2);
+		std::vector<float> weights;
+		if (crease_weights.has_value() && !crease_weights->is_none())
+			GetArray<float>(*crease_weights, weights);
+		if (weights.size() * 2 != pairs.size()) {
+			if (weights.empty() && !pairs.empty())
+				weights.assign(pairs.size() / 2, 10.f);  // default: infinite crease
+			else
+				throw std::runtime_error(
+					"Scene.DefineMeshExt: crease_pairs and crease_weights size mismatch");
+		}
+		std::vector<u_int> upairs(pairs.begin(), pairs.end());
+		newMesh->SetCreases(std::move(upairs), std::move(weights));
+	}
+
 	if (transformation.has_value()) {
 		auto transval = transformation.value();
 		luxrays::Transform luxtrans{transval.data()};
@@ -1611,6 +1632,18 @@ static void Scene_DefineMeshExt3(
 	// Insert mesh into the scene
 	scene->DefineMesh(std::move(newMesh));
 
+}
+
+// Number of imported creases (edge sharpness values) of a mesh
+static size_t Scene_GetMeshCreaseCount(
+	const SceneImplPtr & scene, const std::string &meshName
+) {
+	auto &mesh = scene->GetSlgScene().GetExtMeshes().GetExtMesh(meshName);
+	auto *triMesh = dynamic_cast<luxrays::ExtTriangleMesh *>(&mesh);
+	if (!triMesh)
+		throw std::runtime_error("Scene.GetMeshCreaseCount: mesh '" + meshName +
+			"' is not a triangle mesh");
+	return triMesh->GetCreaseWeights().size();
 }
 
 static void Scene_SetMeshVertexAOV(
@@ -2611,10 +2644,13 @@ PYBIND11_MODULE(pyluxcore, m) {
 		py::arg("uvs") = py::none(),
 		py::arg("colors") = py::none(),
 		py::arg("alphas") = py::none(),
-		py::arg("transformation") = py::none()
+		py::arg("transformation") = py::none(),
+		py::arg("crease_pairs") = py::none(),
+		py::arg("crease_weights") = py::none()
 	)
 	.def("DefineMeshExt", &Scene_DefineMeshExt1)
 	.def("DefineMeshExt", &Scene_DefineMeshExt2)
+    .def("GetMeshCreaseCount", &Scene_GetMeshCreaseCount, py::arg("name"))
     .def("SetMeshVertexAOV", &Scene_SetMeshVertexAOV)
     .def("SetMeshTriangleAOV", &Scene_SetMeshTriangleAOV)
     .def("SetMeshAppliedTransformation", &Scene_SetMeshAppliedTransformation)

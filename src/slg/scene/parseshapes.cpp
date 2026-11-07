@@ -346,6 +346,17 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 		const float sharpnessThresholdRadians = props.Get(Property(propName + ".sharpnessthreshold")(0.512)).Get<double>();
 		const float creaseWeight = props.Get(Property(propName + ".creaseweight")(10.0)).Get<double>();
 
+		const string creasesProp = props.Get(Property(propName + ".creases")("computed")).Get<string>();
+		SubdivCreaseMode creaseMode;
+		if (creasesProp == "none")
+			creaseMode = SubdivCreaseMode::NONE;
+		else if (creasesProp == "imported")
+			creaseMode = SubdivCreaseMode::IMPORTED;
+		else if (creasesProp == "computed")
+			creaseMode = SubdivCreaseMode::COMPUTED;
+		else
+			throw runtime_error("Unknown creases mode in a subdiv shape: " + creasesProp);
+
 		shape = std::make_unique<SubdivShape>(
 			//camera,
 			CameraPtr(&GetCamera()),
@@ -353,7 +364,8 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 			maxLevel,
 			maxEdgeScreenSize,
 			sharpnessThresholdRadians,
-			creaseWeight
+			creaseWeight,
+			creaseMode
 		);
 
 	} else if (shapeType == "subdiv_old") {

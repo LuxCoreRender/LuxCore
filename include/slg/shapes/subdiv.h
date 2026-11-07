@@ -26,6 +26,14 @@
 
 namespace slg {
 
+// How the creases (sharp edges) of a subdiv shape are determined
+enum class SubdivCreaseMode {
+	NONE,       // no creases at all
+	COMPUTED,   // computed from the dihedral angles (sharpnessthreshold) with a uniform creaseweight
+	IMPORTED    // read from the mesh crease data (PLY edge element / DefineMeshExt crease_pairs);
+	            // falls back to NONE when the mesh carries no crease data
+};
+
 class SubdivShape : public Shape {
 public:
 	SubdivShape(
@@ -34,7 +42,8 @@ public:
 		const u_int maxLevel,
 		const float maxEdgeScreenSize,
 		const float sharpnessThresholdRadians,
-		const float creaseWeight
+		const float creaseWeight,
+		const SubdivCreaseMode creaseMode = SubdivCreaseMode::COMPUTED
 	);
 	virtual ~SubdivShape();
 
@@ -45,7 +54,8 @@ public:
 		luxrays::ExtTriangleMeshRef srcMesh,
 		const u_int maxLevel,
 		const float sharpnessThresholdRadians,
-		const float creaseWeight
+		const float creaseWeight,
+		const SubdivCreaseMode creaseMode = SubdivCreaseMode::COMPUTED
 	);
 
 protected:

@@ -172,6 +172,54 @@ float calculateDihedralAngle(const Vector &normal1, const Vector &normal2,
 // Process edges to determine sharpness based on dihedral angles
 void processEdgesForSharpness(const ExtTriangleMesh &mesh,
                              std::map<std::pair<int, int>, EdgeInfo> &edgeMap,
+                             float sharpnessThresholdRadians);
+
+// Build the edge map (with sharpness / crease weight) according to the
+// crease mode:
+// - NONE: empty map (no creases)
+// - COMPUTED: dihedral angles vs sharpnessThresholdRadians, uniform creaseWeight
+// - IMPORTED: crease pairs stored on the mesh (PLY edge element or
+//   DefineMeshExt crease_pairs/crease_weights), with their own sharpness
+//   weights; falls back to NONE when the mesh carries no crease data
+static void buildCreaseEdgeMap(
+	const ExtTriangleMesh &mesh,
+	const SubdivCreaseMode creaseMode,
+	const float sharpnessThresholdRadians,
+	const float creaseWeight,
+	std::map<std::pair<int, int>, EdgeInfo> &edgeMap
+) {
+	switch (creaseMode) {
+		case SubdivCreaseMode::NONE:
+			edgeMap.clear();
+			break;
+		case SubdivCreaseMode::COMPUTED:
+			processEdgesForSharpness(mesh, edgeMap, sharpnessThresholdRadians);
+			// Apply the uniform crease weight to the sharp edges
+			for (auto &entry : edgeMap) {
+				if (entry.second.sharpness > 0.5f)
+					entry.second.creaseWeight = creaseWeight;
+			}
+			break;
+		case SubdivCreaseMode::IMPORTED: {
+			edgeMap.clear();
+			const auto &pairs = mesh.GetCreasePairs();
+			const auto &weights = mesh.GetCreaseWeights();
+			for (size_t i = 0; i < weights.size(); ++i) {
+				const int v0 = static_cast<int>(pairs[2 * i]);
+				const int v1 = static_cast<int>(pairs[2 * i + 1]);
+				EdgeInfo edgeInfo(v0, v1);
+				edgeInfo.sharpness = 1.0f;
+				edgeInfo.creaseWeight = weights[i];
+				edgeMap.emplace(std::make_pair(std::min(v0, v1), std::max(v0, v1)), edgeInfo);
+			}
+			break;
+		}
+	}
+}
+
+// Process edges to determine sharpness based on dihedral angles
+void processEdgesForSharpness(const ExtTriangleMesh &mesh,
+                             std::map<std::pair<int, int>, EdgeInfo> &edgeMap,
                              float sharpnessThresholdRadians) {
 
 	auto triangles = mesh.GetTriangles();
@@ -300,7 +348,7 @@ TopologyRefinerPtr createTopologyAdaptiveRefiner(
 		if (edge.sharpness > 0.5f) {
 			creases.push_back(edge.v0);
 			creases.push_back(edge.v1);
-			creaseWeights.push_back(creaseWeight);
+			creaseWeights.push_back(edge.creaseWeight);
 		}
 	}
 	desc.numCreases = creaseWeights.size();
@@ -342,7 +390,8 @@ struct Surface {
 	Surface(
 		ExtTriangleMeshConstRef srcMesh,
 		const float sharpnessThresholdRadians,
-		const float creaseWeight
+		const float creaseWeight,
+		const SubdivCreaseMode creaseMode
 	) {
 		SDL_LOG("Subdivision (enhanced) - Computing patches");
 
@@ -358,7 +407,7 @@ struct Surface {
 
 		// Mark edges for sharpness
 		std::map<std::pair<int, int>, EdgeInfo> edgeMap;
-		processEdgesForSharpness(srcMesh, edgeMap, sharpnessThresholdRadians);
+		buildCreaseEdgeMap(srcMesh, creaseMode, sharpnessThresholdRadians, creaseWeight, edgeMap);
 
 		// Construct refiner
 		refiner = std::move(
@@ -801,7 +850,8 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	ExtTriangleMeshRef srcMesh,
 	const u_int maxLevel,
 	const float sharpnessThresholdRadians,
-	const float creaseWeight
+	const float creaseWeight,
+	const SubdivCreaseMode creaseMode
 ) {
 	// Remarks:
 	// All buffers (triangles, points, normals...) are enclosed in smart pointers
@@ -814,7 +864,7 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	using std::tie;
 
 	// Create limit surface from base geometry
-	Surface surface(srcMesh, sharpnessThresholdRadians, creaseWeight);
+	Surface surface(srcMesh, sharpnessThresholdRadians, creaseWeight, creaseMode);
 
 	// Subdivide
 	surface.Subdivide(maxLevel);
@@ -913,7 +963,8 @@ SubdivShape::SubdivShape(
 	const u_int maxLevel,
 	const float maxEdgeScreenSize,
 	const float sharpnessThresholdRadians,
-	const float creaseWeight
+	const float creaseWeight,
+	const SubdivCreaseMode creaseMode
 ) {
 	const double startTime = WallClockTime();
 
@@ -985,7 +1036,8 @@ SubdivShape::SubdivShape(
 					*mesh,
 					optimizedLevel,
 					sharpnessThresholdRadians,
-					creaseWeight
+					creaseWeight,
+					creaseMode
 				);
 				SDL_LOG(
 					"Done step #" << i
@@ -1000,7 +1052,7 @@ SubdivShape::SubdivShape(
 		} else {
 			SDL_LOG("Subdividing shape " << srcMesh.GetName() << " at level: " << maxLevel);
 
-			mesh = ApplySubdiv(srcMesh, maxLevel, sharpnessThresholdRadians, creaseWeight);
+			mesh = ApplySubdiv(srcMesh, maxLevel, sharpnessThresholdRadians, creaseWeight, creaseMode);
 		}
 	} else {
 		// Nothing to do, just make a copy
@@ -1077,7 +1129,8 @@ ExtTriangleMeshUPtr SubdivShape::ApplySubdiv(
 	ExtTriangleMeshRef srcMesh,
 	const u_int maxLevel,
 	const float sharpnessThresholdRadians,
-	const float creaseWeight
+	const float creaseWeight,
+	const SubdivCreaseMode creaseMode
 ) {
 	//--------------------------------------------------------------------------
 	// Check data
@@ -1094,7 +1147,7 @@ ExtTriangleMeshUPtr SubdivShape::ApplySubdiv(
 	);
 
 	return enhanced::ApplySubdiv(
-		srcMesh, maxLevel, sharpnessThresholdRadians, creaseWeight
+		srcMesh, maxLevel, sharpnessThresholdRadians, creaseWeight, creaseMode
 	);
 }
 

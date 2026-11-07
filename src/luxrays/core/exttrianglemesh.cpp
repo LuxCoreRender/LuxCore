@@ -458,6 +458,10 @@ ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(
 	// Copy AOV too
 	CopyAOV(*m);
 
+	// Copy imported creases too
+	m->creasePairs = creasePairs;
+	m->creaseWeights = creaseWeights;
+
 	return m;
 }
 
