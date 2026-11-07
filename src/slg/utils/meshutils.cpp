@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "luxrays/core/exttrianglemesh.h"  // complete ExtTriangleMesh for the 'new ExtTriangleMesh' below
+#include "luxrays/core/exttrianglemesh.h"  // complete ExtTriangleMesh for the make_unique below
 #include "luxrays/core/trianglemesh.h"
 #include "slg/cameras/camera.h"
 #include "slg/utils/meshutils.h"
@@ -29,7 +29,7 @@ using namespace slg;
 // ScreenProjection()
 //------------------------------------------------------------------------------
 
-ExtTriangleMesh *ScreenProjection(const Camera &camera, const ExtTriangleMesh &mesh) {
+ExtTriangleMeshUPtr ScreenProjection(const Camera &camera, const ExtTriangleMesh &mesh) {
 	const u_int vertCount = mesh.GetTotalVertexCount();
 	const u_int triCount = mesh.GetTotalTriangleCount();
 
@@ -54,18 +54,18 @@ ExtTriangleMesh *ScreenProjection(const Camera &camera, const ExtTriangleMesh &m
 
 	TriangleBuffer newTris(triangles);
 
-	return new ExtTriangleMesh(std::move(newVertices), std::move(newTris), NormalBuffer());
+	return std::make_unique<ExtTriangleMesh>(std::move(newVertices), std::move(newTris), NormalBuffer());
 }
 
 //------------------------------------------------------------------------------
 // ExtTriangleMeshBuilder
 //------------------------------------------------------------------------------
 
-ExtTriangleMesh *ExtTriangleMeshBuilder::GetExtTriangleMesh() const {
+ExtTriangleMeshUPtr ExtTriangleMeshBuilder::GetExtTriangleMesh() const {
 
 	VertexBuffer newVertices(vertices);
 	TriangleBuffer newTris(triangles);
 
-	return new ExtTriangleMesh(std::move(newVertices), std::move(newTris), NormalBuffer());
+	return std::make_unique<ExtTriangleMesh>(std::move(newVertices), std::move(newTris), NormalBuffer());
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

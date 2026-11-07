@@ -740,9 +740,8 @@ private:
 
 				meshBuilder.AddTriangle(Triangle(index, index + 1, index +2));
 			}
-			ExtTriangleMesh *debugMesh = meshBuilder.GetExtTriangleMesh();
-			debugMesh->Save("debug-candidates.ply");
-			delete debugMesh;*/
+			ExtTriangleMeshUPtr debugMesh = meshBuilder.GetExtTriangleMesh();
+			debugMesh->Save("debug-candidates.ply");*/
 		}
 
 		// Clear dirty flag
@@ -903,18 +902,16 @@ SimplifyShape::SimplifyShape(CameraConstPtr camera, ExtTriangleMeshRef srcMesh,
 	const u_int targetCount = Max(1u, Floor2UInt(srcMesh.GetTotalTriangleCount() * target));
 
 	/*srcMesh->Save("debug-start.ply");
-	ExtTriangleMesh *debugMeshStart = ScreenProjection(*camera, *srcMesh);
-	debugMeshStart->Save("debug-start-proj.ply");
-	delete debugMeshStart;*/
+	ExtTriangleMeshUPtr debugMeshStart = ScreenProjection(*camera, *srcMesh);
+	debugMeshStart->Save("debug-start-proj.ply");*/
 
 	Simplify simplify(srcMesh);
 	simplify.Decimate(targetCount, *camera, edgeScreenSize, preserveBorder);
 	mesh = simplify.GetExtMesh();
 
 	/*srcMesh->Save("debug-end.ply");
-	ExtTriangleMesh *debugMeshEnd = ScreenProjection(*camera, *mesh);
-	debugMeshEnd->Save("debug-end-proj.ply");
-	delete debugMeshEnd;*/
+	ExtTriangleMeshUPtr debugMeshEnd = ScreenProjection(*camera, *mesh);
+	debugMeshEnd->Save("debug-end-proj.ply");*/
 
 	SDL_LOG("Subdivided shape from " << srcMesh.GetTotalTriangleCount() << " to " << mesh->GetTotalTriangleCount() << " faces");
 
