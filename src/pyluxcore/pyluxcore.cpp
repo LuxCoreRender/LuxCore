@@ -49,6 +49,7 @@
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
 #include "luxcore/pyluxcore/pyluxcoreforblender.h"
+#include "slg/utils/group_by_equivalence.h"
 #include "luxcore/pyluxcore/pyluxcoreutils.h"
 
 using namespace luxcore;
@@ -120,6 +121,35 @@ static void LuxCore_SetLogHandler(py::object &logHandler) {
 static const char *LuxCoreVersion() {
   static const char *luxCoreVersion = LUXCORE_VERSION;
   return luxCoreVersion;
+}
+
+// Union-find over [0, num_elements) given pairs of equivalent elements
+// (parallel C++ implementation, slg::equiv::GroupByEquivalence).
+// Returns an int32 array with the component label of each element.
+static py::array_t<int> union_find_labels(
+	const size_t num_elements,
+	const py::array_t<uint32_t, py::array::c_style> &pairs
+) {
+	if (pairs.ndim() != 2 || pairs.shape(1) != 2)
+		throw std::runtime_error("union_find: pairs must be a [n, 2] uint32 array");
+	if (num_elements > std::numeric_limits<uint32_t>::max())
+		throw std::runtime_error("union_find: num_elements too large");
+
+	std::vector<slg::equiv::Relation> rel;
+	rel.reserve(pairs.shape(0));
+	auto p = pairs.unchecked<2>();
+	for (size_t i = 0; i < (size_t)pairs.shape(0); ++i)
+		rel.emplace_back(p(i, 0), p(i, 1));
+
+	auto classes = slg::equiv::GroupByEquivalence(
+		num_elements, std::span<const slg::equiv::Relation>(rel));
+
+	py::array_t<int> labels(num_elements);
+	auto l = labels.mutable_unchecked<1>();
+	for (size_t c = 0; c < classes.size(); ++c)
+		for (const auto e : classes[c])
+			l[e] = static_cast<int>(c);
+	return labels;
 }
 
 static py::list GetOpenCLDeviceList() {
@@ -2196,6 +2226,14 @@ PYBIND11_MODULE(pyluxcore, m) {
       "Provides access to the LuxCoreRender API in python\n\n";
 
   m.def("Version", LuxCoreVersion, "Returns the LuxCore version");
+
+  // Generic union-find (parallel C++ implementation): given num_elements
+  // elements [0, num_elements) and pairs of equivalent elements, returns an
+  // int32 array with the class (component) label of each element
+  m.def("union_find", &union_find_labels,
+	  "Union-find over integer elements: returns the component label of each "
+	  "element [0, num_elements), given pairs of equivalent elements",
+	  py::arg("num_elements"), py::arg("pairs"));
 
   m.def("Init", &LuxCore_Init);
   m.def("Init", &LuxCore_InitDefaultHandler);
