@@ -23,6 +23,8 @@
 
 #include "slg/usings.h"
 #include "slg/shapes/shape.h"
+#include "luxrays/core/exttrianglemesh.h"  // complete type: this header returns ExtTriangleMeshUPtr
+#include "luxrays/utils/utils.h"  // u_int (not provided by MSVC system headers)
 
 namespace slg {
 

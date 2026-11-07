@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/core/exttrianglemesh.h"  // complete ExtTriangleMesh for the 'new ExtTriangleMesh' below
 #include "luxrays/core/trianglemesh.h"
 #include "slg/cameras/camera.h"
 #include "slg/utils/meshutils.h"
