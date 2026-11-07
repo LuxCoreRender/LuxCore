@@ -28,6 +28,7 @@
 #include "slg/shapes/groupshape.h"
 #include "slg/shapes/subdiv.h"
 #include "slg/shapes/subdiv_old.h"
+#include "slg/shapes/tessellate.h"
 #include "slg/shapes/displacement.h"
 #include "slg/shapes/harlequinshape.h"
 #include "slg/shapes/simplify_old.h"
@@ -369,6 +370,22 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 		shape = std::make_unique<SubdivOldShape>(
 			static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName)),
 			maxLevel
+		);
+
+	} else if (shapeType == "tessellate") {
+
+		const string sourceMeshName = props.Get(
+			Property(propName + ".source")("")
+		).Get<string>();
+
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error("Unknown shape name in a tessellate shape: " + shapeName);
+
+		const u_int rate = props.Get(Property(propName + ".rate")(4)).Get<u_int>();
+
+		shape = std::make_unique<TessellateShape>(
+			static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName)),
+			rate
 		);
 
 	} else if (shapeType == "displacement") {
