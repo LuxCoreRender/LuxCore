@@ -24,6 +24,12 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
+// Defined here (and not inline in the header) so that the construction
+// and destruction of the 'mesh' member (std::unique_ptr<ExtTriangleMesh>)
+// happens with the complete type, visible via exttrianglemesh.h
+Shape::Shape() : refined(false) { }
+Shape::~Shape() { }
+
 ExtTriangleMeshUPtr Shape::Refine(SceneConstRef scene) {
 	if (refined)
 		throw runtime_error("Called Shape::Refine() on an already refined shape");
