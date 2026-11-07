@@ -1816,4 +1816,4 @@ ExtTriangleMeshUPtr SubdivShape::RefineImpl(SceneConstRef scene) {
 }
 
 
-// vim: autoindent noexpandtab tabstop=4 shiftwidth=4 foldmethod=syntax
+// vim: autoindent noexpandtab tabstop=4 shiftwidth=4
