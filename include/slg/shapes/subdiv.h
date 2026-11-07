@@ -33,7 +33,6 @@ public:
 		luxrays::ExtTriangleMeshRef srcMesh,
 		const u_int maxLevel,
 		const float maxEdgeScreenSize,
-		const bool enhanced,
 		const float sharpnessThresholdRadians,
 		const float creaseWeight
 	);
@@ -45,9 +44,30 @@ public:
 	static luxrays::ExtTriangleMeshUPtr ApplySubdiv(
 		luxrays::ExtTriangleMeshRef srcMesh,
 		const u_int maxLevel,
-		const bool enhanced,
 		const float sharpnessThresholdRadians,
 		const float creaseWeight
+	);
+
+protected:
+	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) override;
+
+};
+
+// The former "simple" (uniform, non-adaptive) subdivision path, kept as a
+// distinct shape for backward compatibility
+class SubdivOldShape : public Shape {
+public:
+	SubdivOldShape(
+		luxrays::ExtTriangleMeshRef srcMesh,
+		const u_int maxLevel
+	);
+	virtual ~SubdivOldShape();
+
+	virtual ShapeType GetType() const override { return SUBDIV_OLD; }
+
+	static luxrays::ExtTriangleMeshUPtr ApplySubdiv(
+		luxrays::ExtTriangleMeshRef srcMesh,
+		const u_int maxLevel
 	);
 
 protected:

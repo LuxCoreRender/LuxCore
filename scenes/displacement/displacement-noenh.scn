@@ -35,8 +35,7 @@ scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.shapes.sphereply.type = mesh
 scene.shapes.sphereply.ply = sphere.ply
 ##
-scene.shapes.spheresubdiv.type = subdiv
-scene.shapes.spheresubdiv.enhanced = 0
+scene.shapes.spheresubdiv.type = subdiv_old
 scene.shapes.spheresubdiv.source = sphereply
 scene.shapes.spheresubdiv.maxlevel = 4
 ##

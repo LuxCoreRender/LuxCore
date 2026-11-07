@@ -44,7 +44,6 @@ scene.shapes.cube_full_mesh.ply = "scenes/displacement/multi-submesh/cube-full.p
 scene.shapes.cube_full_subdiv.type = subdiv
 scene.shapes.cube_full_subdiv.source = cube_full_mesh
 scene.shapes.cube_full_subdiv.maxlevel = 2
-scene.shapes.cube_full_subdiv.enhanced = 1
 
 scene.objects.cube_subdiv.shape = cube_full_subdiv
 scene.objects.cube_subdiv.material = mat_blue

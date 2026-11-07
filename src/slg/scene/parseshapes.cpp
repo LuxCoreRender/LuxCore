@@ -341,10 +341,6 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 			props.Get(Property(propName + ".maxedgescreensize")(0.0)).Get<double>(),
 			0.0
 		);
-		const bool subdivEnhanced = props.Get(
-			Property(propName + ".enhanced")(false)
-		).Get<bool>();
-
 		const float sharpnessThresholdRadians = props.Get(Property(propName + ".sharpnessthreshold")(0.512)).Get<double>();
 		const float creaseWeight = props.Get(Property(propName + ".creaseweight")(10.0)).Get<double>();
 
@@ -354,9 +350,24 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 			static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName)),
 			maxLevel,
 			maxEdgeScreenSize,
-			subdivEnhanced,
 			sharpnessThresholdRadians,
 			creaseWeight
+		);
+
+	} else if (shapeType == "subdiv_old") {
+
+		const string sourceMeshName = props.Get(
+			Property(propName + ".source")("")
+		).Get<string>();
+
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error("Unknown shape name in a subdiv_old shape: " + shapeName);
+
+		const u_int maxLevel = props.Get(Property(propName + ".maxlevel")(2)).Get<u_int>();
+
+		shape = std::make_unique<SubdivOldShape>(
+			static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName)),
+			maxLevel
 		);
 
 	} else if (shapeType == "displacement") {

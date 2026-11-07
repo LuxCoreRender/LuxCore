@@ -1576,7 +1576,6 @@ SubdivShape::SubdivShape(
 	ExtTriangleMeshRef srcMesh,
 	const u_int maxLevel,
 	const float maxEdgeScreenSize,
-	const bool enhanced,
 	const float sharpnessThresholdRadians,
 	const float creaseWeight
 ) {
@@ -1649,7 +1648,6 @@ SubdivShape::SubdivShape(
 				auto newMesh = ApplySubdiv(
 					*mesh,
 					optimizedLevel,
-					enhanced,
 					sharpnessThresholdRadians,
 					creaseWeight
 				);
@@ -1666,7 +1664,7 @@ SubdivShape::SubdivShape(
 		} else {
 			SDL_LOG("Subdividing shape " << srcMesh.GetName() << " at level: " << maxLevel);
 
-			mesh = ApplySubdiv(srcMesh, maxLevel, enhanced, sharpnessThresholdRadians, creaseWeight);
+			mesh = ApplySubdiv(srcMesh, maxLevel, sharpnessThresholdRadians, creaseWeight);
 		}
 	} else {
 		// Nothing to do, just make a copy
@@ -1742,7 +1740,6 @@ float SubdivShape::MaxEdgeScreenSize(CameraConstRef camera, ExtTriangleMeshRef s
 ExtTriangleMeshUPtr SubdivShape::ApplySubdiv(
 	ExtTriangleMeshRef srcMesh,
 	const u_int maxLevel,
-	const bool enhanced,
 	const float sharpnessThresholdRadians,
 	const float creaseWeight
 ) {
@@ -1754,29 +1751,64 @@ ExtTriangleMeshUPtr SubdivShape::ApplySubdiv(
 	assert(srcMesh.GetTotalVertexCount() <= std::numeric_limits<int>::max());
 	assert(srcMesh.GetTotalTriangleCount() <= std::numeric_limits<int>::max());
 
-	if (enhanced) {
-		SDL_LOG(
-			"Subdivision (enhanced) - Starting - "
-			<< srcMesh.GetTotalVertexCount() << " points / "
-			<< srcMesh.GetTotalTriangleCount() << " triangles"
-		);
+	SDL_LOG(
+		"Subdivision (enhanced) - Starting - "
+		<< srcMesh.GetTotalVertexCount() << " points / "
+		<< srcMesh.GetTotalTriangleCount() << " triangles"
+	);
 
-		return enhanced::ApplySubdiv(
-			srcMesh, maxLevel, sharpnessThresholdRadians, creaseWeight
-		);
-	}
-	else {
-		SDL_LOG("Subdivision - Starting - "
-			<< srcMesh.GetTotalVertexCount() << " points / "
-			<< srcMesh.GetTotalTriangleCount() << " triangles"
-		);
-
-		return simple::ApplySubdiv(srcMesh, maxLevel);
-	}
+	return enhanced::ApplySubdiv(
+		srcMesh, maxLevel, sharpnessThresholdRadians, creaseWeight
+	);
 }
 
 
 SubdivShape::~SubdivShape() {
+}
+
+
+//------------------------------------------------------------------------------
+// SubdivOldShape: the former "simple" (uniform) subdivision path
+//------------------------------------------------------------------------------
+
+SubdivOldShape::SubdivOldShape(
+	ExtTriangleMeshRef srcMesh,
+	const u_int maxLevel
+) {
+	const double startTime = WallClockTime();
+
+	if (maxLevel > 0) {
+		SDL_LOG("Subdividing shape " << srcMesh.GetName() << " at level: " << maxLevel << " (uniform)");
+		mesh = ApplySubdiv(srcMesh, maxLevel);
+		SDL_LOG("Subdivided shape from " << srcMesh.GetTotalTriangleCount() << " to " << mesh->GetTotalTriangleCount() << " faces");
+	} else {
+		SDL_LOG("Subdivision: level=0 - Skipping");
+		mesh = srcMesh.Copy();
+	}
+
+	SDL_LOG("Subdividing time: " << WallClockTime() - startTime << " secs");
+}
+
+SubdivOldShape::~SubdivOldShape() {
+}
+
+ExtTriangleMeshUPtr SubdivOldShape::ApplySubdiv(
+	ExtTriangleMeshRef srcMesh,
+	const u_int maxLevel
+) {
+	assert(srcMesh.GetTotalVertexCount() <= std::numeric_limits<int>::max());
+	assert(srcMesh.GetTotalTriangleCount() <= std::numeric_limits<int>::max());
+
+	SDL_LOG("Subdivision - Starting - "
+		<< srcMesh.GetTotalVertexCount() << " points / "
+		<< srcMesh.GetTotalTriangleCount() << " triangles"
+	);
+
+	return simple::ApplySubdiv(srcMesh, maxLevel);
+}
+
+ExtTriangleMeshUPtr SubdivOldShape::RefineImpl(SceneConstRef scene) {
+	return std::move(mesh);
 }
 
 ExtTriangleMeshUPtr SubdivShape::RefineImpl(SceneConstRef scene) {
