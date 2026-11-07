@@ -27,6 +27,7 @@
 #include "slg/shapes/strands.h"
 #include "slg/shapes/groupshape.h"
 #include "slg/shapes/subdiv.h"
+#include "slg/shapes/subdiv_old.h"
 #include "slg/shapes/displacement.h"
 #include "slg/shapes/harlequinshape.h"
 #include "slg/shapes/simplify_old.h"

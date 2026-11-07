@@ -53,28 +53,6 @@ protected:
 
 };
 
-// The former "simple" (uniform, non-adaptive) subdivision path, kept as a
-// distinct shape for backward compatibility
-class SubdivOldShape : public Shape {
-public:
-	SubdivOldShape(
-		luxrays::ExtTriangleMeshRef srcMesh,
-		const u_int maxLevel
-	);
-	virtual ~SubdivOldShape();
-
-	virtual ShapeType GetType() const override { return SUBDIV_OLD; }
-
-	static luxrays::ExtTriangleMeshUPtr ApplySubdiv(
-		luxrays::ExtTriangleMeshRef srcMesh,
-		const u_int maxLevel
-	);
-
-protected:
-	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) override;
-
-};
-
 }
 
 #endif	/* _SLG_SUBDIVSHAPE_H */
