@@ -141,15 +141,15 @@ static py::array_t<int> union_find_labels(
 	for (size_t i = 0; i < (size_t)pairs.shape(0); ++i)
 		rel.emplace_back(p(i, 0), p(i, 1));
 
-	auto classes = slg::equiv::GroupByEquivalence(
+	// Flat per-element labels directly (no Classes structure)
+	std::vector<uint32_t> labels = slg::equiv::GroupByEquivalenceLabels(
 		num_elements, std::span<const slg::equiv::Relation>(rel));
 
-	py::array_t<int> labels(num_elements);
-	auto l = labels.mutable_unchecked<1>();
-	for (size_t c = 0; c < classes.size(); ++c)
-		for (const auto e : classes[c])
-			l[e] = static_cast<int>(c);
-	return labels;
+	py::array_t<int> out(num_elements);
+	auto l = out.mutable_unchecked<1>();
+	for (size_t i = 0; i < num_elements; ++i)
+		l[i] = static_cast<int>(labels[i]);
+	return out;
 }
 
 static py::list GetOpenCLDeviceList() {

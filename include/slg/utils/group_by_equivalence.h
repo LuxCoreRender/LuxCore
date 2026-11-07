@@ -103,6 +103,14 @@ Classes GroupByEquivalence(size_t numElements, size_t iterationCount,
 
 // Version for direct ranges: relation is a span of Relation pairs
 Classes GroupByEquivalence(size_t numElements, RelationSpan relation);
+
+// Labels variant: instead of the grouped Classes, returns a flat array with
+// the (dense, ascending) class label of each element of [0, numElements).
+// Cheaper than building Classes (no histogram/scatter/slicing): for callers
+// that only need the component label of each element.
+// The relation is normalized first (pairs unordered, duplicates removed,
+// sorted for cache locality), which also speeds up the grouping itself.
+std::vector<uint32_t> GroupByEquivalenceLabels(size_t numElements, RelationSpan relation);
 }  // namespace equiv
 
 }  // namespace slg

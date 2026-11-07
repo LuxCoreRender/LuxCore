@@ -19,11 +19,11 @@
 #include <unordered_map>
 
 #include <boost/format.hpp>
-#include <boost/pending/disjoint_sets.hpp>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/islandaovshape.h"
 #include "slg/scene/scene.h"
+#include "slg/utils/group_by_equivalence.h"
 
 using namespace std;
 using namespace luxrays;
@@ -70,29 +70,27 @@ IslandAOVShape::IslandAOVShape(ExtTriangleMeshRef srcMesh, const u_int dataIndex
 		}
 	}
 
-	vector<u_int> rank(triCount);
-	vector<u_int> parent(triCount);
-	boost::disjoint_sets<u_int *,u_int *> ds(&rank[0], &parent[0]);
-
-	// Create the initial sets with each triangle
-	for (u_int i = 0; i < triCount; ++i)
-		ds.make_set(triangleIndices[i]);
-
-	// Link each triangle with the group leader
+	// Link each triangle with the group leader of its vertices, and compute
+	// the islands with the parallel union-find (labels variant)
+	vector<slg::equiv::Relation> relations;
+	relations.reserve(triCount * 3);
 	for (u_int i = 0; i < triCount; ++i) {
 		const Triangle &tri = tris[i];
 
 		for (u_int j = 0; j < 3; ++j) {
-			ds.union_set(triangleIndices[i], triangleIndices[leaderIndices[uniqueVertices[tri.v[j]]]]);
+			relations.emplace_back(triangleIndices[i],
+				triangleIndices[leaderIndices[uniqueVertices[tri.v[j]]]]);
 		}
 	}
+	const std::vector<uint32_t> labels = slg::equiv::GroupByEquivalenceLabels(
+		triCount, std::span<const slg::equiv::Relation>(relations));
 
 	// Build the list of islands
 	auto triAOV = std::make_shared<float[]>(triCount);
 	unordered_map<u_int, u_int> islandIndices;
 	u_int islandCount = 0;
 	for (u_int i = 0; i < triCount; ++i) {
-		const u_int leaderIndex = ds.find_set(triangleIndices[i]);
+		const u_int leaderIndex = labels[i];
 
 		// Check if it is a new leader
 		u_int islandIndex;
