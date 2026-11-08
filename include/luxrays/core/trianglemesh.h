@@ -91,6 +91,10 @@ private:
 class TriangleMesh : virtual public Mesh {
 public:
 	TriangleMesh(VertexBuffer&& meshVertices, TriangleBuffer&& meshTris);
+	// Sharing constructor: the vertex buffer is copied, i.e. its storage is
+	// shared with the source buffer (the point data is not duplicated), e.g.
+	// between the submeshes of a same source mesh
+	TriangleMesh(const VertexBuffer &sharedVertices, TriangleBuffer&& meshTris);
 	virtual ~TriangleMesh() { };
 
 	virtual MeshType GetType() const { return TYPE_TRIANGLE; }
@@ -103,6 +107,9 @@ public:
 
 	virtual std::span<Point> GetVertices() const { return vertices.GetObjects(); }
 	virtual std::span<float> GetVerticesAsFloats() const { return vertices.GetSubObjects(); }
+	// The vertex buffer itself, e.g. to share it with another mesh through the
+	// sharing ctor (a Buffer copy shares the storage)
+	const VertexBuffer &GetVertexBuffer() const { return vertices; }
 	virtual std::span<const Triangle> GetTriangles() const { return tris.GetObjects(); }
 	virtual std::span<const Triangle::subtype_t> GetTrianglesAsInts() const { return tris.GetSubObjects(); }
 	virtual size_t GetTotalVertexCount() const { return vertices.Count(); }

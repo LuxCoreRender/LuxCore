@@ -264,6 +264,39 @@ static int TriAOVCB(p_ply_argument argument) {
 	return 1;
 }
 
+// rply edge crease callback: element "edge" with properties "vertex1" and
+// "vertex2" (the vertex indices of the creased edge) and "crease" (or
+// "sharpness"), the sharpness of the edge in OpenSubdiv units
+// (0 = smooth, >= 10 = infinite crease)
+struct EdgeCreaseData {
+	std::vector<u_int> *pairs;
+	std::vector<float> *weights;
+};
+
+static int EdgeCreaseCB(p_ply_argument argument) {
+	void *userData = nullptr;
+	long userIndex = 0;
+	ply_get_argument_user_data(argument, &userData, &userIndex);
+	auto *data = static_cast<EdgeCreaseData *>(userData);
+
+	long edgeIndex;
+	ply_get_argument_element(argument, nullptr, &edgeIndex);
+
+	if (userIndex < 2) {
+		if (data->pairs->size() < 2 * (size_t)(edgeIndex + 1))
+			data->pairs->resize(2 * (size_t)(edgeIndex + 1), 0);
+		(*data->pairs)[2 * edgeIndex + userIndex] =
+			static_cast<u_int>(ply_get_argument_value(argument));
+	} else {
+		if (data->weights->size() < (size_t)(edgeIndex + 1))
+			data->weights->resize(edgeIndex + 1, 0.f);
+		(*data->weights)[edgeIndex] =
+			static_cast<float>(ply_get_argument_value(argument));
+	}
+
+	return 1;
+}
+
 //------------------------------------------------------------------------------
 // ExtMesh PLY binary fast path
 //------------------------------------------------------------------------------
@@ -688,6 +721,16 @@ ExtTriangleMeshUPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 		throw runtime_error(ss.str());
 	}
 
+	// Optional edge creases (element "edge": vertex1, vertex2, crease or
+	// sharpness). If neither crease property exists, no callback fires
+	std::vector<u_int> creasePairs;
+	std::vector<float> creaseWeights;
+	EdgeCreaseData creaseData{ &creasePairs, &creaseWeights };
+	ply_set_read_cb(plyfile, "edge", "vertex1", EdgeCreaseCB, &creaseData, 0);
+	ply_set_read_cb(plyfile, "edge", "vertex2", EdgeCreaseCB, &creaseData, 1);
+	ply_set_read_cb(plyfile, "edge", "crease", EdgeCreaseCB, &creaseData, 2);
+	ply_set_read_cb(plyfile, "edge", "sharpness", EdgeCreaseCB, &creaseData, 2);
+
 	// Check if the file includes triaov information
 	ExtMeshProp<float> TriAOVs;
 	array<u_int, EXTMESH_MAX_DATA_COUNT> plyNbTriAOVs;
@@ -810,7 +853,9 @@ ExtTriangleMeshUPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 		//mesh->SetVertexAOV(i, vertexAOVs[i], plyNbVerts);  TODO
 		mesh->SetTriAOV(i, TriAOVs[i], vi.size());
 	}
-	
+	if (!creaseWeights.empty())
+		mesh->SetCreases(std::move(creasePairs), std::move(creaseWeights));
+
 	return mesh;
 }
 

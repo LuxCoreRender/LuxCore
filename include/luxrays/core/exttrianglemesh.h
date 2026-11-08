@@ -309,6 +309,27 @@ public:
 		std::optional<ExtMeshProp<float>> meshAlphas,
 		const float bRadius = 0.f
 	);
+	// Sharing constructors: the vertex buffer is copied, i.e. its storage is
+	// shared with the source buffer (the point data is not duplicated), e.g.
+	// between the submeshes of a same source mesh
+	ExtTriangleMesh(
+		const VertexBuffer &sharedVertices,
+		TriangleBuffer&& meshTris,
+		NormalBuffer&& meshNormals,
+		std::optional<std::span<UV>> meshUVs,
+		std::optional<std::span<Spectrum>> meshCols,
+		std::optional<std::span<float>> meshAlphas,
+		const float bRadius = 0.f
+	);
+	ExtTriangleMesh(
+		const VertexBuffer &sharedVertices,
+		TriangleBuffer&& meshTris,
+		NormalBuffer&& meshNormals,
+		std::optional<ExtMeshProp<UV>> meshUVs,
+		std::optional<ExtMeshProp<Spectrum>> meshCols,
+		std::optional<ExtMeshProp<float>> meshAlphas,
+		const float bRadius = 0.f
+	);
 	~ExtTriangleMesh() { };
 	virtual void Delete();
 
@@ -380,6 +401,19 @@ public:
 	auto GetAlphas(const u_int layerIndex) const { return alphas.GetLayer(layerIndex); }
 	virtual bool HasAlphas(const u_int layerIndex) const { return alphas.LayerHasValues(layerIndex); }
 	const auto& GetAllAlphas() const { return alphas; }
+
+	// Imported creases: vertex index pairs (flat v0, v1, ...) with one
+	// sharpness weight per pair, in OpenSubdiv units (0 = smooth,
+	// >= 10 = infinite crease). Populated e.g. from a PLY 'edge' element
+	// or via pyluxcore Scene.DefineMeshExt(crease_pairs=..., crease_weights=...)
+	void SetCreases(std::vector<u_int> &&pairs, std::vector<float> &&weights) {
+		assert(pairs.size() == 2 * weights.size());
+		creasePairs = std::move(pairs);
+		creaseWeights = std::move(weights);
+	}
+	const std::vector<u_int>& GetCreasePairs() const { return creasePairs; }
+	const std::vector<float>& GetCreaseWeights() const { return creaseWeights; }
+	bool HasCreases() const { return !creaseWeights.empty(); }
 
 
 	// Computes the vertex normals in place: the normal buffer of the mesh is
@@ -649,6 +683,10 @@ public:
 
 	ExtMeshProp<float> vertAOV; // Vertex AOV
 	ExtMeshProp<float> triAOV; // Triangle AOV
+
+	// Imported creases (edge sharpness, OpenSubdiv units)
+	std::vector<u_int> creasePairs;    // flat (v0, v1) pairs
+	std::vector<float> creaseWeights;  // one sharpness per pair
 
 	std::unique_ptr<BevelCylinder[]> bevelCylinders;
 	std::unique_ptr<BevelBoundingCylinder[]> bevelBoundingCylinders;

@@ -46,4 +46,3 @@ scene.shapes.Subdivided.type = subdiv
 scene.shapes.Subdivided.source = Merged
 scene.shapes.Subdivided.maxlevel = 4
 #scene.shapes.Subdivided.maxedgescreensize = 0.1
-scene.shapes.Subdivided.enhanced = 1

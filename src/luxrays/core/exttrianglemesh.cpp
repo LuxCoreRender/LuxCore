@@ -181,6 +181,23 @@ ExtTriangleMesh::ExtTriangleMesh(
 	Init(std::move(meshNormals), meshUVs, meshCols, meshAlphas);
 }
 
+// Sharing constructor: VertexBuffer(sharedVertices) copies the buffer, i.e.
+// shares its storage
+ExtTriangleMesh::ExtTriangleMesh(
+	const VertexBuffer &sharedVertices,
+	TriangleBuffer&& meshTris,
+	NormalBuffer&& meshNormals,
+	std::optional<std::span<UV>> meshUVs,
+	std::optional<std::span<Spectrum>> meshCols,
+	std::optional<std::span<float>> meshAlphas,
+	const float bRadius
+) :
+	ExtTriangleMesh(
+		VertexBuffer(sharedVertices), std::move(meshTris), std::move(meshNormals),
+		std::move(meshUVs), std::move(meshCols), std::move(meshAlphas), bRadius
+	) {
+}
+
 ExtTriangleMesh::ExtTriangleMesh(
 	VertexBuffer&& meshVertices,
 	TriangleBuffer&& meshTris,
@@ -197,6 +214,23 @@ ExtTriangleMesh::ExtTriangleMesh(
 	bevelBVHArrayNodes(nullptr)
 {
 	Init(std::move(meshNormals), meshUVs, meshCols, meshAlphas);
+}
+
+// Sharing constructor: VertexBuffer(sharedVertices) copies the buffer, i.e.
+// shares its storage
+ExtTriangleMesh::ExtTriangleMesh(
+	const VertexBuffer &sharedVertices,
+	TriangleBuffer&& meshTris,
+	NormalBuffer&& meshNormals,
+	std::optional<ExtMeshProp<UV>> meshUVs,
+	std::optional<ExtMeshProp<Spectrum>> meshCols,
+	std::optional<ExtMeshProp<float>> meshAlphas,
+	const float bRadius
+) :
+	ExtTriangleMesh(
+		VertexBuffer(sharedVertices), std::move(meshTris), std::move(meshNormals),
+		std::move(meshUVs), std::move(meshCols), std::move(meshAlphas), bRadius
+	) {
 }
 
 void ExtTriangleMesh::Init(
@@ -331,6 +365,13 @@ void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
 	TriangleMesh::ApplyTransform(trans);
 
 	if (normals) {
+		if (normals.IsShared()) {
+			// The normal storage is shared with other buffers: copy-on-write
+			// instead of modifying the shared content
+			NormalBuffer copy;
+			copy.Set(normals);
+			normals = std::move(copy);
+		}
 		for (u_int i = 0; i < vertices.Count(); ++i) {
 			normals[i] *= trans;
 			normals[i] = Normalize(normals[i]);
@@ -375,9 +416,10 @@ ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(
 	if (meshTris.has_value()) {
 		ts = std::move(meshTris.value());
 	} else {
-		// Share the triangles instead of copying them: the triangles of a
-		// copied mesh are never modified in place (only the vertices are)
-		ts = TriangleBuffer::Share(tris);
+		// Share the triangles instead of copying them (a copy shares the
+		// storage): the triangles of a copied mesh are never modified in
+		// place (only the vertices are)
+		ts = tris;
 	}
 
 	NormalBuffer ns;
@@ -415,6 +457,10 @@ ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(
 
 	// Copy AOV too
 	CopyAOV(*m);
+
+	// Copy imported creases too
+	m->creasePairs = creasePairs;
+	m->creaseWeights = creaseWeights;
 
 	return m;
 }

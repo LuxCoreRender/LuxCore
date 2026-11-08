@@ -1,0 +1,50 @@
+# Test scene illustrating multi-submesh export (as BlendLuxCore now produces it):
+# one source mesh (a cube) exported as several submeshes that share the same
+# welded point array, each submesh with its own material:
+#   - cube-top.ply   : top+bottom faces (8 shared points, 4 triangles)
+#   - cube-sides.ply : side faces      (same 8 shared points, 8 triangles)
+# A third object subdivides the full welded cube, to contrast with the
+# old split-vertex export (which opened gaps under subdivision).
+
+scene.camera.type = "perspective"
+scene.camera.lookat.orig = 4 -4 3
+scene.camera.lookat.target = 0 0 0
+scene.camera.fieldofview = 45
+
+scene.lights.KEY.type = distant
+scene.lights.KEY.color = 1 1 1
+scene.lights.KEY.direction = -1 1 -1.5
+scene.lights.KEY.theta = 30
+scene.lights.KEY.gain = 5 5 5
+scene.lights.bg.type = constantinfinite
+scene.lights.bg.color = 0.2 0.2 0.2
+scene.lights.bg.gain = 1 1 1
+
+scene.materials.mat_red.type = matte
+scene.materials.mat_red.kd = 0.8 0.1 0.1
+scene.materials.mat_gray.type = matte
+scene.materials.mat_gray.kd = 0.6 0.6 0.6
+scene.materials.mat_blue.type = matte
+scene.materials.mat_blue.kd = 0.1 0.1 0.8
+
+# --- the multi-submesh object (two submeshes sharing the welded points) ---
+scene.shapes.cube_top_mesh.type = mesh
+scene.shapes.cube_top_mesh.ply = "scenes/displacement/multi-submesh/cube-top.ply"
+scene.shapes.cube_sides_mesh.type = mesh
+scene.shapes.cube_sides_mesh.ply = "scenes/displacement/multi-submesh/cube-sides.ply"
+
+scene.objects.cube_top.shape = cube_top_mesh
+scene.objects.cube_top.material = mat_red
+scene.objects.cube_sides.shape = cube_sides_mesh
+scene.objects.cube_sides.material = mat_gray
+
+# --- contrast: the same cube as one welded mesh, subdivided (no gaps) ---
+scene.shapes.cube_full_mesh.type = mesh
+scene.shapes.cube_full_mesh.ply = "scenes/displacement/multi-submesh/cube-full.ply"
+scene.shapes.cube_full_subdiv.type = subdiv
+scene.shapes.cube_full_subdiv.source = cube_full_mesh
+scene.shapes.cube_full_subdiv.maxlevel = 2
+
+scene.objects.cube_subdiv.shape = cube_full_subdiv
+scene.objects.cube_subdiv.material = mat_blue
+scene.objects.cube_subdiv.transformation = 1 0 0 3  0 1 0 0  0 0 1 0  0 0 0 1

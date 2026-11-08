@@ -87,6 +87,14 @@ BBox TriangleMesh::GetBBox() const {
 }
 
 void TriangleMesh::ApplyTransform(const Transform &trans) {
+	if (vertices.IsShared()) {
+		// The vertex storage is shared with other meshes: copy-on-write
+		// instead of modifying the shared content
+		VertexBuffer copy;
+		copy.Set(vertices);
+		vertices = std::move(copy);
+	}
+
 	appliedTrans = appliedTrans * trans;
 	appliedTransSwapsHandedness = appliedTrans.SwapsHandedness();
 
@@ -94,6 +102,11 @@ void TriangleMesh::ApplyTransform(const Transform &trans) {
 		vertices[i] *= trans;
 
 	Preprocess();
+}
+
+TriangleMesh::TriangleMesh(const VertexBuffer &sharedVertices, TriangleBuffer&& meshTris) :
+	// VertexBuffer(sharedVertices) copies the buffer, i.e. shares its storage
+	TriangleMesh(VertexBuffer(sharedVertices), std::move(meshTris)) {
 }
 
 TriangleMeshUPtr TriangleMesh::Merge(

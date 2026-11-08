@@ -29,6 +29,10 @@
 #include "slg/scene/scene.h"
 #include "slg/samplers/sampler.h"
 #include "slg/utils/pathdepthinfo.h"
+// Complete DLSCBvh: this header owns a DLSCBvhUPtr member, and an inline
+// special member instantiating its deleter would need the complete type
+// (dlscbvh.h only forward-declares DLSCacheEntry, so there is no cycle)
+#include "slg/lights/strategies/dlscacheimpl/dlscbvh.h"
 
 namespace slg {
 
@@ -157,8 +161,6 @@ protected:
 		ar & persistent.safeSave;
 	}
 };
-
-class DLSCBvh;
 
 class DirectLightSamplingCache {
 public:

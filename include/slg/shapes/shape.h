@@ -39,6 +39,8 @@ public:
 		STRANDS,
 		GROUP,
 		SUBDIV,
+		SUBDIV_OLD,
+		TESSELLATE,
 		DISPLACEMENT,
 		HARLEQUIN,
 		SIMPLIFY_OLD,
@@ -51,8 +53,11 @@ public:
 		SIMPLIFY
 	} ShapeType;
 
-	Shape() : refined(false) { }
-	virtual ~Shape() { }
+	// Defined in shape.cpp: inline ctor/dtor would instantiate
+	// std::unique_ptr<ExtTriangleMesh>'s destructor in every TU including
+	// this header, requiring the complete ExtTriangleMesh type there
+	Shape();
+	virtual ~Shape();
 
 	virtual ShapeType GetType() const = 0;
 

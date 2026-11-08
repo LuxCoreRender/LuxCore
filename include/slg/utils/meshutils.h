@@ -41,13 +41,13 @@ public:
 		triangles.push_back(t);
 	}
 
-	luxrays::ExtTriangleMesh *GetExtTriangleMesh() const;
+	luxrays::ExtTriangleMeshUPtr GetExtTriangleMesh() const;
 
 	std::vector<luxrays::Point> vertices;
 	std::vector<luxrays::Triangle> triangles;
 };
 
-extern luxrays::ExtTriangleMesh *ScreenProjection(const Camera &camera,
+extern luxrays::ExtTriangleMeshUPtr ScreenProjection(const Camera &camera,
 		const luxrays::ExtTriangleMesh &mesh);
 
 }
