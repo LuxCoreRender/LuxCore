@@ -20,6 +20,7 @@
 #define	_SLG_SUBDIVSHAPE_H
 
 #include <string>
+#include <vector>
 
 #include "slg/usings.h"
 #include "slg/shapes/shape.h"
@@ -43,7 +44,8 @@ public:
 		const float maxEdgeScreenSize,
 		const float sharpnessThresholdRadians,
 		const float creaseWeight,
-		const SubdivCreaseMode creaseMode = SubdivCreaseMode::COMPUTED
+		const SubdivCreaseMode creaseMode = SubdivCreaseMode::COMPUTED,
+		const int matSlot = -1
 	);
 	virtual ~SubdivShape();
 
@@ -55,11 +57,21 @@ public:
 		const u_int maxLevel,
 		const float sharpnessThresholdRadians,
 		const float creaseWeight,
-		const SubdivCreaseMode creaseMode = SubdivCreaseMode::COMPUTED
+		const SubdivCreaseMode creaseMode = SubdivCreaseMode::COMPUTED,
+		std::vector<u_int> *triBaseFace = nullptr
 	);
 
 protected:
 	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) override;
+
+	CameraConstPtr camera;
+	luxrays::ExtTriangleMeshRef srcMesh;
+	u_int maxLevel;
+	float maxEdgeScreenSize;
+	float sharpnessThresholdRadians;
+	float creaseWeight;
+	SubdivCreaseMode creaseMode;
+	int matSlot;
 
 };
 

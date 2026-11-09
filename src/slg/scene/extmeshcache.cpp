@@ -156,6 +156,14 @@ ExtMeshRef ExtMeshCache::GetExtMesh(const u_int index) {
 	return static_cast<ExtMesh&>(meshes.GetObj(index));
 }
 
+ExtMeshConstRef ExtMeshCache::GetExtMesh(const string &meshName) const {
+	return static_cast<const ExtMesh&>(meshes.GetObj(meshName));
+}
+
+ExtMeshConstRef ExtMeshCache::GetExtMesh(const u_int index) const {
+	return static_cast<const ExtMesh&>(meshes.GetObj(index));
+}
+
 u_int ExtMeshCache::GetExtMeshIndex(const string &meshName) const {
 	return meshes.GetIndex(meshName);
 }
