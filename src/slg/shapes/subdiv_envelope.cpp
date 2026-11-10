@@ -228,13 +228,16 @@ ExtTriangleMeshUPtr FilterByMaterialSlot(
 	if (mesh.HasNormals())
 		normals = mesh.GetNormals();  // copy shares the storage
 
+	// Per-vertex varying data (UVs, colors, alphas) is shared as-is (a copy
+	// shares the storage): it is per-point, not per-triangle, so the filter
+	// does not affect it
 	auto filtered = std::make_unique<ExtTriangleMesh>(
 		mesh.GetVertexBuffer(),  // share the point storage
 		std::move(tris),
 		std::move(normals),
-		std::optional<luxrays::ExtMeshProp<luxrays::UV>>(),
-		std::optional<luxrays::ExtMeshProp<luxrays::Spectrum>>(),
-		std::optional<luxrays::ExtMeshProp<float>>()
+		mesh.GetAllUVs(),
+		mesh.GetAllColors(),
+		mesh.GetAllAlphas()
 	);
 	for (u_int l = 0; l < EXTMESH_MAX_DATA_COUNT; ++l)
 		if (triAOVs.LayerHasValues(l))
