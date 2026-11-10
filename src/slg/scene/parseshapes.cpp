@@ -357,6 +357,10 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 		else
 			throw runtime_error("Unknown creases mode in a subdiv shape: " + creasesProp);
 
+		// Material slot this shape serves when subdividing a multi-material
+		// envelope (set by BlendLuxCore; -1 = keep all faces)
+		const int matSlot = props.Get(Property(propName + ".matslot")(-1)).Get<int>();
+
 		shape = std::make_unique<SubdivShape>(
 			//camera,
 			CameraPtr(&GetCamera()),
@@ -365,7 +369,8 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 			maxEdgeScreenSize,
 			sharpnessThresholdRadians,
 			creaseWeight,
-			creaseMode
+			creaseMode,
+			matSlot
 		);
 
 	} else if (shapeType == "subdiv_old") {

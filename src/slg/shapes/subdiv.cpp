@@ -40,6 +40,7 @@
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/subdiv.h"
 #include "slg/shapes/tessellate.h"
+#include "slg/shapes/subdiv_envelope.h"
 #include "slg/cameras/camera.h"
 #include "slg/scene/scene.h"
 
@@ -851,7 +852,8 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	const u_int maxLevel,
 	const float sharpnessThresholdRadians,
 	const float creaseWeight,
-	const SubdivCreaseMode creaseMode
+	const SubdivCreaseMode creaseMode,
+	std::vector<u_int> *triBaseFace
 ) {
 	// Remarks:
 	// All buffers (triangles, points, normals...) are enclosed in smart pointers
@@ -879,6 +881,17 @@ ExtTriangleMeshUPtr ApplySubdiv(
 
 	tie(tessCoords, tessTriangles, numPoints, numTriangles) =
 		surface.Tessellate(tessellationRate);
+
+	// Optionally record, for each tessellated triangle, the face of the BASE
+	// (level 0) topology it comes from (walking the refiner parent links).
+	// Used to propagate per-face data (e.g. material slots) through subdivision.
+	if (triBaseFace) {
+		// TessellateTopology works on level 0 of the refiner, so the local
+		// coords' face is already a BASE face index
+		triBaseFace->resize(numTriangles);
+		for (int t = 0; t < numTriangles; ++t)
+			(*triBaseFace)[t] = tessCoords[tessTriangles[t].v[0]].face;
+	}
 
 	// Record initial vertex count
 	u_int numMeshVertex = srcMesh.GetTotalVertexCount();
@@ -964,113 +977,53 @@ SubdivShape::SubdivShape(
 	const float maxEdgeScreenSize,
 	const float sharpnessThresholdRadians,
 	const float creaseWeight,
-	const SubdivCreaseMode creaseMode
-) {
-	const double startTime = WallClockTime();
-
+	const SubdivCreaseMode creaseMode,
+	const int matSlot
+) :
+	camera(camera),
+	srcMesh(srcMesh),
+	maxLevel(maxLevel),
+	maxEdgeScreenSize(maxEdgeScreenSize),
+	sharpnessThresholdRadians(sharpnessThresholdRadians),
+	creaseWeight(creaseWeight),
+	creaseMode(creaseMode),
+	matSlot(matSlot)
+{
 	if ((maxEdgeScreenSize > 0.f) && !camera) {
 		throw std::runtime_error(
 			"The scene.GetCamera() must be defined in order to enable "
 			"subdiv maxedgescreensize option"
 		);
 	}
-
-	if (maxLevel > 0) {
-
-		if (camera && (maxEdgeScreenSize > 0.f)) {
-			SDL_LOG("Subdividing shape " << srcMesh.GetName()
-					<< " - Adaptive subdivision");
-
-			mesh = srcMesh.Copy();
-
-			for (u_int i = 0; i < maxLevel; ++i) {
-				SDL_LOG("Subdividing - Adaptive - Computing max edge size");
-				// Check the size of the longest mesh edge on film image plane
-				const float edgeScreenSize = MaxEdgeScreenSize(*camera, *mesh);
-
-
-				if (edgeScreenSize <= maxEdgeScreenSize)
-					break;
-
-				SDL_LOG(
-					"Subdivision - Adaptive - Step #" << i << " - "
-					<< "Current maximum edge size on screen = "
-					<< edgeScreenSize
-					<< ", target = "
-					<< maxEdgeScreenSize
-				);
-
-
-				int optimizedLevel =
-					static_cast<int>(std::ceil(std::log2f(edgeScreenSize / maxEdgeScreenSize)));
-
-				// Cap optimizedLevel to avoid excessive tessellation.
-				// Tessellation creates FACE_COUNT * (1<<L)^2 triangles, so we
-				// limit both by int overflow and by a practical triangle count.
-				const u_int faceCount = mesh->GetTotalTriangleCount();
-				const double maxNInt = std::sqrt(
-					static_cast<double>(std::numeric_limits<int>::max()) / faceCount
-				);
-				const int maxIntLevel = static_cast<int>(std::log2(maxNInt));
-				// Practical limit: ~50M tessellated triangles
-				const double maxNPractical = std::sqrt(50.0e6 / faceCount);
-				const int maxPracticalLevel = static_cast<int>(std::log2(maxNPractical));
-				const int maxSafeLevel = std::min(maxIntLevel, maxPracticalLevel);
-				if (optimizedLevel > maxSafeLevel) {
-					SDL_LOG(
-						"Subdividing adapted level capped from " << optimizedLevel
-						<< " to " << maxSafeLevel
-						<< " (face count = " << faceCount << ")"
-					);
-					optimizedLevel = maxSafeLevel;
-				}
-				if (optimizedLevel <= 0) {
-					SDL_LOG("Subdivision - cannot subdivide further "
-						"(face count limit reached)");
-					break;
-				}
-				SDL_LOG("Subdividing adapted level = " << optimizedLevel);
-
-				// Subdivide and re-try
-				auto newMesh = ApplySubdiv(
-					*mesh,
-					optimizedLevel,
-					sharpnessThresholdRadians,
-					creaseWeight,
-					creaseMode
-				);
-				SDL_LOG(
-					"Done step #" << i
-					<< " from " << mesh->GetTotalTriangleCount()
-					<< " to " << newMesh->GetTotalTriangleCount() << " faces "
-					<< "(level=" << optimizedLevel << ")"
-				);
-
-				// Replace old mesh with new one
-				std::swap(mesh, newMesh);
-			}
-		} else {
-			SDL_LOG("Subdividing shape " << srcMesh.GetName() << " at level: " << maxLevel);
-
-			mesh = ApplySubdiv(srcMesh, maxLevel, sharpnessThresholdRadians, creaseWeight, creaseMode);
-		}
-	} else {
-		// Nothing to do, just make a copy
-		SDL_LOG("Subdivision: level=0 - Skipping");
-		mesh = srcMesh.Copy();
-	}
-
-	if (maxLevel > 0) {
-		SDL_LOG("Subdivided shape from " << srcMesh.GetTotalTriangleCount() << " to " << mesh->GetTotalTriangleCount() << " faces");
-	}
-
-	// For some debugging
-	//mesh->Save("debug.ply");
-
-	const double endTime = WallClockTime();
-	SDL_LOG("Subdividing time: " << endTime - startTime << " secs");
 }
 
+ExtTriangleMeshUPtr SubdivShape::ApplySubdiv(
+	ExtTriangleMeshRef srcMesh,
+	const u_int maxLevel,
+	const float sharpnessThresholdRadians,
+	const float creaseWeight,
+	const SubdivCreaseMode creaseMode,
+	std::vector<u_int> *triBaseFace
+) {
+	//--------------------------------------------------------------------------
+	// Check data
+	//--------------------------------------------------------------------------
+
+	// OSD topology is indexed by int whereas Lux's one is indexed by uint...
+	assert(srcMesh.GetTotalVertexCount() <= std::numeric_limits<int>::max());
+	assert(srcMesh.GetTotalTriangleCount() <= std::numeric_limits<int>::max());
+
+	SDL_LOG(
+		"Subdivision (enhanced) - Starting - "
+		<< srcMesh.GetTotalVertexCount() << " points / "
+		<< srcMesh.GetTotalTriangleCount() << " triangles"
+	);
+
+	return enhanced::ApplySubdiv(
+		srcMesh, maxLevel, sharpnessThresholdRadians, creaseWeight, creaseMode,
+		triBaseFace
+	);
+}
 
 
 float SubdivShape::MaxEdgeScreenSize(CameraConstRef camera, ExtTriangleMeshRef srcMesh) {
@@ -1125,41 +1078,125 @@ float SubdivShape::MaxEdgeScreenSize(CameraConstRef camera, ExtTriangleMeshRef s
 }
 
 
-ExtTriangleMeshUPtr SubdivShape::ApplySubdiv(
-	ExtTriangleMeshRef srcMesh,
-	const u_int maxLevel,
-	const float sharpnessThresholdRadians,
-	const float creaseWeight,
-	const SubdivCreaseMode creaseMode
-) {
-	//--------------------------------------------------------------------------
-	// Check data
-	//--------------------------------------------------------------------------
-
-	// OSD topology is indexed by int whereas Lux's one is indexed by uint...
-	assert(srcMesh.GetTotalVertexCount() <= std::numeric_limits<int>::max());
-	assert(srcMesh.GetTotalTriangleCount() <= std::numeric_limits<int>::max());
-
-	SDL_LOG(
-		"Subdivision (enhanced) - Starting - "
-		<< srcMesh.GetTotalVertexCount() << " points / "
-		<< srcMesh.GetTotalTriangleCount() << " triangles"
-	);
-
-	return enhanced::ApplySubdiv(
-		srcMesh, maxLevel, sharpnessThresholdRadians, creaseWeight, creaseMode
-	);
-}
-
-
 SubdivShape::~SubdivShape() {
 }
 
 
 
 ExtTriangleMeshUPtr SubdivShape::RefineImpl(SceneConstRef scene) {
+	const double startTime = WallClockTime();
+
+	// Watertight envelope over all submeshes sharing the source point buffer,
+	// so shared edges stay interior during subdivision (no cracks/warping)
+	auto envelope = BuildSubdivEnvelope(scene, srcMesh);
+	ExtTriangleMesh *src = envelope ? envelope.get() : &srcMesh;
+	if (envelope) {
+		SDL_LOG("Subdividing envelope " << envelope->GetName()
+			<< " - " << envelope->GetTotalTriangleCount() << " triangles over "
+			<< envelope->GetTotalVertexCount() << " shared points");
+	}
+
+	// Per-face material slots are propagated through subdivision only on the
+	// uniform path (the refiner parent links are only valid for a single
+	// subdivision of the envelope)
+	std::vector<u_int> triBaseFace;
+	std::vector<u_int> *triBaseFacePtr = nullptr;
+	if (envelope && !(camera && (maxEdgeScreenSize > 0.f)))
+		triBaseFacePtr = &triBaseFace;
+
+	if (maxLevel > 0) {
+		if (camera && (maxEdgeScreenSize > 0.f)) {
+			SDL_LOG("Subdividing shape " << src->GetName()
+					<< " - Adaptive subdivision");
+
+			ExtTriangleMeshUPtr work = src->Copy();
+
+			for (u_int i = 0; i < maxLevel; ++i) {
+				SDL_LOG("Subdividing - Adaptive - Computing max edge size");
+				const float edgeScreenSize = MaxEdgeScreenSize(*camera, *work);
+
+				if (edgeScreenSize <= maxEdgeScreenSize)
+					break;
+
+				SDL_LOG(
+					"Subdivision - Adaptive - Step #" << i << " - "
+					<< "Current maximum edge size on screen = "
+					<< edgeScreenSize
+					<< ", target = " << maxEdgeScreenSize
+				);
+
+				int optimizedLevel =
+					static_cast<int>(std::ceil(std::log2f(edgeScreenSize / maxEdgeScreenSize)));
+
+				// Cap optimizedLevel to avoid excessive tessellation.
+				const u_int faceCount = work->GetTotalTriangleCount();
+				const double maxNInt = std::sqrt(
+					static_cast<double>(std::numeric_limits<int>::max()) / faceCount
+				);
+				const int maxIntLevel = static_cast<int>(std::log2(maxNInt));
+				const double maxNPractical = std::sqrt(50.0e6 / faceCount);
+				const int maxPracticalLevel = static_cast<int>(std::log2(maxNPractical));
+				const int maxSafeLevel = std::min(maxIntLevel, maxPracticalLevel);
+				if (optimizedLevel > maxSafeLevel) {
+					SDL_LOG(
+						"Subdividing adapted level capped from " << optimizedLevel
+						<< " to " << maxSafeLevel
+						<< " (face count = " << faceCount << ")"
+					);
+					optimizedLevel = maxSafeLevel;
+				}
+				if (optimizedLevel <= 0) {
+					SDL_LOG("Subdivision - cannot subdivide further "
+						"(face count limit reached)");
+					break;
+				}
+				SDL_LOG("Subdividing adapted level = " << optimizedLevel);
+
+				auto newMesh = ApplySubdiv(
+					*work,
+					optimizedLevel,
+					sharpnessThresholdRadians,
+					creaseWeight,
+					creaseMode
+				);
+				SDL_LOG(
+					"Done step #" << i
+					<< " from " << work->GetTotalTriangleCount()
+					<< " to " << newMesh->GetTotalTriangleCount() << " faces "
+					<< "(level=" << optimizedLevel << ")"
+				);
+
+				std::swap(work, newMesh);
+			}
+			mesh = std::move(work);
+		} else {
+			SDL_LOG("Subdividing shape " << src->GetName() << " at level: " << maxLevel);
+
+			mesh = ApplySubdiv(
+				*src, maxLevel, sharpnessThresholdRadians, creaseWeight, creaseMode,
+				triBaseFacePtr
+			);
+		}
+	} else {
+		// Nothing to do, just make a copy
+		SDL_LOG("Subdivision: level=0 - Skipping");
+		mesh = src->Copy();
+	}
+
+	// Split the subdivided envelope back per material slot
+	if (envelope) {
+		if (triBaseFacePtr)
+			PropagateMaterialSlots(*envelope, triBaseFace, *mesh);
+		else if (matSlot >= 0)
+			SDL_LOG("Warning: per-material split (matslot) is only supported on "
+				"the uniform subdivision path (no maxedgescreensize)");
+		if (matSlot >= 0 && triBaseFacePtr)
+			mesh = FilterByMaterialSlot(*mesh, matSlot);
+	}
+
+	SDL_LOG("Subdivided shape in " << WallClockTime() - startTime << " secs");
+
 	return std::move(mesh);
 }
-
 
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

@@ -63,6 +63,8 @@ public:
 
 	luxrays::ExtMeshRef GetExtMesh(const std::string &meshName);
 	luxrays::ExtMeshRef GetExtMesh(const u_int index);
+	luxrays::ExtMeshConstRef GetExtMesh(const std::string &meshName) const;
+	luxrays::ExtMeshConstRef GetExtMesh(const u_int index) const;
 	u_int GetExtMeshIndex(const std::string &meshName) const;
 	u_int GetExtMeshIndex(luxrays::ExtMeshConstRef m) const;
 
