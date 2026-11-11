@@ -371,16 +371,43 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	SLG_LOG("Starting "<< oclRenderThreadCount << " OpenCL render threads");
+	// A device whose kernels fail to compile (e.g. an OpenCL device without
+	// real double-precision support) must not abort the whole render: skip it
+	std::vector<PathOCLBaseOCLRenderThread *> compiledThreads;
+	std::vector<std::reference_wrapper<luxrays::IntersectionDevice>> compiledIntersectionDevices;
 	for (size_t i = 0; i < oclRenderThreadCount; ++i) {
 		if (!renderOCLThreads[i]) {
 			IntersectionDeviceRef idev = intersectionDevices[i];
-			renderOCLThreads[i] = CreateOCLThread(
-				i, dynamic_cast<HardwareIntersectionDeviceRef>(idev)
-			);
+			try {
+				renderOCLThreads[i] = CreateOCLThread(
+					compiledThreads.size(), dynamic_cast<HardwareIntersectionDeviceRef>(idev)
+				);
+				auto& hwIdev = dynamic_cast<HardwareIntersectionDeviceRef>(idev);
+				hwIdev.PushThreadCurrentDevice();
+				renderOCLThreads[i]->Start();
+				hwIdev.PopThreadCurrentDevice();
+			} catch (std::exception &e) {
+				SLG_LOG("WARNING: skipping OpenCL device '" << idev.GetName()
+					<< "': kernel compilation failed (" << e.what() << ")");
+				delete renderOCLThreads[i];
+				renderOCLThreads[i] = nullptr;
+				continue;
+			}
+		}
+		if (renderOCLThreads[i]) {
+			compiledThreads.push_back(renderOCLThreads[i]);
+			compiledIntersectionDevices.push_back(intersectionDevices[i]);
 		}
 	}
+	if (compiledThreads.empty())
+		throw runtime_error("No OpenCL device could compile the render kernels");
+	renderOCLThreads = compiledThreads;
+	intersectionDevices = compiledIntersectionDevices;
+	oclRenderThreadCount = renderOCLThreads.size();
 
 	for (auto thread : renderOCLThreads) {
+		if (thread->started)
+			continue;
 		auto& idev = thread->intersectionDevice;
 		idev.PushThreadCurrentDevice();
 		thread->Start();
