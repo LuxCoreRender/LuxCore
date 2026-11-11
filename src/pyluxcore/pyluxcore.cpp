@@ -51,6 +51,8 @@
 #include "luxcore/pyluxcore/pyluxcoreforblender.h"
 #include "slg/utils/group_by_equivalence.h"
 #include "luxcore/pyluxcore/pyluxcoreutils.h"
+#include "oneapi/tbb/parallel_sort.h"
+#include <utility>
 
 using namespace luxcore;
 using namespace luxcore::detail;
@@ -141,15 +143,119 @@ static py::array_t<int> union_find_labels(
 	for (size_t i = 0; i < (size_t)pairs.shape(0); ++i)
 		rel.emplace_back(p(i, 0), p(i, 1));
 
-	// Flat per-element labels directly (no Classes structure)
-	std::vector<uint32_t> labels = slg::equiv::GroupByEquivalenceLabels(
-		num_elements, std::span<const slg::equiv::Relation>(rel));
-
 	py::array_t<int> out(num_elements);
 	auto l = out.mutable_unchecked<1>();
-	for (size_t i = 0; i < num_elements; ++i)
-		l[i] = static_cast<int>(labels[i]);
+	{
+		// The computation is pure C++ (and internally TBB-parallel):
+		// release the GIL so other Python threads can run meanwhile
+		Py_BEGIN_ALLOW_THREADS
+		// Flat per-element labels directly (no Classes structure)
+		std::vector<uint32_t> labels = slg::equiv::GroupByEquivalenceLabels(
+			num_elements, std::span<const slg::equiv::Relation>(rel));
+		for (size_t i = 0; i < num_elements; ++i)
+			l[i] = static_cast<int>(labels[i]);
+		Py_END_ALLOW_THREADS
+	}
 	return out;
+}
+
+// Parallel argsort of a 1-D array (tbb::parallel_sort over (key, index)
+// pairs; ties broken by index, so the result is deterministic). Returns
+// the int64 indices that would sort the array. The GIL is released during
+// the sort. numpy's argsort holds the GIL, so this allows Python threads
+// to overlap sorting work.
+template <typename T>
+static py::array_t<int64_t> ParallelArgsortImpl(const T *keys, const size_t n) {
+	py::array_t<int64_t> out(n);
+	auto o = out.mutable_unchecked<1>();
+	std::vector<std::pair<T, int64_t>> pairs(n);
+	for (size_t i = 0; i < n; ++i)
+		pairs[i] = std::make_pair(keys[i], static_cast<int64_t>(i));
+	{
+		Py_BEGIN_ALLOW_THREADS
+		tbb::parallel_sort(pairs.begin(), pairs.end());
+		for (size_t i = 0; i < n; ++i)
+			o(i) = pairs[i].second;
+		Py_END_ALLOW_THREADS
+	}
+	return out;
+}
+
+// Two-key variant: lexicographic (keys, secondary) order, ties broken by
+// index (deterministic). Same GIL release as ParallelArgsortImpl.
+template <typename T, typename U>
+static py::array_t<int64_t> ParallelArgsort2Impl(
+	const T *keys, const U *secondary, const size_t n
+) {
+	py::array_t<int64_t> out(n);
+	auto o = out.mutable_unchecked<1>();
+	std::vector<std::tuple<T, U, int64_t>> items(n);
+	for (size_t i = 0; i < n; ++i)
+		items[i] = std::make_tuple(keys[i], secondary[i], static_cast<int64_t>(i));
+	{
+		Py_BEGIN_ALLOW_THREADS
+		tbb::parallel_sort(items.begin(), items.end());
+		for (size_t i = 0; i < n; ++i)
+			o(i) = std::get<2>(items[i]);
+		Py_END_ALLOW_THREADS
+	}
+	return out;
+}
+
+template <typename T>
+static py::array_t<int64_t> ParallelArgsortSecondaryDispatch(
+	const T *keys, const py::array &secondary
+) {
+	const size_t n = secondary.shape(0);
+	const char kind = secondary.dtype().kind();
+	const size_t itemsize = secondary.dtype().itemsize();
+	const void *data = secondary.data();
+	if (kind == 'u' && itemsize == 8)
+		return ParallelArgsort2Impl<T, uint64_t>(keys, static_cast<const uint64_t *>(data), n);
+	if (kind == 'i' && itemsize == 8)
+		return ParallelArgsort2Impl<T, int64_t>(keys, static_cast<const int64_t *>(data), n);
+	if (kind == 'u' && itemsize == 4)
+		return ParallelArgsort2Impl<T, uint32_t>(keys, static_cast<const uint32_t *>(data), n);
+	if (kind == 'i' && itemsize == 4)
+		return ParallelArgsort2Impl<T, int32_t>(keys, static_cast<const int32_t *>(data), n);
+	if (kind == 'f' && itemsize == 4)
+		return ParallelArgsort2Impl<T, float>(keys, static_cast<const float *>(data), n);
+	if (kind == 'f' && itemsize == 8)
+		return ParallelArgsort2Impl<T, double>(keys, static_cast<const double *>(data), n);
+	throw std::runtime_error(
+		"parallel_argsort: unsupported secondary dtype (need 4/8-byte int or float)");
+}
+
+static py::array_t<int64_t> parallel_argsort(
+	const py::array &keys, const py::object &secondary
+) {
+	if (keys.ndim() != 1)
+		throw std::runtime_error("parallel_argsort: keys must be a 1-D array");
+	const size_t n = keys.shape(0);
+	const char kind = keys.dtype().kind();
+	const size_t itemsize = keys.dtype().itemsize();
+	const void *data = keys.data();
+	if (!secondary.is_none()) {
+		const py::array sec = py::cast<py::array>(secondary);
+		if (sec.ndim() != 1 || sec.shape(0) != n)
+			throw std::runtime_error("parallel_argsort: secondary must be a 1-D array of the same length");
+		if (kind == 'u' && itemsize == 8)
+			return ParallelArgsortSecondaryDispatch<uint64_t>(static_cast<const uint64_t *>(data), sec);
+		if (kind == 'i' && itemsize == 8)
+			return ParallelArgsortSecondaryDispatch<int64_t>(static_cast<const int64_t *>(data), sec);
+		throw std::runtime_error(
+			"parallel_argsort: unsupported keys dtype for two-key sort (need 8-byte int)");
+	}
+	if (kind == 'u' && itemsize == 8)
+		return ParallelArgsortImpl<uint64_t>(static_cast<const uint64_t *>(data), n);
+	if (kind == 'i' && itemsize == 8)
+		return ParallelArgsortImpl<int64_t>(static_cast<const int64_t *>(data), n);
+	if (kind == 'f' && itemsize == 8)
+		return ParallelArgsortImpl<double>(static_cast<const double *>(data), n);
+	if (kind == 'f' && itemsize == 4)
+		return ParallelArgsortImpl<float>(static_cast<const float *>(data), n);
+	throw std::runtime_error(
+		"parallel_argsort: unsupported dtype (need 4/8-byte int or float)");
 }
 
 static py::list GetOpenCLDeviceList() {
@@ -1409,7 +1515,7 @@ template<
 	size_t stride=3
 >
 std::tuple<std::unique_ptr<D[]>, u_int> dataCopy(
-	py::array_t<S, py::array::c_style> src,
+	const py::array_t<S, py::array::c_style> &src,
 	const std::string& meshName,
 	const std::string& propertyName
 ) {
@@ -1446,7 +1552,7 @@ std::tuple<std::unique_ptr<D[]>, u_int> dataCopy(
 // S: Source underlying type; OUT: Output type type
 template< typename S,  size_t stride, typename O > 
 O dataCopyBuffer(
-	py::array_t<S, py::array::c_style> src,
+	const py::array_t<S, py::array::c_style> &src,
 	const std::string& meshName,
 	const std::string& propertyName
 ) {
@@ -1519,15 +1625,20 @@ static std::optional<luxrays::ExtMeshProp<T>> propCopy(
 	}
 
 	for (size_t i = 0; i < layer_count; ++i) {
-		auto layer = layers.value()[i];
+		const py::array_t<float, py::array::c_style> &layer = layers.value()[i];
 
-		if (N == 1) {
-			// In caller's logic, alpha_layer shape must be (N,), but in
-			// DataCopy logic, it must be (N,1), so we reshape
-			pybind11::array::ShapeContainer new_shape({layer.shape(0), 1,});
-			layer = layer.reshape(new_shape);
-		}
 		constexpr auto allocator = [](size_t n) { return std::make_shared<T[]>(n); };
+		if (N == 1 && layer.ndim() == 1) {
+			// Alpha layers are passed as a 1-D (N,) array: copy directly,
+			// without reshape() (which would need the GIL)
+			auto u = layer.unchecked<1>();
+			const size_t count = u.shape(0);
+			auto data = allocator(count);
+			if (count)
+				std::memcpy(data.get(), u.data(0), count * sizeof(float));
+			out.SetLayer(i, std::shared_ptr<T[]>(std::move(data)), count);
+			continue;
+		}
 		auto [data, numData] = dataCopy<float, T, &AllocBuffer, N>(
 			layer, meshName, objname
 		);
@@ -1552,13 +1663,15 @@ static void Scene_DefineMeshExt3(
     const std::optional<py::object> crease_pairs,
     const std::optional<py::object> crease_weights
 ) {
-	// TODO Release GIL when possible
-
 	// Points: either a new buffer, or shared from an existing mesh (given by
 	// name). A Buffer copy shares the storage, so building the mesh with the
 	// sharing ctor on *sharedPoints never duplicates the point data.
+	// NOTE: the GIL is released for the buffer copies / mesh build / scene
+	// insertion below, so callers must not invoke scene methods concurrently
+	// from multiple threads.
 	luxrays::VertexBuffer points;
 	const luxrays::VertexBuffer *sharedPoints = &points;
+	py_float_array pointsArr;
 	if (py::isinstance<py::str>(p)) {
 		const std::string srcMeshName = py::cast<std::string>(p);
 		auto &srcMesh = scene->GetSlgScene().GetExtMeshes().GetExtMesh(srcMeshName);
@@ -1568,47 +1681,16 @@ static void Scene_DefineMeshExt3(
 				"' used as points source is not a triangle mesh");
 		sharedPoints = &srcTriMesh->GetVertexBuffer();
 	} else {
-		points = dataCopyBuffer< float, 3, luxrays::VertexBuffer > (
-			py::cast<py_float_array>(p), meshName, "Points"
-		);
+		pointsArr = py::cast<py_float_array>(p);
 	}
-
-	// Triangles
-	auto triangles = dataCopyBuffer< luxrays::Triangle::subtype_t, 3, luxrays::TriangleBuffer> (
-		tri, meshName, "Triangles"
-	);
-
-  // Normals
-  auto normals = n ? 
-    dataCopyBuffer< float, 3, luxrays::NormalBuffer > (n.value(), meshName, "Normals") :
-    luxrays::NormalBuffer();
-
-
-	// UV, colors and alphas
-	auto meshUVs = propCopy<luxrays::UV, 2>(uv_layers, "UVs", meshName);
-	auto meshCols = propCopy<luxrays::Spectrum, 3>(color_layers, "colors", meshName);
-	auto meshAlphas = propCopy<float, 1>(alpha_layers, "alphas", meshName);
-	assert(not bool(meshUVs) or meshUVs->GetLayerSize() == sharedPoints->Count());
-	assert(not bool(meshCols) or meshCols->GetLayerSize() == sharedPoints->Count());
-	assert(not bool(meshAlphas) or meshAlphas->GetLayerSize() == sharedPoints->Count());
-
-	// Create Mesh (sharing ctor: the vertex buffer storage is shared, not copied)
-	auto newMesh = std::make_unique<luxrays::ExtTriangleMesh>(
-		*sharedPoints,
-		std::move(triangles),
-		std::move(normals),
-		meshUVs,
-		meshCols,
-		meshAlphas
-	);
-	newMesh->SetName(meshName);
 
 	// Optional imported creases: flat (v0, v1) vertex index pairs with one
 	// sharpness weight per pair, in OpenSubdiv units (>= 10 = infinite)
+	std::vector<u_int> upairs;
+	std::vector<float> weights;
 	if (crease_pairs.has_value() && !crease_pairs->is_none()) {
 		std::vector<int> pairs;
 		GetArray<int>(*crease_pairs, pairs, 2);
-		std::vector<float> weights;
 		if (crease_weights.has_value() && !crease_weights->is_none())
 			GetArray<float>(*crease_weights, weights);
 		if (weights.size() * 2 != pairs.size()) {
@@ -1618,20 +1700,57 @@ static void Scene_DefineMeshExt3(
 				throw std::runtime_error(
 					"Scene.DefineMeshExt: crease_pairs and crease_weights size mismatch");
 		}
-		std::vector<u_int> upairs(pairs.begin(), pairs.end());
-		newMesh->SetCreases(std::move(upairs), std::move(weights));
+		upairs.assign(pairs.begin(), pairs.end());
 	}
 
-	if (transformation.has_value()) {
-		auto transval = transformation.value();
-		luxrays::Transform luxtrans{transval.data()};
-		newMesh->ApplyTransform(luxtrans);
+	std::optional<luxrays::Transform> luxtrans;
+	if (transformation.has_value())
+		luxtrans = luxrays::Transform(transformation.value().data());
+
+	luxrays::TriangleBuffer triangles;
+	luxrays::NormalBuffer normals;
+	auto meshUVs = propCopy<luxrays::UV, 2>(uv_layers, "UVs", meshName);
+	auto meshCols = propCopy<luxrays::Spectrum, 3>(color_layers, "colors", meshName);
+	auto meshAlphas = propCopy<float, 1>(alpha_layers, "alphas", meshName);
+	{
+		Py_BEGIN_ALLOW_THREADS
+		if (sharedPoints == &points)
+			points = dataCopyBuffer< float, 3, luxrays::VertexBuffer > (
+				pointsArr, meshName, "Points"
+			);
+
+		// Triangles
+		triangles = dataCopyBuffer< luxrays::Triangle::subtype_t, 3, luxrays::TriangleBuffer> (
+			tri, meshName, "Triangles"
+		);
+
+		// Normals
+		if (n)
+			normals = dataCopyBuffer< float, 3, luxrays::NormalBuffer > (n.value(), meshName, "Normals");
+
+		assert(not bool(meshUVs) or meshUVs->GetLayerSize() == sharedPoints->Count());
+		assert(not bool(meshCols) or meshCols->GetLayerSize() == sharedPoints->Count());
+		assert(not bool(meshAlphas) or meshAlphas->GetLayerSize() == sharedPoints->Count());
+
+		// Create Mesh (sharing ctor: the vertex buffer storage is shared, not copied)
+		auto newMesh = std::make_unique<luxrays::ExtTriangleMesh>(
+			*sharedPoints,
+			std::move(triangles),
+			std::move(normals),
+			meshUVs,
+			meshCols,
+			meshAlphas
+		);
+		newMesh->SetName(meshName);
+		if (!upairs.empty())
+			newMesh->SetCreases(std::move(upairs), std::move(weights));
+		if (luxtrans.has_value())
+			newMesh->ApplyTransform(luxtrans.value());
+
+		// Insert mesh into the scene
+		scene->DefineMesh(std::move(newMesh));
+		Py_END_ALLOW_THREADS
 	}
-
-
-	// Insert mesh into the scene
-	scene->DefineMesh(std::move(newMesh));
-
 }
 
 // Number of imported creases (edge sharpness values) of a mesh
@@ -1653,7 +1772,9 @@ static void Scene_SetMeshVertexAOV(
 	std::vector<float> v;
 	GetArray<float>(data, v);
 
+	Py_BEGIN_ALLOW_THREADS
 	scene->SetMeshVertexAOV(meshName, index, v);
+	Py_END_ALLOW_THREADS
 }
 
 static void Scene_SetMeshTriangleAOV(
@@ -1665,7 +1786,9 @@ static void Scene_SetMeshTriangleAOV(
   std::vector<float> t;
   GetArray<float>(data, t);
 
+  Py_BEGIN_ALLOW_THREADS
   scene->SetMeshTriangleAOV(meshName, index, t);
+  Py_END_ALLOW_THREADS
 }
 
 static void Scene_SetMeshAppliedTransformation(
@@ -2267,6 +2390,16 @@ PYBIND11_MODULE(pyluxcore, m) {
 	  "Union-find over integer elements: returns the component label of each "
 	  "element [0, num_elements), given pairs of equivalent elements",
 	  py::arg("num_elements"), py::arg("pairs"));
+
+  // Parallel argsort (tbb::parallel_sort) of a 1-D array: returns the int64
+  // indices that would sort it. Releases the GIL during the sort (numpy's
+  // argsort holds it).
+  m.def("parallel_argsort", &parallel_argsort,
+	  "Parallel argsort of a 1-D array (4/8-byte int or float): returns the "
+	  "int64 indices that would sort the array. With an optional 1-D "
+	  "'secondary' array of the same length, sorts lexicographically by "
+	  "(keys, secondary)",
+	  py::arg("keys"), py::arg("secondary") = py::none());
 
   m.def("Init", &LuxCore_Init);
   m.def("Init", &LuxCore_InitDefaultHandler);
