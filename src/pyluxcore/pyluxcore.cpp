@@ -1568,7 +1568,8 @@ static std::shared_ptr<void> pyOwner(py::object obj) {
 // don't have.
 template< typename S,  size_t stride, typename O >
 O dataCopyBufferExternal(
-	py::array_t<S, py::array::c_style | py::array::forcecast> src,
+	const py::array_t<S, py::array::c_style> &src,
+	std::shared_ptr<void> owner,  // pre-made with pyOwner() under the GIL
 	const std::string& meshName,
 	const std::string& propertyName
 ) {
@@ -1583,7 +1584,7 @@ O dataCopyBufferExternal(
 		throw std::runtime_error(errorMsg);
 	}
 	if (!src.shape(0)) return O();
-	return O::WrapExternal(const_cast<void *>(static_cast<const void *>(src.data())), src.shape(0), pyOwner(src));
+	return O::WrapExternal(const_cast<void *>(static_cast<const void *>(src.data())), src.shape(0), std::move(owner));
 }
 
 // Variant of dataCopy for vertex buffer
@@ -1665,7 +1666,7 @@ static std::optional<luxrays::ExtMeshProp<T>> propCopyExternal(
 	}
 
 	for (size_t i = 0; i < layer_count; ++i) {
-		const py::array_t<float, py::array::c_style | py::array::forcecast> &layer =
+		const py::array_t<float, py::array::c_style> &layer =
 			layers.value()[i];
 		if (layer.ndim() == 1) {
 			// alpha layers are passed as 1-D (N,)
@@ -1798,10 +1799,14 @@ static void Scene_DefineMeshExt3(
 
 	luxrays::TriangleBuffer triangles;
 	luxrays::NormalBuffer normals;
-	// UV/color/alpha layers: zero-copy (wrap the numpy buffers)
+	// UV/color/alpha layers: zero-copy (wrap the numpy buffers; pyOwner keeps
+	// the arrays alive). Owners are created here, under the GIL, because
+	// incref/decref of Python objects must not happen with the GIL released.
 	auto meshUVs = propCopyExternal<luxrays::UV, 2>(uv_layers, "UVs", meshName);
 	auto meshCols = propCopyExternal<luxrays::Spectrum, 3>(color_layers, "colors", meshName);
 	auto meshAlphas = propCopyExternal<float, 1>(alpha_layers, "alphas", meshName);
+	auto triOwner = pyOwner(tri);
+	auto normalsOwner = n ? pyOwner(n.value()) : nullptr;
 	{
 		Py_BEGIN_ALLOW_THREADS
 		if (sharedPoints == &points)
@@ -1809,14 +1814,14 @@ static void Scene_DefineMeshExt3(
 				pointsArr, meshName, "Points"
 			);
 
-		// Triangles (zero-copy: wraps the numpy buffer, kept alive by pyOwner)
+		// Triangles (zero-copy: wraps the numpy buffer, kept alive by triOwner)
 		triangles = dataCopyBufferExternal< luxrays::Triangle::subtype_t, 3, luxrays::TriangleBuffer> (
-			tri, meshName, "Triangles"
+			tri, std::move(triOwner), meshName, "Triangles"
 		);
 
 		// Normals (zero-copy)
 		if (n)
-			normals = dataCopyBufferExternal< float, 3, luxrays::NormalBuffer > (n.value(), meshName, "Normals");
+			normals = dataCopyBufferExternal< float, 3, luxrays::NormalBuffer > (n.value(), std::move(normalsOwner), meshName, "Normals");
 
 		assert(not bool(meshUVs) or meshUVs->GetLayerSize() == sharedPoints->Count());
 		assert(not bool(meshCols) or meshCols->GetLayerSize() == sharedPoints->Count());
