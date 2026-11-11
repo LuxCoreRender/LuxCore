@@ -1086,6 +1086,50 @@ SubdivShape::~SubdivShape() {
 ExtTriangleMeshUPtr SubdivShape::RefineImpl(SceneConstRef scene) {
 	const double startTime = WallClockTime();
 
+	const bool adaptive = camera && (maxEdgeScreenSize > 0.f);
+
+	// When splitting per material slot on the uniform path, all the matslot
+	// shapes of the same source mesh share ONE subdivision run of the
+	// envelope (cached on the scene, keyed by the shared point buffer), then
+	// each resplits its own slot.
+	if (matSlot >= 0 && maxLevel > 0 && !adaptive) {
+		const std::string shareKey =
+			std::to_string(reinterpret_cast<uintptr_t>(srcMesh.GetVertexBuffer().Data()))
+			+ "|lvl=" + std::to_string(maxLevel)
+			+ "|sharp=" + std::to_string(sharpnessThresholdRadians)
+			+ "|cw=" + std::to_string(creaseWeight)
+			+ "|cm=" + std::to_string(static_cast<int>(creaseMode));
+
+		std::lock_guard<std::mutex> lock(scene.GetSubdivEnvelopeMutex());
+		auto &cache = scene.GetSubdivEnvelopeCache();
+		auto it = cache.find(shareKey);
+		if (it == cache.end()) {
+			auto envelope = BuildSubdivEnvelope(scene, srcMesh);
+			if (envelope) {
+				SDL_LOG("Subdividing envelope " << envelope->GetName()
+					<< " once for all material slots at level: " << maxLevel);
+				std::vector<u_int> triBaseFace;
+				auto subdivided = ApplySubdiv(
+					*envelope, maxLevel, sharpnessThresholdRadians, creaseWeight,
+					creaseMode, &triBaseFace
+				);
+				PropagateMaterialSlots(*envelope, triBaseFace, *subdivided);
+				it = cache.emplace(shareKey, Scene::SubdivEnvelopeCacheEntry{
+					std::move(subdivided), std::move(triBaseFace)
+				}).first;
+			} else {
+				// No point-buffer siblings: nothing to share, remember it
+				it = cache.emplace(shareKey, Scene::SubdivEnvelopeCacheEntry{nullptr, {}}).first;
+			}
+		}
+		if (it->second.mesh) {
+			mesh = FilterByMaterialSlot(*it->second.mesh, matSlot);
+			SDL_LOG("Subdivided shape in " << WallClockTime() - startTime << " secs");
+			return std::move(mesh);
+		}
+		// No envelope: fall through to the normal path
+	}
+
 	// Watertight envelope over all submeshes sharing the source point buffer,
 	// so shared edges stay interior during subdivision (no cracks/warping)
 	auto envelope = BuildSubdivEnvelope(scene, srcMesh);
@@ -1101,11 +1145,11 @@ ExtTriangleMeshUPtr SubdivShape::RefineImpl(SceneConstRef scene) {
 	// subdivision of the envelope)
 	std::vector<u_int> triBaseFace;
 	std::vector<u_int> *triBaseFacePtr = nullptr;
-	if (envelope && !(camera && (maxEdgeScreenSize > 0.f)))
+	if (envelope && !adaptive)
 		triBaseFacePtr = &triBaseFace;
 
 	if (maxLevel > 0) {
-		if (camera && (maxEdgeScreenSize > 0.f)) {
+		if (adaptive) {
 			SDL_LOG("Subdividing shape " << src->GetName()
 					<< " - Adaptive subdivision");
 
