@@ -35,7 +35,7 @@
 #include <opensubdiv/osd/tbbEvaluator.h>
 #define OSD_EVALUATOR Osd::TbbEvaluator
 
-#include <omp.h>
+#include <oneapi/tbb.h>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/subdiv.h"
@@ -571,14 +571,13 @@ struct Surface {
 
 		const Point* positions = interpolatedPositions.Get<Point>();
 
-		// Evaluate positions and derivatives
-		#pragma omp parallel
-		{
-			// Per-thread weight buffers, resized to the patch CV count as needed
+		// Evaluate positions and derivatives (TBB; per-range weight buffers)
+		tbb::parallel_for(tbb::blocked_range<int>(0, (int)tessCoords.size(), 1024),
+			[&](const tbb::blocked_range<int> &r) {
+			// Per-range weight buffers, resized to the patch CV count as needed
 			std::vector<float> pWeights, duWeights, dvWeights;
 
-			#pragma omp for
-			for (int vertex = 0; vertex < tessCoords.size(); ++vertex) {
+			for (int vertex = r.begin(); vertex < r.end(); ++vertex) {
 				// Init
 				auto& coords = tessCoords[vertex];
 
@@ -647,7 +646,7 @@ struct Surface {
 
 
 			}  // ~for vertex
-		}  // ~omp parallel
+		});  // ~tbb::parallel_for
 
 		return std::make_tuple(std::move(tessPositions), std::move(tessNormals));
 	}
@@ -677,14 +676,13 @@ struct Surface {
 
 		auto inputValues = interpolatedValues.Get<T>();
 
-		// Evaluate
-		#pragma omp parallel
-		{
-			// Per-thread weight buffer, resized to the patch CV count as needed
+		// Evaluate (TBB; per-range weight buffer)
+		tbb::parallel_for(tbb::blocked_range<int>(0, (int)tessCoords.size(), 1024),
+			[&](const tbb::blocked_range<int> &r) {
+			// Per-range weight buffer, resized to the patch CV count as needed
 			std::vector<float> pWeights;
 
-			#pragma omp for
-			for (int vertex = 0; vertex < tessCoords.size(); ++vertex) {
+			for (int vertex = r.begin(); vertex < r.end(); ++vertex) {
 				// Init
 				auto& coords = tessCoords[vertex];
 
@@ -717,7 +715,7 @@ struct Surface {
 				}
 
 			}  // ~for vertex
-		}  // ~omp parallel
+		});  // ~tbb::parallel_for
 
 		return tessValues;
 	}
@@ -761,13 +759,15 @@ static std::unique_ptr<T[]> EvaluateCornerFVar(
 ) {
 	const size_t n = cornerCoords.size();
 	auto out = std::make_unique<T[]>(n);
-	#pragma omp parallel for
-	for (size_t i = 0; i < n; ++i) {
-		const auto &c = cornerCoords[i];
-		const size_t f3 = 3 * (size_t)c.face;
-		out[i] = FVarLerp(baseCornerValues[f3], baseCornerValues[f3 + 1], baseCornerValues[f3 + 2],
-			1.f - c.x - c.y, c.x, c.y);
-	}
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, n, 4096),
+		[&](const tbb::blocked_range<size_t> &r) {
+		for (size_t i = r.begin(); i < r.end(); ++i) {
+			const auto &c = cornerCoords[i];
+			const size_t f3 = 3 * (size_t)c.face;
+			out[i] = FVarLerp(baseCornerValues[f3], baseCornerValues[f3 + 1], baseCornerValues[f3 + 2],
+				1.f - c.x - c.y, c.x, c.y);
+		}
+	});
 	return out;
 }
 
@@ -1141,50 +1141,39 @@ float SubdivShape::MaxEdgeScreenSize(CameraConstRef camera, ExtTriangleMeshRef s
 	const Points verts = srcMesh.GetVertices();
 	const TriangleBuffer tris(srcMesh.GetTriangles());
 
-	// Note VisualStudio doesn't support:
-	//#pragma omp parallel for reduction(max:maxEdgeSize)
-
-	const u_int threadCount = omp_get_max_threads();
-
 	const Transform worldToScreen = Inverse(camera.GetScreenToWorld());
 
-	std::vector<float> maxEdgeSizes(threadCount, 0.f);
-
+	// Project all points to screen (TBB)
 	std::vector<Point> projectedPoints(srcMesh.GetTotalVertexCount());
-	#pragma omp parallel for
-	for(int i = 0; i < srcMesh.GetTotalVertexCount(); ++i) {
-		projectedPoints[i] = worldToScreen * verts[i];
-		projectedPoints[i] /= projectedPoints[i].z;
-	}
+	tbb::parallel_for(tbb::blocked_range<u_int>(0, srcMesh.GetTotalVertexCount(), 4096),
+		[&](const tbb::blocked_range<u_int> &r) {
+		for (u_int i = r.begin(); i < r.end(); ++i) {
+			projectedPoints[i] = worldToScreen * verts[i];
+			projectedPoints[i] /= projectedPoints[i].z;
+		}
+	});
 
-	// Visual C++ 2013 supports only OpenMP 2.5, with int loop indices
-	// At any rate, opensubdiv indices are of type 'int', so no regret...
-	//
-	// We use LengthSquared for max search, sparing one operation per iteration (sqrt)
-	#pragma omp parallel for
-	for(int i = 0; i < triCount; ++i) {
-		const int tid = omp_get_thread_num();
-		//const int tid = 0;
+	// Max edge size on screen. We use LengthSquared for the max search,
+	// sparing one sqrt per iteration.
+	const float maxEdgeSizeSquared = tbb::parallel_reduce(
+		tbb::blocked_range<u_int>(0, triCount, 1024),
+		0.f,
+		[&](const tbb::blocked_range<u_int> &r, float init) {
+			for (u_int i = r.begin(); i < r.end(); ++i) {
+				const Triangle &tri = tris[i];
+				const Point p0 = projectedPoints[tri.v[0]];
+				const Point p1 = projectedPoints[tri.v[1]];
+				const Point p2 = projectedPoints[tri.v[2]];
+				init = std::max(init, (p1 - p0).LengthSquared());
+				init = std::max(init, (p2 - p1).LengthSquared());
+				init = std::max(init, (p0 - p2).LengthSquared());
+			}
+			return init;
+		},
+		[](float a, float b) { return std::max(a, b); }
+	);
 
-		const Triangle &tri = tris[i];
-		const Point p0 = projectedPoints[tri.v[0]];
-		const Point p1 = projectedPoints[tri.v[1]];
-		const Point p2 = projectedPoints[tri.v[2]];
-
-		std::array<float, 4> triMaxEdgeSize;
-		triMaxEdgeSize[0] = (p1 - p0).LengthSquared();
-		triMaxEdgeSize[1] = (p2 - p1).LengthSquared();
-		triMaxEdgeSize[2] = (p0 - p2).LengthSquared();
-		triMaxEdgeSize[3] = maxEdgeSizes[tid];
-
-		maxEdgeSizes[tid] =
-			*std::max_element(triMaxEdgeSize.begin(), triMaxEdgeSize.end());
-
-	}
-
-	float maxEdgeSize = *std::max_element(maxEdgeSizes.begin(), maxEdgeSizes.end());
-
-	return sqrtf(maxEdgeSize);
+	return sqrtf(maxEdgeSizeSquared);
 }
 
 
