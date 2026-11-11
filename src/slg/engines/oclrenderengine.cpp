@@ -27,6 +27,38 @@
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 #include "luxrays/devices/ocldevice.h"
 #include "luxrays/devices/cudadevice.h"
+
+// The render kernels use double precision in a few places. Some OpenCL
+// devices (e.g. Intel integrated GPUs) advertise cl_khr_fp64 but still reject
+// double in the backend, so the only reliable check is to actually try to
+// compile a double-precision kernel on the device.
+static bool CanCompileDoubleKernel(luxrays::DeviceDescriptionRef desc) {
+	if (!(desc.GetType() & luxrays::DEVICE_TYPE_OPENCL_ALL))
+		return true;
+
+	auto &oclDesc = dynamic_cast<luxrays::OpenCLDeviceDescription &>(desc);
+	cl_device_id device = oclDesc.GetOCLDevice();
+
+	cl_platform_id platform;
+	if (clGetDeviceInfo(device, CL_DEVICE_PLATFORM, sizeof(cl_platform_id), &platform, nullptr) != CL_SUCCESS)
+		return false;
+
+	static const char *probeSrc =
+		"kernel void probe(global double *d) { d[get_global_id(0)] = 1.0; }\n";
+
+	cl_int err;
+	cl_context ctx = clCreateContext(nullptr, 1, &device, nullptr, nullptr, &err);
+	if (err != CL_SUCCESS)
+		return false;
+	cl_program prog = clCreateProgramWithSource(ctx, 1, &probeSrc, nullptr, &err);
+	if (err == CL_SUCCESS)
+		err = clBuildProgram(prog, 1, &device, "", nullptr, nullptr);
+	bool ok = (err == CL_SUCCESS);
+	if (prog)
+		clReleaseProgram(prog);
+	clReleaseContext(ctx);
+	return ok;
+}
 #endif
 
 
@@ -115,6 +147,17 @@ OCLRenderEngine::OCLRenderEngine(RenderConfigRef rcfg,
 				selectedDeviceDescs.push_back(desc);
 				selected = true;
 			}
+		}
+
+		// Skip OpenCL devices that cannot compile the double-precision code
+		// used by the render kernels (e.g. Intel iGPUs): they would fail at
+		// kernel compilation anyway, and keeping them selected only wastes
+		// memory (a full geometry copy is compiled per device)
+		if (selected && (desc.GetType() & DEVICE_TYPE_OPENCL_ALL) && !CanCompileDoubleKernel(desc)) {
+			SLG_LOG("Skipping OpenCL device '" << desc.GetName()
+				<< "': cannot compile double-precision kernels (no real fp64 support)");
+			selectedDeviceDescs.pop_back();
+			selected = false;
 		}
 
 		if (selected && (desc.GetType() & DEVICE_TYPE_CUDA_ALL)) {

@@ -1548,6 +1548,45 @@ std::tuple<std::unique_ptr<D[]>, u_int> dataCopy(
 	return std::tuple(std::move(dest), count);
 }
 
+// Keep a Python object alive (e.g. a numpy array) past the current call,
+// releasing the reference with the GIL held (the deleter may run on any
+// thread when the last Buffer/layer copy dies)
+static std::shared_ptr<void> pyOwner(py::object obj) {
+	return std::shared_ptr<void>(
+		new py::object(std::move(obj)),
+		[](void *p) {
+			PyGILState_STATE g = PyGILState_Ensure();
+			delete static_cast<py::object *>(p);
+			PyGILState_Release(g);
+		}
+	);
+}
+
+// Zero-copy variant of dataCopyBuffer for non-vertex buffers: wraps the numpy
+// memory directly (the Buffer keeps the array alive via pyOwner). Do NOT use
+// for vertex buffers: TriangleMesh checks the pad, which external buffers
+// don't have.
+template< typename S,  size_t stride, typename O >
+O dataCopyBufferExternal(
+	const py::array_t<S, py::array::c_style> &src,
+	std::shared_ptr<void> owner,  // pre-made with pyOwner() under the GIL
+	const std::string& meshName,
+	const std::string& propertyName
+) {
+	auto src_stride = src.shape(1);
+	if (src_stride != stride) {
+		std::string errorMsg = std::string("Scene.DefineMeshExt: Error - ")
+			+ "Mesh '" + meshName + "' / "
+			+ "Property '" + std::string(propertyName) + "' - "
+			+ "Shape must be [N,"
+			+ std::to_string(stride)
+			+ "]";
+		throw std::runtime_error(errorMsg);
+	}
+	if (!src.shape(0)) return O();
+	return O::WrapExternal(const_cast<void *>(static_cast<const void *>(src.data())), src.shape(0), std::move(owner));
+}
+
 // Variant of dataCopy for vertex buffer
 // S: Source underlying type; OUT: Output type type
 template< typename S,  size_t stride, typename O > 
@@ -1607,6 +1646,57 @@ std::tuple<std::unique_ptr<D[]>, u_int> dataCopyOptional(
 using triangle_underlying_type = std::remove_all_extents<decltype(luxrays::Triangle::v)>::type;
 
 using py_float_array= py::array_t<float, py::array::c_style>;
+
+// Zero-copy variant of propCopy: the layer wraps the numpy memory directly
+// (kept alive via pyOwner)
+template<typename T, size_t N>
+static std::optional<luxrays::ExtMeshProp<T>> propCopyExternal(
+	const std::optional<std::vector<py_float_array>>& layers,
+	const std::string objname,
+	const std::string meshName
+) {
+	if (not layers or layers->empty()) return std::nullopt;
+
+	auto layer_count = layers->size();
+	luxrays::ExtMeshProp<T> out;
+	if (layer_count > out.GetMaxLayerNumber()) {
+		throw std::runtime_error(
+			"Too many layers of " + objname + " for method Scene.DefineMesh()"
+		);
+	}
+
+	for (size_t i = 0; i < layer_count; ++i) {
+		const py::array_t<float, py::array::c_style> &layer =
+			layers.value()[i];
+		if (layer.ndim() == 1) {
+			// alpha layers are passed as 1-D (N,)
+			const size_t count = layer.shape(0);
+			if (!count) continue;
+			auto owner = pyOwner(layer);
+			std::shared_ptr<T[]> wrapped(
+				reinterpret_cast<T *>(const_cast<void *>(static_cast<const void *>(layer.data()))),
+				[owner](T *) mutable { /* owner released here */ }
+			);
+			out.SetLayer(i, wrapped, count);
+			continue;
+		}
+		if (layer.shape(1) != N) {
+			throw std::runtime_error(
+				std::string("Scene.DefineMeshExt: Error - layer shape must be [N,")
+				+ std::to_string(N) + "] for " + objname
+			);
+		}
+		const size_t count = layer.shape(0);
+		if (!count) continue;
+		auto owner = pyOwner(layer);
+		std::shared_ptr<T[]> wrapped(
+			reinterpret_cast<T *>(const_cast<void *>(static_cast<const void *>(layer.data()))),
+			[owner](T *) mutable { /* owner released here */ }
+		);
+		out.SetLayer(i, wrapped, count);
+	}
+	return out;
+}
 
 template<typename T, size_t N>
 static std::optional<luxrays::ExtMeshProp<T>> propCopy(
@@ -1672,14 +1762,19 @@ static void Scene_DefineMeshExt3(
 	luxrays::VertexBuffer points;
 	const luxrays::VertexBuffer *sharedPoints = &points;
 	py_float_array pointsArr;
+	// When sharing the points of an existing mesh, that buffer is already in
+	// world space (the source mesh applied its transform when it was defined)
+	luxrays::ExtTriangleMesh *srcTriMesh = nullptr;
+	luxrays::Transform srcTrans;
 	if (py::isinstance<py::str>(p)) {
 		const std::string srcMeshName = py::cast<std::string>(p);
 		auto &srcMesh = scene->GetSlgScene().GetExtMeshes().GetExtMesh(srcMeshName);
-		auto *srcTriMesh = dynamic_cast<luxrays::ExtTriangleMesh *>(&srcMesh);
+		srcTriMesh = dynamic_cast<luxrays::ExtTriangleMesh *>(&srcMesh);
 		if (!srcTriMesh)
 			throw std::runtime_error("Scene.DefineMeshExt: mesh '" + srcMeshName +
 				"' used as points source is not a triangle mesh");
 		sharedPoints = &srcTriMesh->GetVertexBuffer();
+		srcTriMesh->GetLocal2World(0.f, srcTrans);
 	} else {
 		pointsArr = py::cast<py_float_array>(p);
 	}
@@ -1709,9 +1804,14 @@ static void Scene_DefineMeshExt3(
 
 	luxrays::TriangleBuffer triangles;
 	luxrays::NormalBuffer normals;
-	auto meshUVs = propCopy<luxrays::UV, 2>(uv_layers, "UVs", meshName);
-	auto meshCols = propCopy<luxrays::Spectrum, 3>(color_layers, "colors", meshName);
-	auto meshAlphas = propCopy<float, 1>(alpha_layers, "alphas", meshName);
+	// UV/color/alpha layers: zero-copy (wrap the numpy buffers; pyOwner keeps
+	// the arrays alive). Owners are created here, under the GIL, because
+	// incref/decref of Python objects must not happen with the GIL released.
+	auto meshUVs = propCopyExternal<luxrays::UV, 2>(uv_layers, "UVs", meshName);
+	auto meshCols = propCopyExternal<luxrays::Spectrum, 3>(color_layers, "colors", meshName);
+	auto meshAlphas = propCopyExternal<float, 1>(alpha_layers, "alphas", meshName);
+	auto triOwner = pyOwner(tri);
+	auto normalsOwner = n ? pyOwner(n.value()) : nullptr;
 	{
 		Py_BEGIN_ALLOW_THREADS
 		if (sharedPoints == &points)
@@ -1719,14 +1819,33 @@ static void Scene_DefineMeshExt3(
 				pointsArr, meshName, "Points"
 			);
 
-		// Triangles
-		triangles = dataCopyBuffer< luxrays::Triangle::subtype_t, 3, luxrays::TriangleBuffer> (
-			tri, meshName, "Triangles"
+		// Triangles (zero-copy: wraps the numpy buffer, kept alive by triOwner)
+		triangles = dataCopyBufferExternal< luxrays::Triangle::subtype_t, 3, luxrays::TriangleBuffer> (
+			tri, std::move(triOwner), meshName, "Triangles"
 		);
 
-		// Normals
+		// Normals (zero-copy)
 		if (n)
-			normals = dataCopyBuffer< float, 3, luxrays::NormalBuffer > (n.value(), meshName, "Normals");
+			normals = dataCopyBufferExternal< float, 3, luxrays::NormalBuffer > (n.value(), std::move(normalsOwner), meshName, "Normals");
+
+		// When sharing the points of another mesh, the shared vertex buffer is
+		// already transformed, so ApplyTransform() must not run on the new mesh
+		// (it would transform the shared points a second time). But the new
+		// mesh still needs the source applied transform (used e.g. for
+		// LocalMapping3D) and its normals rotated to world space, exactly like
+		// ApplyTransform() would have done. The normals buffer may wrap
+		// read-only external memory, so deep-copy it before rotating.
+		if (srcTriMesh) {
+			if (normals) {
+				luxrays::NormalBuffer writableNormals;
+				writableNormals.Set(normals);
+				normals = std::move(writableNormals);
+				for (u_int i = 0; i < normals.Count(); ++i) {
+					normals[i] *= srcTrans;
+					normals[i] = luxrays::Normalize(normals[i]);
+				}
+			}
+		}
 
 		assert(not bool(meshUVs) or meshUVs->GetLayerSize() == sharedPoints->Count());
 		assert(not bool(meshCols) or meshCols->GetLayerSize() == sharedPoints->Count());
@@ -1744,7 +1863,9 @@ static void Scene_DefineMeshExt3(
 		newMesh->SetName(meshName);
 		if (!upairs.empty())
 			newMesh->SetCreases(std::move(upairs), std::move(weights));
-		if (luxtrans.has_value())
+		if (srcTriMesh)
+			newMesh->SetLocal2World(srcTrans);
+		else if (luxtrans.has_value())
 			newMesh->ApplyTransform(luxtrans.value());
 
 		// Insert mesh into the scene

@@ -108,6 +108,27 @@ public:
 	// shared content must never be modified in place (use copy-on-write)
 	bool IsShared() const noexcept { return data.use_count() > 1; }
 
+	// Wrap external memory without copying: the returned Buffer references
+	// ptr (count elements of TYPE). owner keeps the memory alive and is
+	// released when the last Buffer copy dies. The wrapped buffer has NO pad
+	// (GetPad() is empty), so it must never be used as a vertex buffer
+	// (TriangleMesh checks the pad) nor serialized.
+	static Buffer WrapExternal(void *ptr, std::size_t count, std::shared_ptr<void> owner) {
+		Buffer b;
+		b.data = std::shared_ptr<std::byte[]>(
+			static_cast<std::byte*>(ptr),
+			[owner = std::move(owner)](std::byte *) mutable { /* owner released here */ }
+		);
+		b.effectiveSize = count * sizeof(TYPE);
+		b.totalSize = b.effectiveSize;  // no pad
+		b.asType = std::span<TYPE>(static_cast<TYPE *>(ptr), count);
+		b.asSubType = std::span<SUBTYPE>(
+			static_cast<SUBTYPE *>(ptr),
+			b.effectiveSize / sizeof(SUBTYPE)
+		);
+		return b;
+	}
+
 
 private:
 	// Underlying storage (shared, to allow Buffer::Share)
