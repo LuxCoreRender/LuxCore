@@ -1762,14 +1762,19 @@ static void Scene_DefineMeshExt3(
 	luxrays::VertexBuffer points;
 	const luxrays::VertexBuffer *sharedPoints = &points;
 	py_float_array pointsArr;
+	// When sharing the points of an existing mesh, that buffer is already in
+	// world space (the source mesh applied its transform when it was defined)
+	luxrays::ExtTriangleMesh *srcTriMesh = nullptr;
+	luxrays::Transform srcTrans;
 	if (py::isinstance<py::str>(p)) {
 		const std::string srcMeshName = py::cast<std::string>(p);
 		auto &srcMesh = scene->GetSlgScene().GetExtMeshes().GetExtMesh(srcMeshName);
-		auto *srcTriMesh = dynamic_cast<luxrays::ExtTriangleMesh *>(&srcMesh);
+		srcTriMesh = dynamic_cast<luxrays::ExtTriangleMesh *>(&srcMesh);
 		if (!srcTriMesh)
 			throw std::runtime_error("Scene.DefineMeshExt: mesh '" + srcMeshName +
 				"' used as points source is not a triangle mesh");
 		sharedPoints = &srcTriMesh->GetVertexBuffer();
+		srcTriMesh->GetLocal2World(0.f, srcTrans);
 	} else {
 		pointsArr = py::cast<py_float_array>(p);
 	}
@@ -1823,6 +1828,25 @@ static void Scene_DefineMeshExt3(
 		if (n)
 			normals = dataCopyBufferExternal< float, 3, luxrays::NormalBuffer > (n.value(), std::move(normalsOwner), meshName, "Normals");
 
+		// When sharing the points of another mesh, the shared vertex buffer is
+		// already transformed, so ApplyTransform() must not run on the new mesh
+		// (it would transform the shared points a second time). But the new
+		// mesh still needs the source applied transform (used e.g. for
+		// LocalMapping3D) and its normals rotated to world space, exactly like
+		// ApplyTransform() would have done. The normals buffer may wrap
+		// read-only external memory, so deep-copy it before rotating.
+		if (srcTriMesh) {
+			if (normals) {
+				luxrays::NormalBuffer writableNormals;
+				writableNormals.Set(normals);
+				normals = std::move(writableNormals);
+				for (u_int i = 0; i < normals.Count(); ++i) {
+					normals[i] *= srcTrans;
+					normals[i] = luxrays::Normalize(normals[i]);
+				}
+			}
+		}
+
 		assert(not bool(meshUVs) or meshUVs->GetLayerSize() == sharedPoints->Count());
 		assert(not bool(meshCols) or meshCols->GetLayerSize() == sharedPoints->Count());
 		assert(not bool(meshAlphas) or meshAlphas->GetLayerSize() == sharedPoints->Count());
@@ -1839,7 +1863,9 @@ static void Scene_DefineMeshExt3(
 		newMesh->SetName(meshName);
 		if (!upairs.empty())
 			newMesh->SetCreases(std::move(upairs), std::move(weights));
-		if (luxtrans.has_value())
+		if (srcTriMesh)
+			newMesh->SetLocal2World(srcTrans);
+		else if (luxtrans.has_value())
 			newMesh->ApplyTransform(luxtrans.value());
 
 		// Insert mesh into the scene
