@@ -23,6 +23,7 @@
 
 #include "slg/usings.h"
 #include "slg/shapes/shape.h"
+#include "slg/shapes/subdiv_corner_data.h"
 #include "luxrays/core/exttrianglemesh.h"
 
 namespace slg {
@@ -43,9 +44,15 @@ constexpr u_int MATERIAL_TRI_AOV_INDEX = 2;
 //
 // Returns nullptr when srcMesh shares its vertex buffer with no other mesh
 // (no envelope needed: subdivide srcMesh directly).
+//
+// When cornerData is given, it is filled with the per-corner (face-varying)
+// UV / color / alpha values of the envelope: each envelope face takes the
+// values of the submesh it belongs to, so seams between submeshes are
+// preserved through subdivision.
 luxrays::ExtTriangleMeshUPtr BuildSubdivEnvelope(
 	SceneConstRef scene,
-	const luxrays::ExtTriangleMesh &srcMesh
+	const luxrays::ExtTriangleMesh &srcMesh,
+	SubdivCornerData *cornerData = nullptr
 );
 
 // Given the base face index of each triangle of a subdivided mesh
@@ -57,11 +64,15 @@ void PropagateMaterialSlots(
 	luxrays::ExtTriangleMesh &subdivided
 );
 
-// Keep only the triangles of one material slot (triangle AOV layer
-// MATERIAL_TRI_AOV_INDEX). The vertex buffer is shared, not copied.
+// Keep only the triangles of one slot (triangle AOV layer
+// MATERIAL_TRI_AOV_INDEX; one slot per source submesh). The vertex buffer is
+// shared, not copied. When corner data of the subdivided mesh is given, the
+// per-point varying arrays are rebuilt from it, so each output submesh gets
+// the values of its own corners at shared (seam) points.
 luxrays::ExtTriangleMeshUPtr FilterByMaterialSlot(
 	const luxrays::ExtTriangleMesh &mesh,
-	const int matSlot
+	const int matSlot,
+	const SubdivCornerData *corner = nullptr
 );
 
 }

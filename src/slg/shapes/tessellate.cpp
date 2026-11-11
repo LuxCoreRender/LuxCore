@@ -103,7 +103,11 @@ int GetTessellationTriangleCount(const Far::TopologyLevel &topology, int N) {
 	/// sub-edges
 	///
 std::tuple<CoordVector, luxrays::TriangleBuffer, int, int>
-TessellateTopology(const Far::TopologyRefiner &refiner, const size_t N) {
+TessellateTopology(
+	const Far::TopologyRefiner &refiner,
+	const size_t N,
+	std::vector<LocalCoords> *cornerCoords
+) {
 	// This is triforce tessellation.
 
 	// Allocate outputs
@@ -112,6 +116,8 @@ TessellateTopology(const Far::TopologyRefiner &refiner, const size_t N) {
 	int numTriangles = GetTessellationTriangleCount(topology, N);
 	int numPoints = GetTessellationPosCount(topology, N);
 	TriangleBuffer tessTris(numTriangles);
+	if (cornerCoords)
+		cornerCoords->resize(3 * (size_t)numTriangles);
 
 	// Some constants
 	const size_t FACE_COUNT = topology.GetNumFaces();
@@ -286,14 +292,22 @@ TessellateTopology(const Far::TopologyRefiner &refiner, const size_t N) {
 			for (int j = 0; j < N; ++j) {
 				for (int i = 0; i < N - j; ++i, ++idxTri) {
 					tessTris[idxTri] = Triangle(pnt(i, j), pnt(i + 1, j), pnt(i, j + 1));
-					//tessTris[idxTri] = Triangle(pnt(i, j), pnt(i, j +1), pnt(i+1, j));
+					if (cornerCoords) {
+						(*cornerCoords)[3 * idxTri + 0] = LocalCoords(f, i, j, N);
+						(*cornerCoords)[3 * idxTri + 1] = LocalCoords(f, i + 1, j, N);
+						(*cornerCoords)[3 * idxTri + 2] = LocalCoords(f, i, j + 1, N);
+					}
 				}
 			}
 			// Down triangles
 			for (int j = 0; j < N; ++j) {
 				for (int i = 0; i < N - j - 1; ++i, ++idxTri) {
 					tessTris[idxTri] = Triangle(pnt(i, j + 1), pnt(i + 1, j), pnt(i + 1, j + 1));
-					//tessTris[idxTri] = Triangle(pnt(i, j + 1), pnt(i + 1, j + 1), pnt(i + 1, j));
+					if (cornerCoords) {
+						(*cornerCoords)[3 * idxTri + 0] = LocalCoords(f, i, j + 1, N);
+						(*cornerCoords)[3 * idxTri + 1] = LocalCoords(f, i + 1, j, N);
+						(*cornerCoords)[3 * idxTri + 2] = LocalCoords(f, i + 1, j + 1, N);
+					}
 				}
 			}
 

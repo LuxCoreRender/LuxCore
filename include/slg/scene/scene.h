@@ -22,6 +22,9 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <mutex>
+#include <unordered_map>
+#include <vector>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/core/geometry/bsphere.h"
@@ -33,6 +36,7 @@
 #include "slg/editaction.h"
 #include "slg/lights/lightsourcedefs.h"
 #include "slg/shapes/strands.h"
+#include "slg/shapes/subdiv_corner_data.h"
 #include "slg/textures/texturedefs.h"
 #include "slg/materials/materialdefs.h"
 #include "slg/scene/sceneobjectdefs.h"
@@ -261,6 +265,19 @@ public:
 	auto& GetExtMeshes() { return extMeshCache; }
 	const auto& GetExtMeshes() const { return extMeshCache; }
 
+	// Cache of subdivided envelopes: ONE subdivision run per (source mesh,
+	// subdiv params), shared by all the per-material-slot (matslot) shapes of
+	// the same source mesh, which then resplit the result per slot. Pure
+	// runtime cache (not serialized), invalidated when meshes are (re)defined.
+	struct SubdivEnvelopeCacheEntry {
+		luxrays::ExtTriangleMeshSPtr mesh;  // full subdivided envelope
+		std::vector<u_int> triBaseFace;
+		SubdivCornerData corner;  // per-corner varying data of the subdivided mesh
+	};
+	auto &GetSubdivEnvelopeCache() const { return subdivEnvelopeCache; }
+	std::mutex &GetSubdivEnvelopeMutex() const { return subdivEnvelopeMtx; }
+	void ClearSubdivEnvelopeCache();
+
 	auto& GetEditActions() { return editActions; }
 	const auto& GetEditActions() const { return editActions; }
 
@@ -305,6 +322,11 @@ protected:
 	// is up to the rendering engine to empty trash bin.
 	std::vector<luxrays::NamedObjectUPtr> trashBin;
 	mutable std::mutex trashMtx;
+
+	// Subdivided-envelope cache (see GetSubdivEnvelopeCache); mutable because it
+	// is filled lazily from const scene references during shape refinement
+	mutable std::mutex subdivEnvelopeMtx;
+	mutable std::unordered_map<std::string, SubdivEnvelopeCacheEntry> subdivEnvelopeCache;
 
 	// DataSet ownership is not very clear, we set it shared
 	luxrays::DataSetSPtr dataSet;

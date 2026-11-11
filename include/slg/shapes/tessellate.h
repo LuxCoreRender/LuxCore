@@ -85,8 +85,17 @@ typedef std::vector<LocalCoords> CoordVector;
 // the subdivision refiner.
 //
 // Returns (tessCoords, tessTris, numPoints, numTriangles).
+// When cornerCoords is given, it is filled with the local coordinates of each
+// tessellated triangle corner WITHIN ITS OWN base face (3 * numTriangles
+// entries): the per-point tessCoords of points shared between faces carry the
+// face of one arbitrary incident face, which is not suitable for face-varying
+// data evaluation.
 std::tuple<CoordVector, luxrays::TriangleBuffer, int, int>
-TessellateTopology(const Far::TopologyRefiner &refiner, const size_t N);
+TessellateTopology(
+	const Far::TopologyRefiner &refiner,
+	const size_t N,
+	std::vector<LocalCoords> *cornerCoords = nullptr
+);
 
 // Number of positions / triangles after an N-tessellation of the given
 // (base level) topology

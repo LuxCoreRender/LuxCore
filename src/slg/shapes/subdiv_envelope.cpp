@@ -51,7 +51,8 @@ static std::vector<const ExtTriangleMesh *> CollectPointBufferSiblings(
 
 ExtTriangleMeshUPtr BuildSubdivEnvelope(
 	SceneConstRef scene,
-	const ExtTriangleMesh &srcMesh
+	const ExtTriangleMesh &srcMesh,
+	SubdivCornerData *cornerData
 ) {
 	const auto siblings = CollectPointBufferSiblings(scene, srcMesh);
 	if (siblings.size() <= 1)
@@ -79,6 +80,47 @@ ExtTriangleMeshUPtr BuildSubdivEnvelope(
 		} else {
 			for (size_t i = 0; i < srcTris.size(); ++i)
 				matSlots[offset + i] = defaultSlot;
+		}
+
+		// Per-corner (face-varying) varying data: each face takes the values
+		// of its own submesh at the face's points, so seams between submeshes
+		// survive the merge (instead of the per-point first-non-zero merge)
+		if (cornerData) {
+			for (u_int l = 0; l < EXTMESH_MAX_DATA_COUNT; ++l) {
+				if (m->HasUVs(l)) {
+					if (cornerData->uvLayers.size() <= l)
+						cornerData->uvLayers.resize(l + 1);
+					auto &dst = cornerData->uvLayers[l];
+					if (dst.size() < 3 * totalTris)
+						dst.resize(3 * totalTris);
+					const auto src = m->GetAllUVs().GetLayer(l);
+					for (size_t i = 0; i < srcTris.size(); ++i)
+						for (u_int c = 0; c < 3; ++c)
+							dst[3 * (offset + i) + c] = src[srcTris[i].v[c]];
+				}
+				if (m->HasColors(l)) {
+					if (cornerData->colorLayers.size() <= l)
+						cornerData->colorLayers.resize(l + 1);
+					auto &dst = cornerData->colorLayers[l];
+					if (dst.size() < 3 * totalTris)
+						dst.resize(3 * totalTris);
+					const auto src = m->GetAllColors().GetLayer(l);
+					for (size_t i = 0; i < srcTris.size(); ++i)
+						for (u_int c = 0; c < 3; ++c)
+							dst[3 * (offset + i) + c] = src[srcTris[i].v[c]];
+				}
+				if (m->HasAlphas(l)) {
+					if (cornerData->alphaLayers.size() <= l)
+						cornerData->alphaLayers.resize(l + 1);
+					auto &dst = cornerData->alphaLayers[l];
+					if (dst.size() < 3 * totalTris)
+						dst.resize(3 * totalTris);
+					const auto src = m->GetAllAlphas().GetLayer(l);
+					for (size_t i = 0; i < srcTris.size(); ++i)
+						for (u_int c = 0; c < 3; ++c)
+							dst[3 * (offset + i) + c] = src[srcTris[i].v[c]];
+				}
+			}
 		}
 		offset += srcTris.size();
 	}
@@ -196,7 +238,8 @@ void PropagateMaterialSlots(
 
 ExtTriangleMeshUPtr FilterByMaterialSlot(
 	const ExtTriangleMesh &mesh,
-	const int matSlot
+	const int matSlot,
+	const SubdivCornerData *corner
 ) {
 	const auto slots = mesh.GetTriAOVs(MATERIAL_TRI_AOV_INDEX);
 	const auto allTris = mesh.GetTriangles();
@@ -228,16 +271,58 @@ ExtTriangleMeshUPtr FilterByMaterialSlot(
 	if (mesh.HasNormals())
 		normals = mesh.GetNormals();  // copy shares the storage
 
-	// Per-vertex varying data (UVs, colors, alphas) is shared as-is (a copy
-	// shares the storage): it is per-point, not per-triangle, so the filter
-	// does not affect it
+	// Per-vertex varying data (UVs, colors, alphas): when the subdivided mesh
+	// carries per-corner data, rebuild the per-point arrays from the corners of
+	// this slot's own triangles, so a point shared with another submesh (seam)
+	// gets this submesh's value. Otherwise share the arrays as-is (a copy
+	// shares the storage): the data is per-point, not per-triangle.
+	const size_t numPoints = mesh.GetTotalVertexCount();
+	luxrays::ExtMeshProp<luxrays::UV> uvs;
+	luxrays::ExtMeshProp<luxrays::Spectrum> cols;
+	luxrays::ExtMeshProp<float> alphas;
+	if (corner) {
+		for (u_int l = 0; l < EXTMESH_MAX_DATA_COUNT; ++l) {
+			if (l < corner->uvLayers.size() && !corner->uvLayers[l].empty()) {
+				auto arr = std::make_shared<luxrays::UV[]>(numPoints);
+				for (size_t k = 0; k < kept.size(); ++k) {
+					const auto &t = allTris[kept[k]];
+					for (u_int c = 0; c < 3; ++c)
+						arr[t.v[c]] = corner->uvLayers[l][3 * kept[k] + c];
+				}
+				uvs.SetLayer(l, arr, numPoints);
+			}
+			if (l < corner->colorLayers.size() && !corner->colorLayers[l].empty()) {
+				auto arr = std::make_shared<luxrays::Spectrum[]>(numPoints);
+				for (size_t k = 0; k < kept.size(); ++k) {
+					const auto &t = allTris[kept[k]];
+					for (u_int c = 0; c < 3; ++c)
+						arr[t.v[c]] = corner->colorLayers[l][3 * kept[k] + c];
+				}
+				cols.SetLayer(l, arr, numPoints);
+			}
+			if (l < corner->alphaLayers.size() && !corner->alphaLayers[l].empty()) {
+				auto arr = std::make_shared<float[]>(numPoints);
+				for (size_t k = 0; k < kept.size(); ++k) {
+					const auto &t = allTris[kept[k]];
+					for (u_int c = 0; c < 3; ++c)
+						arr[t.v[c]] = corner->alphaLayers[l][3 * kept[k] + c];
+				}
+				alphas.SetLayer(l, arr, numPoints);
+			}
+		}
+	} else {
+		uvs = mesh.GetAllUVs();
+		cols = mesh.GetAllColors();
+		alphas = mesh.GetAllAlphas();
+	}
+
 	auto filtered = std::make_unique<ExtTriangleMesh>(
 		mesh.GetVertexBuffer(),  // share the point storage
 		std::move(tris),
 		std::move(normals),
-		mesh.GetAllUVs(),
-		mesh.GetAllColors(),
-		mesh.GetAllAlphas()
+		uvs,
+		cols,
+		alphas
 	);
 	for (u_int l = 0; l < EXTMESH_MAX_DATA_COUNT; ++l)
 		if (triAOVs.LayerHasValues(l))

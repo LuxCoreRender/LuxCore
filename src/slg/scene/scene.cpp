@@ -236,6 +236,13 @@ Scene::ReturnType<ExtMesh> Scene::DefineMesh(ExtMeshUPtr&& mesh) {
 	// This is the only place where it is safe to call extMeshCache.DefineExtMesh()
 	auto [newMeshRef, oldMeshPtr] = extMeshCache.DefineExtMesh(std::move(mesh));
 
+	// A mesh was REPLACED (redefinition, e.g. viewport update): any cached
+	// subdivided envelope is stale. New meshes (initial parse, refined shape
+	// registrations) must NOT clear the cache, or the shared subdiv run would
+	// be lost between the matslot shapes of one source mesh.
+	if (oldMeshPtr)
+		ClearSubdivEnvelopeCache();
+
 	editActions.AddAction(GEOMETRY_EDIT);
 
 	return std::make_tuple(
@@ -613,8 +620,16 @@ void Scene::RemoveUnusedMeshes() {
 		}
 	}
 
-	if (deleted)
+	if (deleted) {
+		// Meshes changed: any cached subdivided envelope is stale
+		ClearSubdivEnvelopeCache();
 		editActions.AddAction(GEOMETRY_EDIT);
+	}
+}
+
+void Scene::ClearSubdivEnvelopeCache() {
+	std::lock_guard<std::mutex> lock(subdivEnvelopeMtx);
+	subdivEnvelopeCache.clear();
 }
 
 void Scene::DeleteObject(const string &objName) {
