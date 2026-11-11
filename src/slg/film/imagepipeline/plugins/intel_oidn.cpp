@@ -236,15 +236,21 @@ IntelOIDN::float_buffer IntelOIDN::PrepareBuffer (
 
 	// Prefilter
 	if (enablePrefiltering) {
-		FilterImage(
-			imageName,
-			&tmpBuffer[0],
-			&outBuffer[0],
-			&dummy1[0],
-			&dummy2[0],
-			width, height,
-			false
-		);
+		try {
+			FilterImage(
+				imageName,
+				&tmpBuffer[0],
+				&outBuffer[0],
+				&dummy1[0],
+				&dummy2[0],
+				width, height,
+				false
+			);
+		} catch (std::exception &e) {
+			SLG_LOG("[IntelOIDNPlugin] WARNING: prefiltering " << imageName
+				<< " failed (" << e.what() << "), using the raw channel");
+			return tmpBuffer;
+		}
 	} else {
 		return tmpBuffer;
 	}
@@ -321,10 +327,18 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 
 
 	SLG_LOG("IntelOIDNPlugin filtering image");
-	FilterImage("Image Pipeline", inputBuffer, &outputBuffer[0],
-			(albedoBuffer.size() > 0) ? &albedoBuffer[0] : nullptr,
-			(normalBuffer.size() > 0) ? &normalBuffer[0] : nullptr,
-			width, height, enablePrefiltering);
+	try {
+		FilterImage("Image Pipeline", inputBuffer, &outputBuffer[0],
+				(albedoBuffer.size() > 0) ? &albedoBuffer[0] : nullptr,
+				(normalBuffer.size() > 0) ? &normalBuffer[0] : nullptr,
+				width, height, enablePrefiltering);
+	} catch (std::exception &e) {
+		// The OIDN CPU device may fail to initialize (e.g. its device module
+		// failed to register): don't kill the whole render, just skip denoising
+		SLG_LOG("[IntelOIDNPlugin] WARNING: denoising failed (" << e.what()
+			<< "), using the non-denoised image");
+		std::copy(inputBuffer, inputBuffer + 3 * pixelCount, &outputBuffer[0]);
+	}
 
     SLG_LOG("IntelOIDNPlugin copying output buffer");
 	tbb::affinity_partitioner aff_p;

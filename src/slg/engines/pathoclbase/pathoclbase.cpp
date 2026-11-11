@@ -399,8 +399,11 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 			compiledIntersectionDevices.push_back(intersectionDevices[i]);
 		}
 	}
-	if (compiledThreads.empty())
-		throw runtime_error("No OpenCL device could compile the render kernels");
+	// Keep the native intersection devices (they follow the OpenCL ones)
+	for (size_t i = oclRenderThreadCount; i < intersectionDevices.size(); ++i)
+		compiledIntersectionDevices.push_back(intersectionDevices[i]);
+	if (compiledThreads.empty() && compiledIntersectionDevices.empty())
+		throw runtime_error("No device could compile the render kernels");
 	renderOCLThreads = compiledThreads;
 	intersectionDevices = compiledIntersectionDevices;
 	oclRenderThreadCount = renderOCLThreads.size();
