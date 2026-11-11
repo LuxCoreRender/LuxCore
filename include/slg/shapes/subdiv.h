@@ -24,6 +24,7 @@
 
 #include "slg/usings.h"
 #include "slg/shapes/shape.h"
+#include "slg/shapes/subdiv_corner_data.h"
 
 namespace slg {
 
@@ -58,7 +59,9 @@ public:
 		const float sharpnessThresholdRadians,
 		const float creaseWeight,
 		const SubdivCreaseMode creaseMode = SubdivCreaseMode::COMPUTED,
-		std::vector<u_int> *triBaseFace = nullptr
+		std::vector<u_int> *triBaseFace = nullptr,
+		const SubdivCornerData *cornerData = nullptr,
+		SubdivCornerData *outCorner = nullptr
 	);
 
 protected:

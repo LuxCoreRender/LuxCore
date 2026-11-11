@@ -487,8 +487,8 @@ struct Surface {
 	/// Tessellate input mesh: delegates to the standalone tessellation
 	/// (TessellateShape API), called directly on this refiner
 	std::tuple<CoordVector, TriangleBuffer, int, int>
-	Tessellate (const size_t N) {
-		return TessellateTopology(*refiner, N);
+	Tessellate (const size_t N, std::vector<LocalCoords> *cornerCoords = nullptr) {
+		return TessellateTopology(*refiner, N, cornerCoords);
 	}
 
 
@@ -733,6 +733,72 @@ struct Surface {
 
 };
 
+// Barycentric interpolation of 3 values (used for per-corner/face-varying data)
+template <typename T>
+static T FVarLerp(const T &a, const T &b, const T &c, float w0, float w1, float w2) {
+	if constexpr (std::is_same_v<T, float>) {
+		return w0 * a + w1 * b + w2 * c;
+	} else {
+		T r;
+		r.Clear();
+		r.AddWithWeight(a, w0);
+		r.AddWithWeight(b, w1);
+		r.AddWithWeight(c, w2);
+		return r;
+	}
+}
+
+// Evaluate per-corner (face-varying) data at the tessellation points. Each
+// tessellation point lies in a base face (coords.face) at local (x, y), with
+// face corner i at (0,0), (1,0), (0,1) for i = 0,1,2 — so the value is the
+// barycentric interpolation of the base face's 3 corner values. Seams between
+// submeshes (different corner values on the two sides of a shared edge) are
+// preserved; non-seam edges stay continuous.
+template <typename T>
+static std::unique_ptr<T[]> EvaluateCornerFVar(
+	const std::vector<LocalCoords> &cornerCoords,  // 3 * numTessTris
+	const std::vector<T> &baseCornerValues  // 3 * numBaseFaces
+) {
+	const size_t n = cornerCoords.size();
+	auto out = std::make_unique<T[]>(n);
+	#pragma omp parallel for
+	for (size_t i = 0; i < n; ++i) {
+		const auto &c = cornerCoords[i];
+		const size_t f3 = 3 * (size_t)c.face;
+		out[i] = FVarLerp(baseCornerValues[f3], baseCornerValues[f3 + 1], baseCornerValues[f3 + 2],
+			1.f - c.x - c.y, c.x, c.y);
+	}
+	return out;
+}
+
+// Evaluate a face-varying layer at the tessellation points and produce:
+// - perPoint: per-output-point values (first face touching the point wins)
+// - outCorner: per-output-triangle-corner values (3 * numTessTris)
+template <typename T>
+static void ApplyCornerFVar(
+	const std::vector<LocalCoords> &cornerCoords,  // 3 * numTessTris, within own base face
+	const TriangleBuffer &tessTriangles,
+	const std::vector<T> &baseCorner,  // 3 * numBaseFaces
+	std::vector<T> &outCorner,         // 3 * numTessTris
+	std::unique_ptr<T[]> &perPoint,    // numPoints, first corner touching the point wins
+	size_t numPoints
+) {
+	auto cornerVals = EvaluateCornerFVar<T>(cornerCoords, baseCorner);
+	perPoint = std::make_unique<T[]>(numPoints);
+	std::vector<char> seen(numPoints, 0);
+	const size_t nTris = tessTriangles.Count();
+	outCorner.resize(3 * nTris);
+	for (size_t t = 0; t < nTris; ++t)
+		for (u_int c = 0; c < 3; ++c) {
+			const size_t p = tessTriangles[t].v[c];
+			outCorner[3 * t + c] = cornerVals[3 * t + c];
+			if (!seen[p]) {
+				perPoint[p] = cornerVals[3 * t + c];
+				seen[p] = 1;
+			}
+		}
+}
+
 // Helper to evaluate multi-layers data, like UV, Colors, Gamma, AOV.
 // EXTRACTOR is a callable type providing the coarse data for a given layer.
 struct MultiLayerDataEvaluator{
@@ -853,7 +919,9 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	const float sharpnessThresholdRadians,
 	const float creaseWeight,
 	const SubdivCreaseMode creaseMode,
-	std::vector<u_int> *triBaseFace
+	std::vector<u_int> *triBaseFace,
+	const SubdivCornerData *cornerData = nullptr,
+	SubdivCornerData *outCorner = nullptr
 ) {
 	// Remarks:
 	// All buffers (triangles, points, normals...) are enclosed in smart pointers
@@ -874,23 +942,29 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	// Compute tesselletion rate, from maxLevel
 	size_t tessellationRate = 1 << maxLevel;
 
-	// Tessellate
+	// Tessellate. When face-varying data is used, also record the local
+	// coordinates of each tessellated corner within its OWN base face (the
+	// per-point coords of points shared between faces carry an arbitrary
+	// incident face, unsuitable for face-varying evaluation).
 	CoordVector tessCoords;
 	TriangleBuffer tessTriangles;
 	int numPoints, numTriangles;
+	std::vector<LocalCoords> cornerCoords;
 
 	tie(tessCoords, tessTriangles, numPoints, numTriangles) =
-		surface.Tessellate(tessellationRate);
+		surface.Tessellate(tessellationRate,
+			(cornerData || outCorner) ? &cornerCoords : nullptr);
 
 	// Optionally record, for each tessellated triangle, the face of the BASE
-	// (level 0) topology it comes from (walking the refiner parent links).
-	// Used to propagate per-face data (e.g. material slots) through subdivision.
+	// (level 0) topology it comes from. TessellateTopology generates the
+	// triangles face by face in order, so triangle t belongs to base face
+	// t / (N*N) exactly (unlike the per-point coords' face, which is ambiguous
+	// for points shared between faces).
 	if (triBaseFace) {
-		// TessellateTopology works on level 0 of the refiner, so the local
-		// coords' face is already a BASE face index
 		triBaseFace->resize(numTriangles);
+		const size_t perFace = tessellationRate * tessellationRate;
 		for (int t = 0; t < numTriangles; ++t)
-			(*triBaseFace)[t] = tessCoords[tessTriangles[t].v[0]].face;
+			(*triBaseFace)[t] = static_cast<u_int>(t / perFace);
 	}
 
 	// Record initial vertex count
@@ -928,6 +1002,40 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	// Evaluate AOVs
 	auto extractorAOVs = [&srcMesh](u_int layer) { return srcMesh.GetVertexAOVs(layer).get(); };
 	auto tessAOVs = evaluator.evaluate(extractorAOVs);
+
+	// Face-varying (per-corner) evaluation of UV / color / alpha layers when
+	// corner data of the base (envelope) mesh is available: values are
+	// barycentric within each base face, so seams between submeshes are
+	// preserved. The per-point arrays of the output mesh get the first face's
+	// value at each point; the exact per-corner values are returned in
+	// outCorner for the per-slot resplit.
+	if (cornerData && outCorner) {
+		for (u_int l = 0; l < EXTMESH_MAX_DATA_COUNT; ++l) {
+			if (l < cornerData->uvLayers.size() && !cornerData->uvLayers[l].empty()) {
+				outCorner->uvLayers.resize(std::max(outCorner->uvLayers.size(), (size_t)l + 1));
+				ApplyCornerFVar<luxrays::UV>(cornerCoords, tessTriangles,
+					cornerData->uvLayers[l], outCorner->uvLayers[l], tessUVs[l], numPoints);
+			}
+			if (l < cornerData->colorLayers.size() && !cornerData->colorLayers[l].empty()) {
+				outCorner->colorLayers.resize(std::max(outCorner->colorLayers.size(), (size_t)l + 1));
+				ApplyCornerFVar<luxrays::Spectrum>(cornerCoords, tessTriangles,
+					cornerData->colorLayers[l], outCorner->colorLayers[l], tessCols[l], numPoints);
+			}
+			if (l < cornerData->alphaLayers.size() && !cornerData->alphaLayers[l].empty()) {
+				outCorner->alphaLayers.resize(std::max(outCorner->alphaLayers.size(), (size_t)l + 1));
+				std::vector<float> corner;
+				std::unique_ptr<float[]> perPoint;
+				ApplyCornerFVar<float>(cornerCoords, tessTriangles,
+					cornerData->alphaLayers[l], corner, perPoint, numPoints);
+				outCorner->alphaLayers[l] = std::move(corner);
+				// the evaluator stores alphas as FloatAdapter
+				auto fa = std::make_unique<FloatAdapter[]>(numPoints);
+				for (int j = 0; j < numPoints; ++j)
+					fa[j] = FloatAdapter(perPoint[j]);
+				tessAlphas[l] = std::move(fa);
+			}
+		}
+	}
 
 	// Allocate the new mesh and release buffers (transfer ownership to new
 	// mesh)
@@ -1003,7 +1111,9 @@ ExtTriangleMeshUPtr SubdivShape::ApplySubdiv(
 	const float sharpnessThresholdRadians,
 	const float creaseWeight,
 	const SubdivCreaseMode creaseMode,
-	std::vector<u_int> *triBaseFace
+	std::vector<u_int> *triBaseFace,
+	const SubdivCornerData *cornerData,
+	SubdivCornerData *outCorner
 ) {
 	//--------------------------------------------------------------------------
 	// Check data
@@ -1021,7 +1131,7 @@ ExtTriangleMeshUPtr SubdivShape::ApplySubdiv(
 
 	return enhanced::ApplySubdiv(
 		srcMesh, maxLevel, sharpnessThresholdRadians, creaseWeight, creaseMode,
-		triBaseFace
+		triBaseFace, cornerData, outCorner
 	);
 }
 
@@ -1104,26 +1214,28 @@ ExtTriangleMeshUPtr SubdivShape::RefineImpl(SceneConstRef scene) {
 		auto &cache = scene.GetSubdivEnvelopeCache();
 		auto it = cache.find(shareKey);
 		if (it == cache.end()) {
-			auto envelope = BuildSubdivEnvelope(scene, srcMesh);
+			SubdivCornerData cornerIn;
+			auto envelope = BuildSubdivEnvelope(scene, srcMesh, &cornerIn);
 			if (envelope) {
 				SDL_LOG("Subdividing envelope " << envelope->GetName()
 					<< " once for all material slots at level: " << maxLevel);
 				std::vector<u_int> triBaseFace;
+				SubdivCornerData cornerOut;
 				auto subdivided = ApplySubdiv(
 					*envelope, maxLevel, sharpnessThresholdRadians, creaseWeight,
-					creaseMode, &triBaseFace
+					creaseMode, &triBaseFace, &cornerIn, &cornerOut
 				);
 				PropagateMaterialSlots(*envelope, triBaseFace, *subdivided);
 				it = cache.emplace(shareKey, Scene::SubdivEnvelopeCacheEntry{
-					std::move(subdivided), std::move(triBaseFace)
+					std::move(subdivided), std::move(triBaseFace), std::move(cornerOut)
 				}).first;
 			} else {
 				// No point-buffer siblings: nothing to share, remember it
-				it = cache.emplace(shareKey, Scene::SubdivEnvelopeCacheEntry{nullptr, {}}).first;
+				it = cache.emplace(shareKey, Scene::SubdivEnvelopeCacheEntry{nullptr, {}, {}}).first;
 			}
 		}
 		if (it->second.mesh) {
-			mesh = FilterByMaterialSlot(*it->second.mesh, matSlot);
+			mesh = FilterByMaterialSlot(*it->second.mesh, matSlot, &it->second.corner);
 			SDL_LOG("Subdivided shape in " << WallClockTime() - startTime << " secs");
 			return std::move(mesh);
 		}

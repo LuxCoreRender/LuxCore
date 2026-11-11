@@ -36,6 +36,7 @@
 #include "slg/editaction.h"
 #include "slg/lights/lightsourcedefs.h"
 #include "slg/shapes/strands.h"
+#include "slg/shapes/subdiv_corner_data.h"
 #include "slg/textures/texturedefs.h"
 #include "slg/materials/materialdefs.h"
 #include "slg/scene/sceneobjectdefs.h"
@@ -271,6 +272,7 @@ public:
 	struct SubdivEnvelopeCacheEntry {
 		luxrays::ExtTriangleMeshSPtr mesh;  // full subdivided envelope
 		std::vector<u_int> triBaseFace;
+		SubdivCornerData corner;  // per-corner varying data of the subdivided mesh
 	};
 	auto &GetSubdivEnvelopeCache() const { return subdivEnvelopeCache; }
 	std::mutex &GetSubdivEnvelopeMutex() const { return subdivEnvelopeMtx; }
