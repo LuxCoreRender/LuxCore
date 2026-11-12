@@ -1828,6 +1828,20 @@ static void Scene_DefineMeshExt3(
 		if (n)
 			normals = dataCopyBufferExternal< float, 3, luxrays::NormalBuffer > (n.value(), std::move(normalsOwner), meshName, "Normals");
 
+		// A zero-copy (WrapExternal) normals buffer always reports
+		// IsShared() == false, so ApplyTransform() below would rotate the
+		// normals in place, i.e. directly inside the caller's numpy array.
+		// When the same array is passed for several submeshes of a
+		// multi-material object (each with the same transformation), the
+		// normals would be rotated once per submesh. Deep-copy the normals
+		// when a transformation will be applied, so the external memory is
+		// never modified.
+		if (normals && luxtrans.has_value()) {
+			luxrays::NormalBuffer writableNormals;
+			writableNormals.Set(normals);
+			normals = std::move(writableNormals);
+		}
+
 		// When sharing the points of another mesh, the shared vertex buffer is
 		// already transformed, so ApplyTransform() must not run on the new mesh
 		// (it would transform the shared points a second time). But the new

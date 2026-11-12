@@ -87,11 +87,7 @@ void TracePhotonsThread::Mutate(RandomGenerator &rndGen,
 	assert (mutationSize != 0.f);
 
 	for (u_int i = 0; i < currentPathSamples.size(); ++i) {
-		// mutationSize is clamped at the update site, but guard anyway:
-		// a non-positive mutationSize would make the exponent negative and
-		// deltaU explode to inf
-		const float safeMutationSize = (mutationSize > 0.f) ? mutationSize : 1.f;
-		const float deltaU = powf(rndGen.floatValue(), 1.f / safeMutationSize + 1.f);
+		const float deltaU = powf(rndGen.floatValue(), 1.f / mutationSize + 1.f);
 
 		float mutateValue = currentPathSamples[i];
 		if (rndGen.floatValue() < .5f)
@@ -100,10 +96,13 @@ void TracePhotonsThread::Mutate(RandomGenerator &rndGen,
 			mutateValue -= deltaU;
 
 		// Wrap into [0, 1): fmod handles any magnitude of deltaU (the old
-		// single +/-1 wrap broke when deltaU >= 1), and numerical precision
-		// can still produce exactly 1.f
+		// single +/-1 wrap broke when deltaU >= 1, e.g. when the unclamped
+		// mutationSize drifts non-positive and the powf exponent goes
+		// negative), and numerical precision can still produce exactly 1.f
 		mutateValue -= floorf(mutateValue);
-		candidatePathSamples[i] = (mutateValue >= 1.f) ? 0.f : mutateValue;
+		// deltaU can be inf (non-positive mutationSize -> negative powf
+		// exponent, powf(0, neg) = inf), and inf - inf = NaN: guard it
+		candidatePathSamples[i] = (mutateValue >= 1.f || !std::isfinite(mutateValue)) ? 0.f : mutateValue;
 
 		assert ((candidatePathSamples[i] >= 0.f) && (candidatePathSamples[i] < 1.f));
 	}
@@ -457,10 +456,7 @@ void TracePhotonsThread::RenderFunc(std::stop_token stop_token) {
 						const float R = acceptedCount / (float)mutatedCount;
 						// 0.234 => the optimal asymptotic acceptance ratio has been
 						// derived 23.4% [Roberts et al. 1997]
-						// Clamp: a non-positive mutationSize would make the Mutate()
-						// exponent negative and deltaU explode
-						mutationSize = Clamp(mutationSize + (R - .234f) / mutatedCount,
-							0.01f, 10.f);
+						mutationSize += (R - .234f) / mutatedCount;
 					}
 
 #ifdef WIN32
