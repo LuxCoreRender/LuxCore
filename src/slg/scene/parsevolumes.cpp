@@ -167,7 +167,7 @@ void Scene::ParseVolumes(const Properties &props) {
 
 VolumeUPtr Scene::CreateVolume(const u_int defaultVolID, const string &volName, const Properties &props) {
 	const string propName = "scene.volumes." + volName;
-	const string volType = props.Get(Property(propName + ".type")("homogenous")).Get<string>();
+	const string volType = props.Get(Property(propName + ".type")("homogeneous")).Get<string>();
 
 	auto& iorTex = GetTexture(props.Get(Property(propName + ".ior")(1.f)));
 	auto emissionTex = props.IsDefined(propName + ".emission") ?
