@@ -16,6 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_for.h>
+
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
@@ -42,11 +45,54 @@ extern atomic<u_int> defaultMaterialIDIndex;
 
 void Scene::ParseVolumes(const Properties &props) {
 	vector<string> matKeys = props.GetAllUniqueSubNames("scene.volumes");
+	// Validate the names serially first, so the reported error is the same
+	// as in the serial version
 	for(const string &key: matKeys) {
-		// Extract the volume name
 		const string volName = Property::ExtractField(key, 2);
 		if (volName == "")
 			throw runtime_error("Syntax error in volume definition: " + volName);
+	}
+
+	// A redefinition of an already defined volume takes the replacement path
+	// (it updates object/light/camera references and the trash); keep the
+	// fully serial path in that case to preserve those semantics exactly.
+	bool serialPath = false;
+	for(const string &key: matKeys) {
+		if (matDefs.IsMaterialDefined(Property::ExtractField(key, 2)))
+			serialPath = true;
+	}
+
+	if (!serialPath) {
+		// Create the volumes in parallel; define them serially in the
+		// original key order so material insertion order and harlequin IDs
+		// are unchanged. CreateVolume only reads props and uses GetTexture
+		// (serialized by texDefMtx) at this point.
+		const size_t volTotal = matKeys.size();
+		std::vector<u_int> volIDs(volTotal);
+		for (size_t i = 0; i < volTotal; ++i) {
+			// In order to have harlequin colors with MATERIAL_ID output
+			const u_int index = defaultMaterialIDIndex++;
+			volIDs[i] = ((u_int)(RadicalInverse(index + 1, 2) * 255.f + .5f)) |
+					(((u_int)(RadicalInverse(index + 1, 3) * 255.f + .5f)) << 8) |
+					(((u_int)(RadicalInverse(index + 1, 5) * 255.f + .5f)) << 16);
+		}
+		std::vector<MaterialUPtr> vols(volTotal);
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, volTotal),
+			[&](const tbb::blocked_range<size_t> &r) {
+				for (size_t i = r.begin(); i < r.end(); ++i)
+					vols[i] = CreateVolume(volIDs[i], Property::ExtractField(matKeys[i], 2), props);
+			});
+		for (size_t i = 0; i < volTotal; ++i) {
+			const string volName = Property::ExtractField(matKeys[i], 2);
+			SDL_LOG("Volume definition: " << volName);
+			// Volumes are just a special kind of materials so they are stored
+			// in matDefs too.
+			matDefs.DefineMaterial(std::move(vols[i]));
+		}
+	} else {
+	for(const string &key: matKeys) {
+		// Extract the volume name
+		const string volName = Property::ExtractField(key, 2);
 
 		SDL_LOG("Volume definition: " << volName);
 		// In order to have harlequin colors with MATERIAL_ID output
@@ -101,6 +147,7 @@ void Scene::ParseVolumes(const Properties &props) {
 			// Only a new Material
 			matDefs.DefineMaterial(std::move(newMat));
 		}
+	}
 	}
 
 	if (props.IsDefined("scene.world.volume.default")) {

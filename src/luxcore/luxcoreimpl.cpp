@@ -959,6 +959,9 @@ void SceneImpl::DefineMesh(const std::string &meshName,
 			(void *)p, (void *)vi, (void *)n,
 			(void *)uvs, (void *)cols, (void *)alphas);
 
+	// Thread-safe (see SceneImpl::DefineMesh(unique_ptr))
+	std::lock_guard<std::recursive_mutex> meshLock(GetSlgScene().MeshDefMutex());
+
 	// Invalidate the scene properties cache
 	scenePropertiesCache->Clear();
 
@@ -1003,6 +1006,10 @@ void SceneImpl::DefineMeshExt(const std::string &meshName,
 	// A safety check
 	static_assert(LC_MESH_MAX_DATA_COUNT == EXTMESH_MAX_DATA_COUNT,
 			"LC_MESH_MAX_DATA_COUNT and EXTMESH_MAX_DATA_COUNT must have the same value");
+
+	// Thread-safe (see SceneImpl::DefineMesh(unique_ptr)): held across the
+	// cache invalidation and the slg::Scene call
+	std::lock_guard<std::recursive_mutex> meshLock(GetSlgScene().MeshDefMutex());
 
 	// Invalidate the scene properties cache
 	scenePropertiesCache->Clear();
@@ -1064,6 +1071,7 @@ void SceneImpl::SetMeshVertexAOV(const string &meshName,
 		const unsigned int index, std::span<float> data) {
 	API_BEGIN("{}, {}, {}, {}", ToArgString(meshName), index, (void *)data.data(), data.size());
 
+	std::lock_guard<std::recursive_mutex> meshLock(GetSlgScene().MeshDefMutex());
 	GetSlgScene().SetMeshVertexAOV(meshName, index, data);
 
 	API_END();
@@ -1073,6 +1081,7 @@ void SceneImpl::SetMeshTriangleAOV(const string &meshName,
 		const unsigned int index, std::span<float> data) {
 	API_BEGIN("{}, {}, {}, {}", ToArgString(meshName), index, (void *)data.data(), data.size());
 
+	std::lock_guard<std::recursive_mutex> meshLock(GetSlgScene().MeshDefMutex());
 	GetSlgScene().SetMeshTriangleAOV(meshName, index, data);
 
 	API_END();
@@ -1477,6 +1486,12 @@ void SceneImpl::DefineImageMapFloat(const std::string &imgMapName,
 // Note: this method is not part of LuxCore API and it is used only internally
 void SceneImpl::DefineMesh(std::unique_ptr<ExtTriangleMesh>&& mesh) {
 	API_BEGIN("{}", (void *)mesh.get());
+
+	// Thread-safe mesh definition: the lock is recursive, so it can be held
+	// across the properties cache invalidation and the slg::Scene call (which
+	// locks again internally). pyluxcore releases the GIL around this, so
+	// worker threads may call it concurrently.
+	std::lock_guard<std::recursive_mutex> meshLock(GetSlgScene().MeshDefMutex());
 
 	// Invalidate the scene properties cache
 	scenePropertiesCache->Clear();

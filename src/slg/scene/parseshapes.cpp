@@ -16,6 +16,13 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_for.h>
+
+#include <boost/format.hpp>
+
+#include <unordered_set>
+
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/usings.h"
 #include "luxrays/utils/cyhair/cyHairFile.h"
@@ -53,25 +60,87 @@ void Scene::ParseShapes(const Properties &props) {
 		return;
 	}
 
-	double lastPrint = WallClockTime();
-	u_int shapeCount = 0;
+	// Validate the names serially first, so the reported error is the same
+	// as in the serial version
 	for(const string &key: shapeKeys) {
-		// Extract the shape name
 		const string shapeName = Property::ExtractField(key, 2);
 		if (shapeName == "")
 			throw runtime_error("Syntax error in shape definition: " + shapeName);
+	}
 
-		auto mesh = CreateShape(shapeName, props);
-		DefineMesh(std::move(mesh));
-		++shapeCount;
-
-		const double now = WallClockTime();
-		if (now - lastPrint > 2.0) {
-			SDL_LOG("Shape count: " << shapeCount);
-			lastPrint = now;
+	// A shape may reference as source another shape of this same block; in
+	// the serial version that works because sources are defined in key
+	// order. If any such intra-block dependency exists, keep the fully
+	// serial path to preserve those semantics exactly.
+	std::unordered_set<string> loopShapeNames;
+	for(const string &key: shapeKeys)
+		loopShapeNames.insert(Property::ExtractField(key, 2));
+	bool hasIntraLoopDependency = false;
+	for(const string &key: shapeKeys) {
+		const string propName = "scene.shapes." + Property::ExtractField(key, 2);
+		const string shapeType = props.Get(Property(propName + ".type")("mesh")).Get<string>();
+		if (shapeType == "group") {
+			for(const string &subKey: props.GetAllUniqueSubNames(propName, true)) {
+				const string name = props.Get(Property(propName + "." +
+					Property::ExtractField(subKey, 3) + ".shape")("shape")).Get<string>();
+				if (loopShapeNames.count(name) && !extMeshCache.IsExtMeshDefined(name))
+					hasIntraLoopDependency = true;
+			}
+		} else {
+			const string source = props.Get(Property(propName + ".source")("")).Get<string>();
+			if (!source.empty() && loopShapeNames.count(source) &&
+					!extMeshCache.IsExtMeshDefined(source))
+				hasIntraLoopDependency = true;
 		}
 	}
-	SDL_LOG("Shape count: " << shapeCount);
+
+	const double startTime = WallClockTime();
+	double lastPrint = startTime;
+	u_int shapeCount = 0;
+	if (!hasIntraLoopDependency) {
+		// Create the shapes in parallel: this is the expensive part (PLY
+		// loading, pointiness, subdivision, strands...). Everything
+		// CreateShape touches at this point is read-only (camera, ext mesh
+		// cache, properties) or already internally synchronized (GetTexture
+		// via texDefMtx, the subdiv envelope cache). The DefineMesh calls
+		// stay serial, in the original key order, so mesh insertion order
+		// -- and therefore mesh indices -- are unchanged.
+		const size_t shapeTotal = shapeKeys.size();
+		std::vector<ExtTriangleMeshUPtr> meshes(shapeTotal);
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, shapeTotal),
+			[&](const tbb::blocked_range<size_t> &r) {
+				for (size_t i = r.begin(); i < r.end(); ++i)
+					meshes[i] = CreateShape(Property::ExtractField(shapeKeys[i], 2), props);
+			});
+		for (size_t i = 0; i < shapeTotal; ++i) {
+			DefineMesh(std::move(meshes[i]));
+			++shapeCount;
+
+			const double now = WallClockTime();
+			if (now - lastPrint > 2.0) {
+				SDL_LOG("Shape count: " << shapeCount << " ("
+					<< (boost::format("%.3f") % (now - startTime)) << " secs)");
+				lastPrint = now;
+			}
+		}
+	} else {
+		for(const string &key: shapeKeys) {
+			const string shapeName = Property::ExtractField(key, 2);
+
+			auto mesh = CreateShape(shapeName, props);
+			DefineMesh(std::move(mesh));
+			++shapeCount;
+
+			const double now = WallClockTime();
+			if (now - lastPrint > 2.0) {
+				SDL_LOG("Shape count: " << shapeCount << " ("
+					<< (boost::format("%.3f") % (now - startTime)) << " secs)");
+				lastPrint = now;
+			}
+		}
+	}
+	SDL_LOG("Shape count: " << shapeCount << " ("
+		<< (boost::format("%.3f") % (WallClockTime() - startTime)) << " secs)");
 
 	editActions.AddActions(GEOMETRY_EDIT);
 }

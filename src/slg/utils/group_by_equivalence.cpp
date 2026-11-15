@@ -128,6 +128,7 @@ public:
 			unite(x, other.parent[x]);
 		return *this;
 	}
+
 };
 
 // Processes the equivalence relations in parallel: each thread unions its
@@ -424,6 +425,32 @@ slg::equiv::Classes BuildClassesFromUnionFind(const UnionFind& uf, const size_t 
 	return classes;
 }
 
+// Serial path for sparse relation sets (relation count a small multiple of
+// the element count, e.g. mesh island graphs with ~1.5 relations per
+// triangle): one UnionFind over the whole element space, built in a single
+// pass, then the shared labeling. Measured faster than both parallel paths
+// in this regime: the dense per-body path pays O(bodies x numElements) in
+// per-body constructions, and a sparse per-body path pays O(R log) in
+// endpoint compression/remap plus the TBB body overhead -- all dominating
+// the O(numElements + R) union work itself (standalone n=4M/R=6M: serial
+// 0.27s vs sparse-parallel 3.5s; in the parallel mesh export the gap is
+// wider because the callers already saturate the arena).
+ScalableVector<uint32_t> SerialUnionFindLabels(const size_t numElements,
+		slg::equiv::RelationSpan relation) {
+	UnionFind uf(numElements);
+	for (const auto &[a, b] : relation)
+		uf.unite(a, b);
+	return BuildLabelsFromUnionFind(uf, numElements);
+}
+
+slg::equiv::Classes SerialUnionFindClasses(const size_t numElements,
+		slg::equiv::RelationSpan relation) {
+	UnionFind uf(numElements);
+	for (const auto &[a, b] : relation)
+		uf.unite(a, b);
+	return BuildClassesFromUnionFind(uf, numElements);
+}
+
 // Grain for the parallel_reduce of the equivalence grouping: every reduce
 // body constructs a whole UnionFind over the element space (an identity
 // parent array of numElements entries, a cost independent of the body
@@ -433,6 +460,16 @@ slg::equiv::Classes BuildClassesFromUnionFind(const UnionFind& uf, const size_t 
 size_t GroupingGrain(const size_t iterationCount) {
 	return std::max<size_t>(1024,
 		iterationCount / size_t(2 * tbb::this_task_arena::max_concurrency()));
+}
+
+// The dense per-body DSU constructions cost O(bodies x numElements) per
+// call (bodies ~ 2 x thread count, see GroupingGrain), which dominates when
+// the relation count is a small multiple of the element count. Use the
+// serial path in that regime; the dense parallel path otherwise. The floor
+// of 8 keeps sparse relation sets on the serial path even in small arenas.
+bool UseSerialPath(const size_t numElements, const size_t relationSize) {
+	const size_t threads = std::max<size_t>(8, tbb::this_task_arena::max_concurrency());
+	return 2 * relationSize < numElements * threads;
 }
 
 }  // namespace
@@ -449,10 +486,21 @@ namespace equiv {
 // referenced by the relations
 Classes GroupByEquivalence(size_t numElements, size_t iterationCount,
 	RelationFunction relation) {
-	// Use parallel_reduce with ParallelGroupByEquivalenceFromGenerator
 	static tbb::affinity_partitioner tbb_partitioner;
 	const size_t grain = GroupingGrain(iterationCount);
 
+	if (UseSerialPath(numElements, iterationCount)) {
+		// Gather the generated relations in chunks, then one serial pass
+		RelationVector all;
+		for (size_t b = 0; b < iterationCount; b += 65536) {
+			RelationVector chunk = relation(b, std::min(b + 65536, iterationCount));
+			all.insert(all.end(), chunk.begin(), chunk.end());
+		}
+		return SerialUnionFindClasses(numElements,
+			std::span<const Relation>(all.data(), all.size()));
+	}
+
+	// Use parallel_reduce with ParallelGroupByEquivalenceFromGenerator
 	ParallelGroupByEquivalenceFromGenerator<RelationFunction> solver(
 		numElements, std::move(relation));
 
@@ -467,12 +515,17 @@ Classes GroupByEquivalence(size_t numElements, size_t iterationCount,
 
 // Version for direct ranges: relation is a span of Relation pairs
 Classes GroupByEquivalence(size_t numElements, RelationSpan relation) {
+	static tbb::affinity_partitioner tbb_partitioner;
+
+	// Serial path for sparse relation sets: no normalization either
+	// (duplicates are no-ops in union-find)
+	if (UseSerialPath(numElements, relation.size()))
+		return SerialUnionFindClasses(numElements, relation);
+
 	// Normalize first: dedup + sort (also speeds up the grouping itself)
 	RelationVector normalized = NormalizeRelations(relation);
 
 	// Use parallel_reduce with ParallelGroupByEquivalence
-	static tbb::affinity_partitioner tbb_partitioner;
-
 	const size_t relationSize = normalized.size();
 	const size_t grain = GroupingGrain(relationSize);
 
@@ -490,10 +543,17 @@ Classes GroupByEquivalence(size_t numElements, RelationSpan relation) {
 
 // Labels variant: flat per-element class labels, no Classes structure
 std::vector<uint32_t> GroupByEquivalenceLabels(size_t numElements, RelationSpan relation) {
+	static tbb::affinity_partitioner tbb_partitioner;
+
+	// Serial path for sparse relation sets: no normalization either
+	// (duplicates are no-ops in union-find)
+	if (UseSerialPath(numElements, relation.size())) {
+		ScalableVector<uint32_t> labels = SerialUnionFindLabels(numElements, relation);
+		return std::vector<uint32_t>(labels.begin(), labels.end());
+	}
+
 	// Normalize first: dedup + sort (also speeds up the grouping itself)
 	RelationVector normalized = NormalizeRelations(relation);
-
-	static tbb::affinity_partitioner tbb_partitioner;
 
 	const size_t relationSize = normalized.size();
 	const size_t grain = GroupingGrain(relationSize);

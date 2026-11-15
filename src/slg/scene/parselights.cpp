@@ -16,6 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_for.h>
+
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
@@ -76,30 +79,84 @@ void Scene::ParseLights(const Properties &props) {
 		return;
 	}
 
+	// Validate the names serially first, so the reported error is the same
+	// as in the serial version
 	for(const string &key: lightKeys) {
-		// Extract the light name
 		const string lightName = Property::ExtractField(key, 2);
 		if (lightName == "")
 			throw runtime_error("Syntax error in light definition: " + lightName);
+	}
 
-		if (lightDefs.IsLightSourceDefined(lightName)) {
-			SDL_LOG("Light re-definition: " << lightName);
-		} else {
-			SDL_LOG("Light definition: " << lightName);
+	// Some light types mutate the image map cache (emission maps are
+	// resampled/merged via DeleteImageMap + DefineImageMap, the sky3
+	// radiance map is registered in the cache): a concurrent light could
+	// hold a reference to a deleted map. If any such light exists, keep the
+	// fully serial path. All other types only read the cache (GetImageMap,
+	// which is thread-safe) or don't touch it.
+	bool cacheMutatingLight = false;
+	for(const string &key: lightKeys) {
+		const string propName = "scene.lights." + Property::ExtractField(key, 2);
+		const string lightType = props.Get(Property(propName + ".type")("sky2")).Get<string>();
+		if (lightType == "mappoint" || lightType == "mapsphere" || lightType == "sky3")
+			cacheMutatingLight = true;
+	}
+
+	if (!cacheMutatingLight) {
+		// Create the light sources in parallel; define them serially in the
+		// original key order so light insertion order (and light IDs) are
+		// unchanged. CreateLightSource only reads props/materials and uses
+		// the thread-safe ImageMapCache::GetImageMap at this point.
+		const size_t lightTotal = lightKeys.size();
+		std::vector<LightSourceUPtr> lights(lightTotal);
+		std::vector<char> imagemapsEdit(lightTotal, 0);
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, lightTotal),
+			[&](const tbb::blocked_range<size_t> &r) {
+				for (size_t i = r.begin(); i < r.end(); ++i) {
+					lights[i] = CreateLightSource(Property::ExtractField(lightKeys[i], 2), props);
+					const LightSourceType t = lights[i]->GetType();
+					imagemapsEdit[i] = (t == TYPE_IL) || (t == TYPE_IL_SKY3) ||
+						(t == TYPE_MAPPOINT) || (t == TYPE_MAPSPHERE) || (t == TYPE_PROJECTION);
+				}
+			});
+		for (size_t i = 0; i < lightTotal; ++i) {
+			const string lightName = Property::ExtractField(lightKeys[i], 2);
+			if (lightDefs.IsLightSourceDefined(lightName)) {
+				SDL_LOG("Light re-definition: " << lightName);
+			} else {
+				SDL_LOG("Light definition: " << lightName);
+			}
+
+			if (imagemapsEdit[i])
+				editActions.AddActions(IMAGEMAPS_EDIT);
+
+			// Move to container. This MUST be the last statement of the block.
+			// Afterwards, access to the light is undefined behavior.
+			lightDefs.DefineLightSource(std::move(lights[i]));
 		}
+	} else {
+		for(const string &key: lightKeys) {
+			// Extract the light name
+			const string lightName = Property::ExtractField(key, 2);
 
-		auto newLight = CreateLightSource(lightName, props);
+			if (lightDefs.IsLightSourceDefined(lightName)) {
+				SDL_LOG("Light re-definition: " << lightName);
+			} else {
+				SDL_LOG("Light definition: " << lightName);
+			}
 
-		if ((newLight->GetType() == TYPE_IL) ||
-				(newLight->GetType() == TYPE_IL_SKY3) ||
-				(newLight->GetType() == TYPE_MAPPOINT) ||
-				(newLight->GetType() == TYPE_MAPSPHERE) ||
-				(newLight->GetType() == TYPE_PROJECTION))
-			editActions.AddActions(IMAGEMAPS_EDIT);
+			auto newLight = CreateLightSource(lightName, props);
 
-		// Move to container. This MUST be the last statement of the block.
-		// Afterwards, access to newLight is undefined behavior.
-		lightDefs.DefineLightSource(std::move(newLight));
+			if ((newLight->GetType() == TYPE_IL) ||
+					(newLight->GetType() == TYPE_IL_SKY3) ||
+					(newLight->GetType() == TYPE_MAPPOINT) ||
+					(newLight->GetType() == TYPE_MAPSPHERE) ||
+					(newLight->GetType() == TYPE_PROJECTION))
+				editActions.AddActions(IMAGEMAPS_EDIT);
+
+			// Move to container. This MUST be the last statement of the block.
+			// Afterwards, access to newLight is undefined behavior.
+			lightDefs.DefineLightSource(std::move(newLight));
+		}
 	}
 
 	editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);

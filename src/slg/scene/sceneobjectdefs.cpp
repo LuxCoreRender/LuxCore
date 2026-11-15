@@ -16,6 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_for.h>
+
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/usings.h"
@@ -64,24 +67,43 @@ void SceneObjectDefinitions::DefineIntersectableLights
 	// Add all new triangle lights
 
 	const string prefix = Scene::EncodeTriangleLightNamePrefix(obj.GetName());
-	for (u_int i = 0; i < mesh.GetTotalTriangleCount(); ++i) {
-		auto tl = std::make_unique<TriangleLight>();
+	const u_int triCount = mesh.GetTotalTriangleCount();
 
-		// I use here boost::lexical_cast instead of ToString() because it is a
-		// lot faster and there can not be locale related problems with integers
-		//tl->SetName(prefix + ToString(i));
-		tl->SetName(prefix + boost::lexical_cast<string>(i));
-
-		tl->lightMaterial = &obj.GetMaterial();
-		tl->volume = tl->lightMaterial->GetExteriorVolume();
-		tl->sceneObject = &obj;
-		// This is initialized in LightSourceDefinitions::Preprocess()
-		tl->meshIndex = NULL_INDEX;
-		tl->triangleIndex = i;
-		tl->Preprocess();
-
-		lightDefs.DefineLightSource(std::move(tl));
+	// Pre-warm the lazily cached mesh area: GetMeshArea() writes a mutable
+	// cache on first call, which would race if done from the parallel loop
+	{
+		Transform localToWorld;
+		mesh.GetLocal2World(0.f, localToWorld);
+		(void)mesh.GetMeshArea(localToWorld);
 	}
+
+	// Create the triangle lights in parallel (the per-light name formatting
+	// via lexical_cast dominates and each light is independent), then insert
+	// them serially in triangle order so light insertion order is unchanged
+	std::vector<LightSourceUPtr> tls(triCount);
+	tbb::parallel_for(tbb::blocked_range<u_int>(0, triCount),
+		[&](const tbb::blocked_range<u_int> &r) {
+			for (u_int i = r.begin(); i < r.end(); ++i) {
+				auto tl = std::make_unique<TriangleLight>();
+
+				// I use here boost::lexical_cast instead of ToString() because it is a
+				// lot faster and there can not be locale related problems with integers
+				//tl->SetName(prefix + ToString(i));
+				tl->SetName(prefix + boost::lexical_cast<string>(i));
+
+				tl->lightMaterial = &obj.GetMaterial();
+				tl->volume = tl->lightMaterial->GetExteriorVolume();
+				tl->sceneObject = &obj;
+				// This is initialized in LightSourceDefinitions::Preprocess()
+				tl->meshIndex = NULL_INDEX;
+				tl->triangleIndex = i;
+				tl->Preprocess();
+
+				tls[i] = std::move(tl);
+			}
+		});
+	for (u_int i = 0; i < triCount; ++i)
+		lightDefs.DefineLightSource(std::move(tls[i]));
 }
 
 void SceneObjectDefinitions::UpdateMaterialReferences(MaterialConstRef oldMat, MaterialRef newMat) {

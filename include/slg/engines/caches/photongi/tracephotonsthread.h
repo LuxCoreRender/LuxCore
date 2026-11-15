@@ -68,7 +68,10 @@ public:
 
 private:
 	void UniformMutate(luxrays::RandomGenerator &rndGen, std::vector<float> &samples) const;
-	void Mutate(luxrays::RandomGenerator &rndGen, const std::vector<float> &currentPathSamples,
+	// Returns false when a candidate sample is still outside [0,1) after the
+	// wrap (the unclamped mutationSize drifted non-positive and deltaU
+	// exploded): the caller must reject the candidate without tracing it
+	bool Mutate(luxrays::RandomGenerator &rndGen, const std::vector<float> &currentPathSamples,
 			std::vector<float> &candidatePathSamples, const float mutationSize) const;
 	bool TracePhotonPath(luxrays::RandomGenerator &rndGen,
 			const std::vector<float> &samples,

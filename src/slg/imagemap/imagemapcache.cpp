@@ -89,39 +89,40 @@ ImageMapRef ImageMapCache::GetImageMap(
 	string key = GetCacheKey(fileName);
 
 	// Check if the image map has been already defined
-	auto it = mapByKey.find(key);
-
-	if (it != mapByKey.end()) {
-		//SDL_LOG("Cached defined image map: " << fileName);
-		auto im = (it->second);
-		return im.get();
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		auto it = mapByKey.find(key);
+		if (it != mapByKey.end())
+			return it->second;
 	}
 
 	// Check if it is a reference to a file
 	key = GetCacheKey(fileName, imgCfg);
-	it = mapByKey.find(key);
-
-	if (it != mapByKey.end()) {
-		//SDL_LOG("Cached file image map: " << fileName);
-		auto im = (it->second);
-		return im.get();
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		auto it = mapByKey.find(key);
+		if (it != mapByKey.end())
+			return it->second;
 	}
 
-	// I haven't yet loaded the file
-
+	// I haven't yet loaded the file. The (expensive) load runs OUTSIDE the
+	// lock, so concurrent callers load different files in parallel; the
+	// insert below is serialized and re-checks the key (a concurrent caller
+	// may have inserted the same key in the meantime)
 	ImageMapUPtr im;
+	bool toApply = false;
 	if (applyResizePolicy) {
 		// Scale the image if required
-		bool toApply;
 		im = resizePolicy->ApplyResizePolicy(fileName, imgCfg, toApply);
-
-		resizePolicyToApply.push_back(toApply);
 	} else {
 		im = std::make_unique<ImageMap>(fileName, imgCfg);
-
-		resizePolicyToApply.push_back(false);
 	}
 
+	std::lock_guard<std::mutex> lock(mtx);
+	auto it = mapByKey.find(key);
+	if (it != mapByKey.end())
+		return it->second;
+	resizePolicyToApply.push_back(toApply);
 	auto& imRef = AppendImageMap(ImageMapSPtr(std::move(im)), fileName, key);
 
 	return std::ref(imRef);

@@ -34,6 +34,7 @@
 
 #include <locale>
 #include <memory>
+#include <unordered_map>
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -49,6 +50,7 @@
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
 #include "luxcore/pyluxcore/pyluxcoreforblender.h"
+#include "compute_submeshes.h"
 #include "slg/utils/group_by_equivalence.h"
 #include "luxcore/pyluxcore/pyluxcoreutils.h"
 #include "oneapi/tbb/parallel_sort.h"
@@ -1740,6 +1742,220 @@ static std::optional<luxrays::ExtMeshProp<T>> propCopy(
 
 
 // Define Mesh from Numpy arrays
+// Parsed arguments of one DefineMeshExt call. The GIL-sensitive parsing
+// (pybind casts, GetArray, pyOwner, propCopyExternal) happens under the GIL in
+// parseExtMeshArgs(); buildExtMesh() then runs with the GIL released.
+struct ParsedExtMesh {
+	std::string meshName;
+	bool pointsIsName = false;      // points given as the name of an existing mesh
+	std::string srcMeshName;
+	py_float_array pointsArr;
+	py::array_t<triangle_underlying_type, py::array::c_style> tri;
+	std::optional<py_float_array> n;
+	std::optional<luxrays::ExtMeshProp<luxrays::UV>> uvs;
+	std::optional<luxrays::ExtMeshProp<luxrays::Spectrum>> cols;
+	std::optional<luxrays::ExtMeshProp<float>> alphas;
+	std::optional<luxrays::Transform> luxtrans;
+	std::vector<u_int> upairs;
+	std::vector<float> weights;
+	bool normals_pretransformed = false;
+	int tri_aov_index = -1;
+	float tri_aov_value = 0.0f;
+	std::shared_ptr<void> triOwner;
+	std::shared_ptr<void> normalsOwner;
+};
+
+static std::optional<std::vector<py_float_array>> optLayers(const py::object &o) {
+	if (o.is_none())
+		return std::nullopt;
+	return py::cast<std::vector<py_float_array>>(o);
+}
+
+// Parse one mesh definition. Must be called with the GIL held.
+static ParsedExtMesh parseExtMeshArgs(
+	const std::string &meshName,
+	const py::object &p,  // points ndarray, or the name of an existing mesh to share the points from
+	const py::object &tri,
+	const py::object &n,
+	const std::optional<std::vector<py_float_array>> &uv_layers,
+	const std::optional<std::vector<py_float_array>> &color_layers,
+	const std::optional<std::vector<py_float_array>> &alpha_layers,
+	const py::object &transformation,
+	const py::object &crease_pairs,
+	const py::object &crease_weights,
+	const bool normals_pretransformed,
+	const int tri_aov_index,
+	const float tri_aov_value
+) {
+	ParsedExtMesh a;
+	a.meshName = meshName;
+	a.normals_pretransformed = normals_pretransformed;
+	a.tri_aov_index = tri_aov_index;
+	a.tri_aov_value = tri_aov_value;
+	if (py::isinstance<py::str>(p)) {
+		a.pointsIsName = true;
+		a.srcMeshName = py::cast<std::string>(p);
+	} else {
+		a.pointsArr = py::cast<py_float_array>(p);
+	}
+	a.tri = py::cast<py::array_t<triangle_underlying_type, py::array::c_style>>(tri);
+	if (!n.is_none())
+		a.n = py::cast<py_float_array>(n);
+	// Optional imported creases: flat (v0, v1) vertex index pairs with one
+	// sharpness weight per pair, in OpenSubdiv units (>= 10 = infinite)
+	if (!crease_pairs.is_none()) {
+		std::vector<int> pairs;
+		GetArray<int>(crease_pairs, pairs, 2);
+		std::vector<float> weights;
+		if (!crease_weights.is_none())
+			GetArray<float>(crease_weights, weights);
+		if (weights.size() * 2 != pairs.size()) {
+			if (weights.empty() && !pairs.empty())
+				weights.assign(pairs.size() / 2, 10.f);  // default: infinite crease
+			else
+				throw std::runtime_error(
+					"Scene.DefineMeshExt: crease_pairs and crease_weights size mismatch");
+		}
+		a.upairs.assign(pairs.begin(), pairs.end());
+		a.weights = std::move(weights);
+	}
+	if (!transformation.is_none())
+		a.luxtrans = luxrays::Transform(py::cast<py_float_array>(transformation).data());
+	// UV/color/alpha layers: zero-copy (wrap the numpy buffers; pyOwner keeps
+	// the arrays alive). Owners are created here, under the GIL, because
+	// incref/decref of Python objects must not happen with the GIL released.
+	a.uvs = propCopyExternal<luxrays::UV, 2>(uv_layers, "UVs", meshName);
+	a.cols = propCopyExternal<luxrays::Spectrum, 3>(color_layers, "colors", meshName);
+	a.alphas = propCopyExternal<float, 1>(alpha_layers, "alphas", meshName);
+	(void)0;
+	a.triOwner = pyOwner(a.tri);
+	if (a.n)
+		a.normalsOwner = pyOwner(a.n.value());
+	return a;
+}
+
+// Build the ExtTriangleMesh from parsed args. The GIL must be RELEASED by the
+// caller; the mesh is NOT inserted into the scene here. The mesh-def mutex is
+// only taken for the shared-points lookup (it is recursive, so this is safe
+// under an outer batch lock too).
+// batchLocal: meshes already built by the current DefineMeshesExt batch, by
+// name. When the points source is one of them, it is used directly and no
+// lock is needed (the batch keeps the source alive until insertion). Only
+// sources outside the batch fall back to the locked scene-cache lookup.
+static luxrays::ExtTriangleMeshUPtr buildExtMesh(
+	const SceneImplPtr &scene, ParsedExtMesh &a,
+	const std::unordered_map<std::string, luxrays::ExtTriangleMesh *> *batchLocal = nullptr
+) {
+	luxrays::VertexBuffer points;
+	const luxrays::VertexBuffer *sharedPoints = &points;
+	// When sharing the points of an existing mesh, that buffer is already in
+	// world space (the source mesh applied its transform when it was defined)
+	luxrays::ExtTriangleMesh *srcTriMesh = nullptr;
+	luxrays::Transform srcTrans;
+	if (a.pointsIsName) {
+		if (batchLocal) {
+			auto it = batchLocal->find(a.srcMeshName);
+			if (it != batchLocal->end())
+				srcTriMesh = it->second;
+		}
+		if (!srcTriMesh) {
+			// The source-mesh lookup reads the shared mesh cache: lock it (the
+			// source mesh itself is not modified here; it stays alive because the
+			// cache holds it and meshes are not deleted during the export)
+			std::lock_guard<std::recursive_mutex> meshLock(scene->GetSlgScene().MeshDefMutex());
+			auto &srcMesh = scene->GetSlgScene().GetExtMeshes().GetExtMesh(a.srcMeshName);
+			srcTriMesh = dynamic_cast<luxrays::ExtTriangleMesh *>(&srcMesh);
+			if (!srcTriMesh)
+				throw std::runtime_error("Scene.DefineMeshExt: mesh '" + a.srcMeshName +
+					"' used as points source is not a triangle mesh");
+		}
+		sharedPoints = &srcTriMesh->GetVertexBuffer();
+		srcTriMesh->GetLocal2World(0.f, srcTrans);
+	}
+
+	if (sharedPoints == &points)
+		points = dataCopyBuffer<float, 3, luxrays::VertexBuffer>(a.pointsArr, a.meshName, "Points");
+
+	// Triangles (zero-copy: wraps the numpy buffer, kept alive by triOwner)
+	luxrays::TriangleBuffer triangles =
+		dataCopyBufferExternal<luxrays::Triangle::subtype_t, 3, luxrays::TriangleBuffer>(
+			a.tri, std::move(a.triOwner), a.meshName, "Triangles");
+
+	// Normals (zero-copy)
+	luxrays::NormalBuffer normals;
+	if (a.n)
+		normals = dataCopyBufferExternal<float, 3, luxrays::NormalBuffer>(
+			a.n.value(), std::move(a.normalsOwner), a.meshName, "Normals");
+
+	// A zero-copy (WrapExternal) normals buffer always reports
+	// IsShared() == false, so ApplyTransform() below would rotate the
+	// normals in place, i.e. directly inside the caller's numpy array.
+	// When the same array is passed for several submeshes of a
+	// multi-material object (each with the same transformation), the
+	// normals would be rotated once per submesh. Deep-copy the normals
+	// when a transformation will be applied, so the external memory is
+	// never modified.
+	if (normals && a.luxtrans.has_value()) {
+		luxrays::NormalBuffer writableNormals;
+		writableNormals.Set(normals);
+		normals = std::move(writableNormals);
+	}
+
+	// When sharing the points of another mesh, the shared vertex buffer is
+	// already transformed, so ApplyTransform() must not run on the new mesh
+	// (it would transform the shared points a second time). But the new
+	// mesh still needs the source applied transform (used e.g. for
+	// LocalMapping3D) and its normals rotated to world space, exactly like
+	// ApplyTransform() would have done. The normals buffer may wrap
+	// read-only external memory, so deep-copy it before rotating.
+	if (srcTriMesh) {
+		// normals_pretransformed: the caller already rotated the normals
+		// to world space (e.g. BlendLuxCore bakes the transform into the
+		// points itself and pre-rotates the normals in numpy). Skipping
+		// the rotation here also avoids the O(normals) deep copy.
+		if (normals && !a.normals_pretransformed) {
+			luxrays::NormalBuffer writableNormals;
+			writableNormals.Set(normals);
+			normals = std::move(writableNormals);
+			for (u_int i = 0; i < normals.Count(); ++i) {
+				normals[i] *= srcTrans;
+				normals[i] = luxrays::Normalize(normals[i]);
+			}
+		}
+	}
+
+	assert(not a.uvs or a.uvs->GetLayerSize() == sharedPoints->Count());
+	assert(not a.cols or a.cols->GetLayerSize() == sharedPoints->Count());
+	assert(not a.alphas or a.alphas->GetLayerSize() == sharedPoints->Count());
+
+	// Create Mesh (sharing ctor: the vertex buffer storage is shared, not copied)
+	auto newMesh = std::make_unique<luxrays::ExtTriangleMesh>(
+		*sharedPoints,
+		std::move(triangles),
+		std::move(normals),
+		a.uvs,
+		a.cols,
+		a.alphas
+	);
+	newMesh->SetName(a.meshName);
+	if (!a.upairs.empty())
+		newMesh->SetCreases(std::move(a.upairs), std::move(a.weights));
+	if (srcTriMesh)
+		newMesh->SetLocal2World(srcTrans);
+	else if (a.luxtrans.has_value())
+		newMesh->ApplyTransform(a.luxtrans.value());
+
+	// Optional constant per-triangle AOV (e.g. material slot): built and
+	// set here, with the GIL released and before the scene insertion, so
+	// the caller needs no extra SetMeshTriangleAOV round-trip (which would
+	// copy the array under the GIL and take the mesh-def mutex again)
+	if (a.tri_aov_index >= 0) {
+		std::vector<float> aov(triangles.Count(), a.tri_aov_value);
+		newMesh->SetTriAOV((u_int)a.tri_aov_index, std::span<float>(aov.data(), aov.size()));
+	}
+	return newMesh;
+}
+
 static void Scene_DefineMeshExt3(
 	  const SceneImplPtr & scene,
 	  const std::string &meshName,
@@ -1751,141 +1967,77 @@ static void Scene_DefineMeshExt3(
     const std::optional<std::vector<py_float_array>> alpha_layers,
     const std::optional<py_float_array> transformation,
     const std::optional<py::object> crease_pairs,
-    const std::optional<py::object> crease_weights
+    const std::optional<py::object> crease_weights,
+    const bool normals_pretransformed = false,
+    const int tri_aov_index = -1,
+    const float tri_aov_value = 0.0f
 ) {
-	// Points: either a new buffer, or shared from an existing mesh (given by
-	// name). A Buffer copy shares the storage, so building the mesh with the
-	// sharing ctor on *sharedPoints never duplicates the point data.
 	// NOTE: the GIL is released for the buffer copies / mesh build / scene
-	// insertion below, so callers must not invoke scene methods concurrently
-	// from multiple threads.
-	luxrays::VertexBuffer points;
-	const luxrays::VertexBuffer *sharedPoints = &points;
-	py_float_array pointsArr;
-	// When sharing the points of an existing mesh, that buffer is already in
-	// world space (the source mesh applied its transform when it was defined)
-	luxrays::ExtTriangleMesh *srcTriMesh = nullptr;
-	luxrays::Transform srcTrans;
-	if (py::isinstance<py::str>(p)) {
-		const std::string srcMeshName = py::cast<std::string>(p);
-		auto &srcMesh = scene->GetSlgScene().GetExtMeshes().GetExtMesh(srcMeshName);
-		srcTriMesh = dynamic_cast<luxrays::ExtTriangleMesh *>(&srcMesh);
-		if (!srcTriMesh)
-			throw std::runtime_error("Scene.DefineMeshExt: mesh '" + srcMeshName +
-				"' used as points source is not a triangle mesh");
-		sharedPoints = &srcTriMesh->GetVertexBuffer();
-		srcTriMesh->GetLocal2World(0.f, srcTrans);
-	} else {
-		pointsArr = py::cast<py_float_array>(p);
+	// insertion below. Scene mesh definition is serialized by the scene's
+	// mesh-def mutex (slg::Scene::MeshDefMutex, taken inside
+	// SceneImpl::DefineMesh), so this method is safe to call concurrently
+	// from multiple threads as long as no mesh is redefined/deleted while
+	// the export runs.
+	ParsedExtMesh a = parseExtMeshArgs(
+		meshName, p, tri, n ? py::reinterpret_borrow<py::object>(*n) : py::none(), uv_layers, color_layers, alpha_layers,
+		transformation ? py::reinterpret_borrow<py::object>(*transformation) : py::none(),
+		crease_pairs ? *crease_pairs : py::none(),
+		crease_weights ? *crease_weights : py::none(),
+		normals_pretransformed, tri_aov_index, tri_aov_value);
+	Py_BEGIN_ALLOW_THREADS
+	auto newMesh = buildExtMesh(scene, a);
+	// Insert mesh into the scene
+	scene->DefineMesh(std::move(newMesh));
+	Py_END_ALLOW_THREADS
+}
+
+// Batch version of DefineMeshExt: 'payloads' is a list of dicts with the same
+// keys as the DefineMeshExt kwargs (plus optional tri_aov_index/tri_aov_value).
+// One GIL release for the whole batch, and one mesh-def mutex acquisition that
+// covers only the insertions (the builds run lock-free; a submesh referencing
+// the points of an earlier payload of the same batch resolves it batch-locally,
+// without touching the scene cache). Meshes are inserted in list order.
+static void Scene_DefineMeshesExt(const SceneImplPtr &scene, const py::list &payloads) {
+	std::vector<ParsedExtMesh> parsed;
+	parsed.reserve(py::len(payloads));
+	for (py::handle h : payloads) {
+		py::dict d = py::cast<py::dict>(h);
+		parsed.push_back(parseExtMeshArgs(
+			py::cast<std::string>(d["name"]),
+			d["points"], d["triangles"], d["normals"],
+			optLayers(d["uvs"]), optLayers(d["colors"]), optLayers(d["alphas"]),
+			d["transformation"], d["crease_pairs"], d["crease_weights"],
+			py::cast<bool>(d["normals_pretransformed"]),
+			d.contains("tri_aov_index") ? py::cast<int>(d["tri_aov_index"]) : -1,
+			d.contains("tri_aov_value") ? py::cast<float>(d["tri_aov_value"]) : 0.0f));
 	}
-
-	// Optional imported creases: flat (v0, v1) vertex index pairs with one
-	// sharpness weight per pair, in OpenSubdiv units (>= 10 = infinite)
-	std::vector<u_int> upairs;
-	std::vector<float> weights;
-	if (crease_pairs.has_value() && !crease_pairs->is_none()) {
-		std::vector<int> pairs;
-		GetArray<int>(*crease_pairs, pairs, 2);
-		if (crease_weights.has_value() && !crease_weights->is_none())
-			GetArray<float>(*crease_weights, weights);
-		if (weights.size() * 2 != pairs.size()) {
-			if (weights.empty() && !pairs.empty())
-				weights.assign(pairs.size() / 2, 10.f);  // default: infinite crease
-			else
-				throw std::runtime_error(
-					"Scene.DefineMeshExt: crease_pairs and crease_weights size mismatch");
-		}
-		upairs.assign(pairs.begin(), pairs.end());
+	Py_BEGIN_ALLOW_THREADS
+	// Build all meshes first, WITHOUT the mesh-def lock: the build only copies
+	// buffers and constructs mesh objects (the expensive part), and the only
+	// scene access is the shared-points lookup, resolved batch-locally when
+	// the source is an earlier payload of the same batch (BlendLuxCore only
+	// shares points between submeshes of one object, i.e. within one batch).
+	std::vector<luxrays::ExtTriangleMeshUPtr> built;
+	built.reserve(parsed.size());
+	std::unordered_map<std::string, luxrays::ExtTriangleMesh *> builtByName;
+	builtByName.reserve(parsed.size() * 2);
+	for (auto &a : parsed) {
+		auto newMesh = buildExtMesh(scene, a, &builtByName);
+		builtByName.emplace(a.meshName, newMesh.get());
+		built.push_back(std::move(newMesh));
 	}
-
-	std::optional<luxrays::Transform> luxtrans;
-	if (transformation.has_value())
-		luxtrans = luxrays::Transform(transformation.value().data());
-
-	luxrays::TriangleBuffer triangles;
-	luxrays::NormalBuffer normals;
-	// UV/color/alpha layers: zero-copy (wrap the numpy buffers; pyOwner keeps
-	// the arrays alive). Owners are created here, under the GIL, because
-	// incref/decref of Python objects must not happen with the GIL released.
-	auto meshUVs = propCopyExternal<luxrays::UV, 2>(uv_layers, "UVs", meshName);
-	auto meshCols = propCopyExternal<luxrays::Spectrum, 3>(color_layers, "colors", meshName);
-	auto meshAlphas = propCopyExternal<float, 1>(alpha_layers, "alphas", meshName);
-	auto triOwner = pyOwner(tri);
-	auto normalsOwner = n ? pyOwner(n.value()) : nullptr;
+	// One lock for the insertions only: per mesh it is just a cache map
+	// insert + vector push + edit flag (O(1)), so the lock hold time is
+	// negligible and the buffer copies above run lock-free, in parallel
+	// across batches. Insertion in list order keeps shared-points references
+	// valid (the source is inserted first). Recursive mutex: Scene::DefineMesh
+	// re-locking is a no-op on this thread.
 	{
-		Py_BEGIN_ALLOW_THREADS
-		if (sharedPoints == &points)
-			points = dataCopyBuffer< float, 3, luxrays::VertexBuffer > (
-				pointsArr, meshName, "Points"
-			);
-
-		// Triangles (zero-copy: wraps the numpy buffer, kept alive by triOwner)
-		triangles = dataCopyBufferExternal< luxrays::Triangle::subtype_t, 3, luxrays::TriangleBuffer> (
-			tri, std::move(triOwner), meshName, "Triangles"
-		);
-
-		// Normals (zero-copy)
-		if (n)
-			normals = dataCopyBufferExternal< float, 3, luxrays::NormalBuffer > (n.value(), std::move(normalsOwner), meshName, "Normals");
-
-		// A zero-copy (WrapExternal) normals buffer always reports
-		// IsShared() == false, so ApplyTransform() below would rotate the
-		// normals in place, i.e. directly inside the caller's numpy array.
-		// When the same array is passed for several submeshes of a
-		// multi-material object (each with the same transformation), the
-		// normals would be rotated once per submesh. Deep-copy the normals
-		// when a transformation will be applied, so the external memory is
-		// never modified.
-		if (normals && luxtrans.has_value()) {
-			luxrays::NormalBuffer writableNormals;
-			writableNormals.Set(normals);
-			normals = std::move(writableNormals);
-		}
-
-		// When sharing the points of another mesh, the shared vertex buffer is
-		// already transformed, so ApplyTransform() must not run on the new mesh
-		// (it would transform the shared points a second time). But the new
-		// mesh still needs the source applied transform (used e.g. for
-		// LocalMapping3D) and its normals rotated to world space, exactly like
-		// ApplyTransform() would have done. The normals buffer may wrap
-		// read-only external memory, so deep-copy it before rotating.
-		if (srcTriMesh) {
-			if (normals) {
-				luxrays::NormalBuffer writableNormals;
-				writableNormals.Set(normals);
-				normals = std::move(writableNormals);
-				for (u_int i = 0; i < normals.Count(); ++i) {
-					normals[i] *= srcTrans;
-					normals[i] = luxrays::Normalize(normals[i]);
-				}
-			}
-		}
-
-		assert(not bool(meshUVs) or meshUVs->GetLayerSize() == sharedPoints->Count());
-		assert(not bool(meshCols) or meshCols->GetLayerSize() == sharedPoints->Count());
-		assert(not bool(meshAlphas) or meshAlphas->GetLayerSize() == sharedPoints->Count());
-
-		// Create Mesh (sharing ctor: the vertex buffer storage is shared, not copied)
-		auto newMesh = std::make_unique<luxrays::ExtTriangleMesh>(
-			*sharedPoints,
-			std::move(triangles),
-			std::move(normals),
-			meshUVs,
-			meshCols,
-			meshAlphas
-		);
-		newMesh->SetName(meshName);
-		if (!upairs.empty())
-			newMesh->SetCreases(std::move(upairs), std::move(weights));
-		if (srcTriMesh)
-			newMesh->SetLocal2World(srcTrans);
-		else if (luxtrans.has_value())
-			newMesh->ApplyTransform(luxtrans.value());
-
-		// Insert mesh into the scene
-		scene->DefineMesh(std::move(newMesh));
-		Py_END_ALLOW_THREADS
+		std::lock_guard<std::recursive_mutex> batchLock(scene->GetSlgScene().MeshDefMutex());
+		for (auto &m : built)
+			scene->DefineMesh(std::move(m));
 	}
+	Py_END_ALLOW_THREADS
 }
 
 // Number of imported creases (edge sharpness values) of a mesh
@@ -2536,6 +2688,21 @@ PYBIND11_MODULE(pyluxcore, m) {
 	  "(keys, secondary)",
 	  py::arg("keys"), py::arg("secondary") = py::none());
 
+  // C++ port of BlendLuxCore's mesh compute (weld, islands, grouping,
+  // per-submesh gathers): takes the numpy arrays extracted from Blender,
+  // returns (payloads, info) with per-submesh numpy arrays ready for
+  // Scene.DefineMeshExt. Releases the GIL during the computation.
+  m.def("compute_submeshes_c", &compute_submeshes_c,
+	  "Compute submeshes (weld points, varying-data islands, (material,island) "
+	  "grouping, per-submesh varying data) in C++/TBB. Returns (payloads, info)",
+	  py::arg("vertex_points"), py::arg("loop_vertices"), py::arg("loop_normals"),
+	  py::arg("triangle_loops"), py::arg("loop_triangle_materials"),
+	  py::arg("loop_uvs"), py::arg("color_attrs"), py::arg("color_domains"),
+	  py::arg("edge_verts") = py::none(), py::arg("edge_crease") = py::none(),
+	  py::arg("transform") = py::none(),
+	  py::arg("is_viewport_render"), py::arg("use_instancing"),
+	  py::arg("share_points"), py::arg("mesh_key"));
+
   m.def("Init", &LuxCore_Init);
   m.def("Init", &LuxCore_InitDefaultHandler);
   m.def("SetLogHandler", &LuxCore_SetLogHandler);
@@ -2914,7 +3081,19 @@ PYBIND11_MODULE(pyluxcore, m) {
 		py::arg("alphas") = py::none(),
 		py::arg("transformation") = py::none(),
 		py::arg("crease_pairs") = py::none(),
-		py::arg("crease_weights") = py::none()
+		py::arg("crease_weights") = py::none(),
+		py::arg("normals_pretransformed") = false,
+		py::arg("tri_aov_index") = -1,
+		py::arg("tri_aov_value") = 0.0
+	)
+	.def(
+		"DefineMeshesExt",
+		&Scene_DefineMeshesExt,
+		"Batch version of DefineMeshExt: takes a list of payload dicts (same "
+		"keys as the DefineMeshExt kwargs, plus optional tri_aov_index / "
+		"tri_aov_value) and defines them all with one GIL release and one "
+		"mesh-def mutex acquisition",
+		py::arg("payloads")
 	)
 	.def("DefineMeshExt", &Scene_DefineMeshExt1)
 	.def("DefineMeshExt", &Scene_DefineMeshExt2)

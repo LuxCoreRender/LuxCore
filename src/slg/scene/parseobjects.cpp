@@ -16,6 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_for.h>
+
 #include "slg/scene/scene.h"
 #include "slg/utils/filenameresolver.h"
 
@@ -34,51 +37,124 @@ void Scene::ParseObjects(const Properties &props) {
 		return;
 	}
 
-	double lastPrint = WallClockTime();
-	u_int objCount = 0;
+	// Validate the names serially first, so the reported error is the same
+	// as in the serial version
 	for(const string &key: objKeys) {
-		// Extract the object name
 		const string objName = Property::ExtractField(key, 2);
 		if (objName == "")
 			throw runtime_error("Syntax error in " + key);
+	}
 
-		if (objDefs.IsSceneObjectDefined(objName)) {
-			// A replacement for an existing object
-			auto& oldObj = objDefs.GetSceneObject(objName);
-			const bool wasLightSource = oldObj.GetMaterial().IsLightSource();
+	// Some object definitions mutate shared state inside CreateObject or
+	// depend on key order in the define phase (legacy inline meshes call
+	// DefineMesh, bake maps call ImageMapCache::DefineImageMap, redefinitions
+	// delete the old object's triangle lights). If any such object exists,
+	// keep the fully serial path to preserve those semantics exactly.
+	bool serialPath = false;
+	for(const string &key: objKeys) {
+		const string objName = Property::ExtractField(key, 2);
+		const string propName = "scene.objects." + objName;
+		if (objDefs.IsSceneObjectDefined(objName) ||
+				props.IsDefined(propName + ".ply") ||
+				props.IsDefined(propName + ".vertices") ||
+				props.IsDefined(propName + ".bake.combined.file") ||
+				props.IsDefined(propName + ".bake.lightmap.file"))
+			serialPath = true;
+	}
 
-			// Check if the old object was a light source
-			if (wasLightSource) {
-				editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
+	double lastPrint = WallClockTime();
+	u_int objCount = 0;
+	if (!serialPath) {
+		// Create the objects in parallel; define them serially in the
+		// original key order so object insertion order, harlequin IDs and
+		// triangle-light creation order are unchanged. CreateObject only
+		// reads props/materials/meshes at this point.
+		const size_t objTotal = objKeys.size();
+		std::vector<u_int> objIDs(objTotal);
+		for (size_t i = 0; i < objTotal; ++i) {
+			// In order to have harlequin colors with OBJECT_ID output
+			const u_int index = defaultObjectIDIndex++;
+			objIDs[i] = ((u_int)(RadicalInverse(index + 1, 2) * 255.f + .5f)) |
+					(((u_int)(RadicalInverse(index + 1, 3) * 255.f + .5f)) << 8) |
+					(((u_int)(RadicalInverse(index + 1, 5) * 255.f + .5f)) << 16);
+		}
+		std::vector<SceneObjectUPtr> objPtrs(objTotal);
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, objTotal),
+			[&](const tbb::blocked_range<size_t> &r) {
+				for (size_t i = r.begin(); i < r.end(); ++i) {
+					// CreateObject reads extMeshCache (IsExtMeshDefined/GetExtMesh)
+					// and writes it (DefineMesh of instance/motion meshes). The
+					// writes lock MeshDefMutex internally, but the reads must be
+					// under the same lock or they can observe a bimap mid-update
+					// (name present in the object list but not yet in the index)
+					// and wrongly report "Unknown shape".
+					std::lock_guard<std::recursive_mutex> meshLock(MeshDefMutex());
+					objPtrs[i] = CreateObject(objIDs[i], Property::ExtractField(objKeys[i], 2), props);
+				}
+			});
+		for (size_t i = 0; i < objTotal; ++i) {
+			const string objName = Property::ExtractField(objKeys[i], 2);
+			auto [obj, oldObjPtr] = objDefs.DefineSceneObject(std::move(objPtrs[i]));
 
-				// Delete all old triangle lights
-				lightDefs.DeleteLightSourceStartWith(Scene::EncodeTriangleLightNamePrefix(oldObj.GetName()));
+			// Check if it is a light source
+			auto& mat = obj.GetMaterial();
+			if (mat.IsLightSource()) {
+				SDL_LOG("The " << objName << " object is a light sources with " << obj.GetExtMesh().GetTotalTriangleCount() << " triangles");
+
+				objDefs.DefineIntersectableLights(lightDefs, obj);
+			}
+
+			++objCount;
+
+			const double now = WallClockTime();
+			if (now - lastPrint > 2.0) {
+				SDL_LOG("Scene objects count: " << objCount);
+				lastPrint = now;
 			}
 		}
+	} else {
+		for(const string &key: objKeys) {
+			// Extract the object name
+			const string objName = Property::ExtractField(key, 2);
 
-		// In order to have harlequin colors with OBJECT_ID output
-		const u_int index = defaultObjectIDIndex++;
-		const u_int objID = ((u_int)(RadicalInverse(index + 1, 2) * 255.f + .5f)) |
-				(((u_int)(RadicalInverse(index + 1, 3) * 255.f + .5f)) << 8) |
-				(((u_int)(RadicalInverse(index + 1, 5) * 255.f + .5f)) << 16);
-		auto objptr = CreateObject(objID, objName, props);
-		//SceneObjectRef obj = objDefs.DefineSceneObject(objptr);
-		auto [obj, oldObjPtr] = objDefs.DefineSceneObject(std::move(objptr));
+			if (objDefs.IsSceneObjectDefined(objName)) {
+				// A replacement for an existing object
+				auto& oldObj = objDefs.GetSceneObject(objName);
+				const bool wasLightSource = oldObj.GetMaterial().IsLightSource();
 
-		// Check if it is a light source
-		auto& mat = obj.GetMaterial();
-		if (mat.IsLightSource()) {
-			SDL_LOG("The " << objName << " object is a light sources with " << obj.GetExtMesh().GetTotalTriangleCount() << " triangles");
+				// Check if the old object was a light source
+				if (wasLightSource) {
+					editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 
-			objDefs.DefineIntersectableLights(lightDefs, obj);
-		}
+					// Delete all old triangle lights
+					lightDefs.DeleteLightSourceStartWith(Scene::EncodeTriangleLightNamePrefix(oldObj.GetName()));
+				}
+			}
 
-		++objCount;
+			// In order to have harlequin colors with OBJECT_ID output
+			const u_int index = defaultObjectIDIndex++;
+			const u_int objID = ((u_int)(RadicalInverse(index + 1, 2) * 255.f + .5f)) |
+					(((u_int)(RadicalInverse(index + 1, 3) * 255.f + .5f)) << 8) |
+					(((u_int)(RadicalInverse(index + 1, 5) * 255.f + .5f)) << 16);
+			auto objptr = CreateObject(objID, objName, props);
+			//SceneObjectRef obj = objDefs.DefineSceneObject(objptr);
+			auto [obj, oldObjPtr] = objDefs.DefineSceneObject(std::move(objptr));
 
-		const double now = WallClockTime();
-		if (now - lastPrint > 2.0) {
-			SDL_LOG("Scene objects count: " << objCount);
-			lastPrint = now;
+			// Check if it is a light source
+			auto& mat = obj.GetMaterial();
+			if (mat.IsLightSource()) {
+				SDL_LOG("The " << objName << " object is a light sources with " << obj.GetExtMesh().GetTotalTriangleCount() << " triangles");
+
+				objDefs.DefineIntersectableLights(lightDefs, obj);
+			}
+
+			++objCount;
+
+			const double now = WallClockTime();
+			if (now - lastPrint > 2.0) {
+				SDL_LOG("Scene objects count: " << objCount);
+				lastPrint = now;
+			}
 		}
 	}
 	SDL_LOG("Scene objects count: " << objCount);

@@ -79,33 +79,42 @@ void TracePhotonsThread::UniformMutate(RandomGenerator &rndGen, vector<float> &s
 		sample = rndGen.floatValue();
 }
 
-void TracePhotonsThread::Mutate(RandomGenerator &rndGen,
+bool TracePhotonsThread::Mutate(RandomGenerator &rndGen,
 		const vector<float> &currentPathSamples,
 		vector<float> &candidatePathSamples,
 		const float mutationSize) const {
 	assert (candidatePathSamples.size() == currentPathSamples.size());
 	assert (mutationSize != 0.f);
 
+	bool valid = true;
 	for (u_int i = 0; i < currentPathSamples.size(); ++i) {
 		const float deltaU = powf(rndGen.floatValue(), 1.f / mutationSize + 1.f);
 
 		float mutateValue = currentPathSamples[i];
-		if (rndGen.floatValue() < .5f)
+		if (rndGen.floatValue() < .5f) {
 			mutateValue += deltaU;
-		else
+			mutateValue = (mutateValue < 1.f) ? mutateValue : (mutateValue - 1.f);
+		} else {
 			mutateValue -= deltaU;
+			mutateValue = (mutateValue < 0.f) ? (mutateValue + 1.f) : mutateValue;
+		}
 
-		// Wrap into [0, 1): fmod handles any magnitude of deltaU (the old
-		// single +/-1 wrap broke when deltaU >= 1, e.g. when the unclamped
-		// mutationSize drifts non-positive and the powf exponent goes
-		// negative), and numerical precision can still produce exactly 1.f
-		mutateValue -= floorf(mutateValue);
-		// deltaU can be inf (non-positive mutationSize -> negative powf
-		// exponent, powf(0, neg) = inf), and inf - inf = NaN: guard it
-		candidatePathSamples[i] = (mutateValue >= 1.f || !std::isfinite(mutateValue)) ? 0.f : mutateValue;
+		// mutateValue can still be 1.f due to numerical precision problems
+		candidatePathSamples[i] = (mutateValue == 1.f) ? 0.f : mutateValue;
 
-		assert ((candidatePathSamples[i] >= 0.f) && (candidatePathSamples[i] < 1.f));
+		// When the unclamped mutationSize drifts non-positive, the powf
+		// exponent goes negative and deltaU explodes (up to inf): the single
+		// +/-1 wrap then leaves the sample outside [0,1). 2.11.2 release lets
+		// such samples through (its assert is compiled out) and the invalid
+		// path is filtered by the IsValid() check at the photon-deposit site;
+		// here we reject the candidate up front instead, which is equivalent
+		// for the acceptance dynamics but debug-safe. Do NOT wrap with fmod:
+		// that turns the exploded deltaU into a valid random sample (a
+		// metropolis restart) and produces fireflies.
+		if (!(candidatePathSamples[i] >= 0.f && candidatePathSamples[i] < 1.f))
+			valid = false;
 	}
+	return valid;
 }
 
 bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
@@ -433,12 +442,12 @@ void TracePhotonsThread::RenderFunc(std::stop_token stop_token) {
 
 						++uniformCount;
 					} else {
-						// Try a mutation of the current path
-						Mutate(rndGen, currentPathSamples, candidatePathSamples, mutationSize);
+						// Try a mutation of the current path (rejected up front
+						// when a sample is still out of [0,1), see Mutate())
 						++mutatedCount;
-
-						if (TracePhotonPath(rndGen, candidatePathSamples, candidateIndirectPhotons,
-								candidateCausticPhotons)) {
+						if (Mutate(rndGen, currentPathSamples, candidatePathSamples, mutationSize) &&
+								TracePhotonPath(rndGen, candidatePathSamples, candidateIndirectPhotons,
+										candidateCausticPhotons)) {
 							// Add the old current photons (scaled by currentPhotonsScale)
 							AddPhotons(currentPhotonsScale, currentIndirectPhotons, currentCausticPhotons);
 

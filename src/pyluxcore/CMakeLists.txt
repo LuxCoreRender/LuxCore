@@ -28,6 +28,7 @@ include_directories(${PROJECT_SOURCE_DIR}/deps/bcd-1.1/include)
 pybind11_add_module(pyluxcore MODULE
   ${PROJECT_SOURCE_DIR}/src/pyluxcore/pyluxcore.cpp
   ${PROJECT_SOURCE_DIR}/src/pyluxcore/pyluxcoreforblender.cpp
+  ${PROJECT_SOURCE_DIR}/src/pyluxcore/compute_submeshes.cpp
 )
 
 target_link_libraries(pyluxcore PRIVATE

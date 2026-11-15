@@ -23,6 +23,9 @@
 #include <optional>
 #include <typeinfo>
 
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_for.h>
+
 #include "luxrays/core/color/color.h"
 #include "luxrays/usings.h"
 #include "slg/materials/material.h"
@@ -87,8 +90,49 @@ void Scene::ParseMaterials(const Properties &props) {
 		}
 	}
 
+	// Pre-assign the material IDs serially: the ID feeds the harlequin
+	// MATERIAL_ID output, so it must not depend on the scheduling
+	const size_t matCount = matKeys.size();
+	vector<u_int> matIDs(matCount);
+	for (size_t i = 0; i < matCount; ++i)
+		matIDs[i] = defaultMaterialIDIndex++;
+	auto matIDFromIndex = [](const u_int index) {
+		return ((u_int)(RadicalInverse(index + 1, 2) * 255.f + .5f)) |
+				(((u_int)(RadicalInverse(index + 1, 3) * 255.f + .5f)) << 8) |
+				(((u_int)(RadicalInverse(index + 1, 5) * 255.f + .5f)) << 16);
+	};
+
+	// Create the materials in parallel. CreateMaterial only reads props and
+	// the already-parsed texDefs/matDefs (volumes come before materials), and
+	// matDefs is not modified during this phase, so the concurrent reads are
+	// safe. Materials that reference another material by name (mix, twosided,
+	// ...) are created serially in the insert loop below, because their
+	// reference may be defined later in the list
+	vector<MaterialUPtr> newMats(matCount);
+	vector<char> parallelOK(matCount, 0);
+	for (size_t i = 0; i < matCount; ++i) {
+		const string propName = "scene.materials." + Property::ExtractField(matKeys[i], 2);
+		parallelOK[i] = !props.IsDefined(propName + ".material1") &&
+			!props.IsDefined(propName + ".material2") &&
+			!props.IsDefined(propName + ".base") &&
+			!props.IsDefined(propName + ".frontmaterial") &&
+			!props.IsDefined(propName + ".backmaterial");
+	}
+	if (matCount > 1) {
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, matCount),
+			[&](const tbb::blocked_range<size_t> &r) {
+				for (size_t i = r.begin(); i < r.end(); ++i) {
+					if (!parallelOK[i])
+						continue;
+					const string matName = Property::ExtractField(matKeys[i], 2);
+					newMats[i] = CreateMaterial(matIDFromIndex(matIDs[i]), matName, props);
+				}
+			});
+	}
+
 	// Now I can update the materials
-	for(const string &key: matKeys) {
+	for (size_t ki = 0; ki < matCount; ++ki) {
+		const string &key = matKeys[ki];
 		// Extract the material name
 		const string matName = Property::ExtractField(key, 2);
 		if (matName == "")
@@ -101,11 +145,9 @@ void Scene::ParseMaterials(const Properties &props) {
 		}
 
 		// In order to have harlequin colors with MATERIAL_ID output
-		const u_int index = defaultMaterialIDIndex++;
-		const u_int matID = ((u_int)(RadicalInverse(index + 1, 2) * 255.f + .5f)) |
-				(((u_int)(RadicalInverse(index + 1, 3) * 255.f + .5f)) << 8) |
-				(((u_int)(RadicalInverse(index + 1, 5) * 255.f + .5f)) << 16);
-		auto newMat = CreateMaterial(matID, matName, props);
+		auto newMat = std::move(newMats[ki]);
+		if (!newMat)
+			newMat = CreateMaterial(matIDFromIndex(matIDs[ki]), matName, props);
 
 		if (matDefs.IsMaterialDefined(matName)) {
 			//// A replacement for an existing material

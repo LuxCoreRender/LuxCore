@@ -17,6 +17,10 @@
  ***************************************************************************/
 
 #include <memory>
+#include <unordered_set>
+
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_for.h>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -97,6 +101,62 @@ void Scene::ParseTextures(const Properties &props) {
 		return;
 	}
 
+	// Preload all the image map files in parallel: the OIIO decode inside
+	// ImageMapCache::GetImageMap is the expensive part of texture parsing
+	// and each file is independent. The keys are deduped so every file is
+	// loaded exactly once (GetImageMap is thread-safe for distinct keys:
+	// the load runs outside its lock, the cache insert is serialized). The
+	// serial definition loop below then only hits the cache.
+	{
+		struct Preload {
+			string file;
+			ImageMapConfig cfg;
+			bool applyResize;
+		};
+		vector<Preload> preload;
+		std::unordered_set<string> seenKeys;
+		for (const string &key : texKeys) {
+			const string propName = "scene.textures." + Property::ExtractField(key, 2);
+			if (props.Get(Property(propName + ".type")("imagemap")).Get<string>() != "imagemap")
+				continue;
+			const string file = props.Get(Property(propName + ".file")("image.png")).Get<string>();
+			ImageMapConfig cfg(props, propName);
+			if (seenKeys.insert(imgMapCache.GetCacheKey(file, cfg)).second)
+				preload.push_back({file, std::move(cfg), true});
+		}
+		// Also preload the image files referenced directly by light sources
+		// (infinite env maps, projection/emission map files), so they are
+		// decoded in the same parallel batch instead of on first use during
+		// ParseLights. Lights call GetImageMap with applyResizePolicy=false,
+		// and mappoint/mapsphere force float storage (as CreateEmissionMap).
+		for (const string &lkey : props.GetAllUniqueSubNames("scene.lights")) {
+			const string lprop = "scene.lights." + Property::ExtractField(lkey, 2);
+			const string ltype = props.Get(Property(lprop + ".type")("sky2")).Get<string>();
+			if (ltype != "infinite" && ltype != "projection" &&
+					ltype != "mappoint" && ltype != "mapsphere")
+				continue;
+			const string fileSuffix = (ltype == "infinite") ? ".file" : ".mapfile";
+			if (!props.IsDefined(lprop + fileSuffix))
+				continue;
+			const string file = props.Get(Property(lprop + fileSuffix)("")).Get<string>();
+			if (file.empty())
+				continue;
+			ImageMapConfig cfg(props, lprop);
+			if (ltype == "mappoint" || ltype == "mapsphere")
+				cfg.SetStorageType(ImageMapStorage::FLOAT);
+			if (seenKeys.insert(imgMapCache.GetCacheKey(file, cfg)).second)
+				preload.push_back({file, std::move(cfg), false});
+		}
+		if (!preload.empty()) {
+			SDL_LOG("Preloading " << preload.size() << " image map(s) in parallel");
+			tbb::parallel_for(tbb::blocked_range<size_t>(0, preload.size()),
+				[&](const tbb::blocked_range<size_t> &r) {
+					for (size_t i = r.begin(); i < r.end(); ++i)
+						imgMapCache.GetImageMap(preload[i].file, preload[i].cfg, preload[i].applyResize);
+				});
+		}
+	}
+
 	for(const string &key: texKeys) {
 		// Extract the texture name
 		const string texName = Property::ExtractField(key, 2);
@@ -139,7 +199,7 @@ void Scene::ParseTextures(const Properties &props) {
 		}
 	}
 
-	editActions.AddActions(MATERIALS_EDIT | MATERIAL_TYPES_EDIT);
+editActions.AddActions(MATERIALS_EDIT | MATERIAL_TYPES_EDIT);
 }
 
 TextureUPtr Scene::CreateTexture(const string &texName, const Properties &props) {
@@ -709,6 +769,11 @@ Spectrum Scene::GetColor(const luxrays::Property &prop) {
 }
 
 TextureRef Scene::GetTexture(const luxrays::Property &prop) {
+	// The check + implicit definition below mutate texDefs, and this method
+	// is called concurrently from the parallel material creation of
+	// ParseMaterials: serialize it (textures are never deleted during the
+	// parse, so the returned reference stays valid after the unlock)
+	std::lock_guard<std::recursive_mutex> lock(texDefMtx);
 	const string &name = prop.GetValuesString();
 
 	if (texDefs.IsTextureDefined(name))

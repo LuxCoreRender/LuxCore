@@ -19,6 +19,7 @@
 #ifndef _SLG_IMAGEMAPCACHE_H
 #define	_SLG_IMAGEMAPCACHE_H
 
+#include <mutex>
 #include <string>
 #include <vector>
 #include <ranges>
@@ -115,6 +116,12 @@ private:
 	// of ImageMapTexture::randomImageMap, which belongs also to ImageMapTexture
 	// as a class static singleton
 	std::vector<ImageMapSPtr> maps;
+
+	// Guards maps / mapByKey / mapNames / resizePolicyToApply during
+	// concurrent GetImageMap calls (e.g. the parallel image preload of
+	// Scene::ParseTextures): the file load runs outside the lock, only the
+	// lookups and the insert are serialized
+	mutable std::mutex mtx;
 
 	std::unordered_map<std::string, std::reference_wrapper<ImageMap> > mapByKey;
 	// Used to preserve insertion order and to retrieve insertion index

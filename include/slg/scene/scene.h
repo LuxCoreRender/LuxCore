@@ -147,6 +147,14 @@ public:
 
 	ReturnType<ExtMotionTriangleMesh> DefineMesh(ExtMotionTriangleMeshUPtr&& mesh);
 
+	// Serializes mesh definition/AOV mutations (DefineMesh*, SetMesh*AOV,
+	// DeleteUnreferencedMeshes) so that pyluxcore can call them concurrently
+	// from worker threads (the pyluxcore bindings release the GIL around the
+	// C++ calls). Recursive: SceneImpl holds it across the scene-properties
+	// cache invalidation + the slg::Scene call, and the DefineMesh overloads
+	// funnel into each other.
+	std::recursive_mutex &MeshDefMutex() { return meshDefMtx; }
+
 	ReturnType<ExtTriangleMesh> DefineMesh(
 		const std::string &shapeName,
 		luxrays::VertexBuffer&& p,
@@ -322,6 +330,14 @@ protected:
 	// is up to the rendering engine to empty trash bin.
 	std::vector<luxrays::NamedObjectUPtr> trashBin;
 	mutable std::mutex trashMtx;
+
+	// Guards extMeshCache / editActions / objDefs / lightDefs mutations done
+	// by the mesh definition entry points (see MeshDefMutex())
+	mutable std::recursive_mutex meshDefMtx;
+
+	// Guards texDefs during the parallel material creation of ParseMaterials:
+	// Scene::GetTexture implicitly defines constant textures on first use
+	mutable std::recursive_mutex texDefMtx;
 
 	// Subdivided-envelope cache (see GetSubdivEnvelopeCache); mutable because it
 	// is filled lazily from const scene references during shape refinement
