@@ -81,8 +81,16 @@ void Scene::ParseObjects(const Properties &props) {
 		std::vector<SceneObjectUPtr> objPtrs(objTotal);
 		tbb::parallel_for(tbb::blocked_range<size_t>(0, objTotal),
 			[&](const tbb::blocked_range<size_t> &r) {
-				for (size_t i = r.begin(); i < r.end(); ++i)
+				for (size_t i = r.begin(); i < r.end(); ++i) {
+					// CreateObject reads extMeshCache (IsExtMeshDefined/GetExtMesh)
+					// and writes it (DefineMesh of instance/motion meshes). The
+					// writes lock MeshDefMutex internally, but the reads must be
+					// under the same lock or they can observe a bimap mid-update
+					// (name present in the object list but not yet in the index)
+					// and wrongly report "Unknown shape".
+					std::lock_guard<std::recursive_mutex> meshLock(MeshDefMutex());
 					objPtrs[i] = CreateObject(objIDs[i], Property::ExtractField(objKeys[i], 2), props);
+				}
 			});
 		for (size_t i = 0; i < objTotal; ++i) {
 			const string objName = Property::ExtractField(objKeys[i], 2);
