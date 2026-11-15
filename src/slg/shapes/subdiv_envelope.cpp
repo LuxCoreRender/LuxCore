@@ -26,6 +26,7 @@ namespace slg {
 using luxrays::ExtTriangleMesh;
 using luxrays::ExtTriangleMeshUPtr;
 using luxrays::TriangleBuffer;
+using luxrays::Normal;
 using luxrays::NormalBuffer;
 
 //------------------------------------------------------------------------------
@@ -267,8 +268,31 @@ ExtTriangleMeshUPtr FilterByMaterialSlot(
 		triAOVs.SetLayer(l, subset, kept.size());
 	}
 
+	const size_t numPoints = mesh.GetTotalVertexCount();
+
+	// Normals: when the subdivided mesh carries per-corner normals, rebuild
+	// the per-point array from the corners of this slot's own triangles, so a
+	// point shared with another submesh across a shading discontinuity
+	// (crease / sharp edge, as split at Blender mesh import) gets this
+	// side's normal. Otherwise share the per-point array as-is (a copy
+	// shares the storage).
 	NormalBuffer normals;
-	if (mesh.HasNormals())
+	if (corner && !corner->normals.empty()) {
+		normals.Allocate(numPoints);
+		if (mesh.HasNormals()) {
+			const auto src = mesh.GetNormals();
+			for (size_t i = 0; i < numPoints; ++i)
+				normals[i] = src[i];
+		} else {
+			for (size_t i = 0; i < numPoints; ++i)
+				normals[i] = Normal(0.f, 0.f, 0.f);
+		}
+		for (size_t k = 0; k < kept.size(); ++k) {
+			const auto &t = allTris[kept[k]];
+			for (u_int c = 0; c < 3; ++c)
+				normals[t.v[c]] = corner->normals[3 * kept[k] + c];
+		}
+	} else if (mesh.HasNormals())
 		normals = mesh.GetNormals();  // copy shares the storage
 
 	// Per-vertex varying data (UVs, colors, alphas): when the subdivided mesh
@@ -276,7 +300,6 @@ ExtTriangleMeshUPtr FilterByMaterialSlot(
 	// this slot's own triangles, so a point shared with another submesh (seam)
 	// gets this submesh's value. Otherwise share the arrays as-is (a copy
 	// shares the storage): the data is per-point, not per-triangle.
-	const size_t numPoints = mesh.GetTotalVertexCount();
 	luxrays::ExtMeshProp<luxrays::UV> uvs;
 	luxrays::ExtMeshProp<luxrays::Spectrum> cols;
 	luxrays::ExtMeshProp<float> alphas;

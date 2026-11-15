@@ -651,6 +651,78 @@ struct Surface {
 		return std::make_tuple(std::move(tessPositions), std::move(tessNormals));
 	}
 
+	/// Evaluate the limit-surface normal at each tessellated CORNER, using
+	/// the corner's own base face patch (du x dv). Unlike the per-point
+	/// evaluation above, a point shared by several base faces gets one normal
+	/// per incident face side: at a shading discontinuity (crease / sharp
+	/// edge) the two sides of the edge evaluate to different normals, which
+	/// is what allows the resplit per material slot to restore the correct
+	/// side's normal (same discontinuity-driven split as Blender mesh import).
+	///
+	/// @param interpolatedValues Values of the positions at the vertices
+	///							  of the limit surface
+	/// @param cornerCoords Local coordinates of each tessellated corner
+	///					   within its OWN base face (3 * triangle count)
+	///
+	/// @return A buffer of per-corner normals (3 * triangle count)
+	std::unique_ptr<Normal[]> EvaluateCornerNormals(
+		const InterpolatedValues& interpolatedPositions,
+		const std::vector<LocalCoords>& cornerCoords
+	) const {
+
+		const size_t n = cornerCoords.size();
+		auto cornerNormals = std::make_unique<Normal[]>(n);
+
+		const Point* positions = interpolatedPositions.Get<Point>();
+
+		// TBB; per-range weight buffers
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, n, 1024),
+			[&](const tbb::blocked_range<size_t> &r) {
+			std::vector<float> pWeights, duWeights, dvWeights;
+
+			for (size_t i = r.begin(); i < r.end(); ++i) {
+				const auto &coords = cornerCoords[i];
+
+				int ptexFace = ptexIndices->GetFaceId(coords.face);
+
+				Far::PatchTable::PatchHandle const * handle =
+					patchMap->FindPatch(ptexFace, coords.x, coords.y);
+				assert(handle);
+
+				Far::ConstIndexArray cvIndices = patchTable->GetPatchVertices(*handle);
+				const int numCVs = cvIndices.size();
+
+				pWeights.resize(numCVs);
+				duWeights.resize(numCVs);
+				dvWeights.resize(numCVs);
+				patchTable->EvaluateBasis(
+					*handle, coords.x, coords.y,
+					pWeights.data(), duWeights.data(), dvWeights.data()
+				);
+
+				Vector du;
+				du.Clear();
+				Vector dv;
+				dv.Clear();
+
+				for (int cv = 0; cv < numCVs; ++cv) {
+					const Point& position = positions[cvIndices[cv]];
+					du.AddWithWeight(position, duWeights[cv]);
+					dv.AddWithWeight(position, dvWeights[cv]);
+				}
+
+				Normal &t = cornerNormals[i];
+				t = Normal(Cross(du, dv));
+
+				const float length = t.Length();
+				if (length != 0.f)
+					t /= length;
+			}
+		});
+
+		return cornerNormals;
+	}
+
 	///
 	/// Evaluate primvar data at tessellated mesh coordinates
 	///
@@ -973,6 +1045,7 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	// Evaluate positions and normals
 	VertexBuffer tessPoints;
 	NormalBuffer tessNormals;
+	std::unique_ptr<Normal[]> cornerNormals;
 	{
 		// Interpolate positions on subdivided surface
 		auto interpolatedPositions =
@@ -982,7 +1055,16 @@ ExtTriangleMeshUPtr ApplySubdiv(
 		SDL_LOG("Subdivision (enhanced) - Evaluating positions and normals");
 		tie(tessPoints, tessNormals) =
 			surface.EvaluatePositions(interpolatedPositions, tessCoords);
+
+		// Per-corner limit normals, each corner evaluated in its own base
+		// face's patch, so shading discontinuities (creases / sharp edges)
+		// show up as different normals on the two sides of an edge
+		if (outCorner && !cornerCoords.empty())
+			cornerNormals =
+				surface.EvaluateCornerNormals(interpolatedPositions, cornerCoords);
 	}
+	if (outCorner && cornerNormals)
+		outCorner->normals.assign(cornerNormals.get(), cornerNormals.get() + cornerCoords.size());
 
 	// Evaluate other primvars
 	MultiLayerDataEvaluator evaluator(surface, numMeshVertex, tessCoords);
