@@ -672,8 +672,11 @@ bool BiDirCPURenderThread::TraceLightPath(const float time,
 				// Update the new light vertex
 				lightVertex.throughput *= connectionThroughput;
 		
-				// Infinite lights use MIS based on solid angle instead of area
-				if((lightVertex.depth > 1) || !light->IsEnvironmental())
+				// Infinite lights use MIS based on solid angle instead of area; distant
+				// and laser lights emit per area of a disk, so they skip the distance factor too
+				if((lightVertex.depth > 1) || !(light->IsEnvironmental() ||
+						(light->GetType() == TYPE_SHARPDISTANT) || (light->GetType() == TYPE_DISTANT) ||
+						(light->GetType() == TYPE_LASER)))
 					lightVertex.dVCM *= MIS(nextEventRayHit.t * nextEventRayHit.t);
 				const float factor = 1.f / MIS(AbsDot(lightVertex.bsdf.hitPoint.shadeN, lightRay.d));
 				lightVertex.dVCM *= factor;
