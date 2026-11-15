@@ -34,6 +34,12 @@ struct SubdivCornerData {
 	std::vector<std::vector<luxrays::UV>> uvLayers;        // per UV layer
 	std::vector<std::vector<luxrays::Spectrum>> colorLayers;  // per color layer
 	std::vector<std::vector<float>> alphaLayers;           // per alpha layer
+	// Per-corner shading normals of the subdivided mesh (3 * triangle count),
+	// each evaluated in its own base face's patch. At a shading
+	// discontinuity (crease / sharp edge, i.e. where Blender mesh import
+	// splits the normals), the two sides of an edge carry different values,
+	// so the per-slot resplit can give each side its own normal.
+	std::vector<luxrays::Normal> normals;
 };
 
 }
