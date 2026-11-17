@@ -31,12 +31,13 @@ namespace slg {
 
 TessellateShape::TessellateShape(
 	ExtTriangleMeshRef srcMesh,
-	const u_int rate
+	const u_int rate,
+	const bool interpolatedNormals
 ) {
 	const double startTime = WallClockTime();
 
 	if (rate > 0)
-		mesh = ApplyTessellate(srcMesh, rate);
+		mesh = ApplyTessellate(srcMesh, rate, interpolatedNormals);
 	else
 		mesh = srcMesh.Copy();
 
@@ -54,10 +55,11 @@ ExtTriangleMeshUPtr TessellateShape::RefineImpl(SceneConstRef scene) {
 
 ExtTriangleMeshUPtr TessellateShape::ApplyTessellate(
 	ExtTriangleMeshRef srcMesh,
-	const u_int rate
+	const u_int rate,
+	const bool interpolatedNormals
 ) {
 	// Flat (ApplyTessellate) API flavor: mesh in, tessellated mesh out
-	return TessellateTopology(srcMesh, rate);
+	return TessellateTopology(srcMesh, rate, interpolatedNormals);
 }
 
 }  // ~namespace slg

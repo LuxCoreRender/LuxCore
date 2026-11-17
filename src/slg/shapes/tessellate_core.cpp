@@ -361,6 +361,26 @@ TessellateTopologyData(
 
 }
 
+// Collect the present layers of a mesh prop of the source mesh: allocates
+// the destination layer and records the (src, dst) pointer pair used by
+// the interpolation loops. `allocated` keeps the new layers alive until
+// they are attached to the output mesh.
+template <typename T>
+void CollectLayers(
+	const ExtMeshProp<T> &srcProp,
+	const size_t count,
+	std::vector<std::pair<const T *, T *>> &pairs,
+	std::vector<std::pair<u_int, std::shared_ptr<T[]>>> &allocated
+) {
+	for (u_int l = 0; l < EXTMESH_MAX_DATA_COUNT; ++l) {
+		if (!srcProp.LayerHasValues(l))
+			continue;
+		auto dst = std::make_shared<T[]>(count);
+		pairs.emplace_back(srcProp[l].get(), dst.get());
+		allocated.emplace_back(l, std::move(dst));
+	}
+}
+
 }  // ~namespace (local)
 
 // Get number of positions after N-tessellation
@@ -391,10 +411,11 @@ TessellationData TessellateTopology(
 }
 
 // ApplyTessellate (flat) API flavor: mesh in, tessellated mesh out, with
-// barycentrically interpolated positions
+// barycentrically interpolated positions and mesh data
 luxrays::ExtTriangleMeshUPtr TessellateTopology(
 	const ExtTriangleMesh &srcMesh,
-	const size_t N
+	const size_t N,
+	const bool interpolatedNormals
 ) {
 	const auto faces = srcMesh.GetTriangles();
 
@@ -405,26 +426,89 @@ luxrays::ExtTriangleMeshUPtr TessellateTopology(
 		CheckedCount(srcMesh.GetTotalVertexCount()), faces,
 		N, nullptr);
 
-	// 3D positions: barycentric interpolation inside the base triangles
-	// (local coords convention: face vertex 0 -> (0,0), 1 -> (1,0), 2 -> (0,1))
+	// Output vertex data: positions and all per-vertex props (normals, UVs,
+	// colors, alphas, vertex AOVs) are interpolated barycentrically inside
+	// the base triangles (local coords convention: face vertex 0 -> (0,0),
+	// 1 -> (1,0), 2 -> (0,1)). Normals are normalized after interpolation,
+	// unless interpolatedNormals is false: then the output mesh has no
+	// vertex normals and shades flat via the triangle normals.
 	const Points verts = srcMesh.GetVertices();
 	VertexBuffer points(numPoints);
+	NormalBuffer normals;
+	if (interpolatedNormals && srcMesh.HasNormals())
+		normals.Allocate(numPoints);
+	const NormalBuffer &srcNormals = srcMesh.GetNormals();
+
+	std::vector<std::pair<const UV *, UV *>> uvPairs;
+	std::vector<std::pair<u_int, std::shared_ptr<UV[]>>> uvLayers;
+	CollectLayers(srcMesh.GetAllUVs(), numPoints, uvPairs, uvLayers);
+	std::vector<std::pair<const Spectrum *, Spectrum *>> colPairs;
+	std::vector<std::pair<u_int, std::shared_ptr<Spectrum[]>>> colLayers;
+	CollectLayers(srcMesh.GetAllColors(), numPoints, colPairs, colLayers);
+	std::vector<std::pair<const float *, float *>> alphaPairs;
+	std::vector<std::pair<u_int, std::shared_ptr<float[]>>> alphaLayers;
+	CollectLayers(srcMesh.GetAllAlphas(), numPoints, alphaPairs, alphaLayers);
+	std::vector<std::pair<const float *, float *>> vertAOVPairs;
+	std::vector<std::pair<u_int, std::shared_ptr<float[]>>> vertAOVLayers;
+	CollectLayers(srcMesh.vertAOV, numPoints, vertAOVPairs, vertAOVLayers);
+
 	tbb::parallel_for(tbb::blocked_range<u_int>(0, numPoints, 4096),
 		[&](const tbb::blocked_range<u_int> &r) {
 		for (u_int i = r.begin(); i < r.end(); ++i) {
-			const auto &c = coords[i];
+			const LocalCoords &c = coords[i];
 			const Triangle &ft = faces[c.face];
-			const Point &p0 = verts[ft.v[0]];
-			const Point &p1 = verts[ft.v[1]];
-			const Point &p2 = verts[ft.v[2]];
+			const u_int v0 = ft.v[0], v1 = ft.v[1], v2 = ft.v[2];
 			const float b0 = 1.f - c.x - c.y;
-			points[i] = b0 * p0 + c.x * p1 + c.y * p2;
+			points[i] = b0 * verts[v0] + c.x * verts[v1] + c.y * verts[v2];
+			if (normals) {
+				normals[i] = Normalize(
+					srcNormals[v0] * b0 + srcNormals[v1] * c.x + srcNormals[v2] * c.y);
+			}
+			for (const auto &p : uvPairs)
+				p.second[i] = p.first[v0] * b0 + p.first[v1] * c.x + p.first[v2] * c.y;
+			for (const auto &p : colPairs)
+				p.second[i] = p.first[v0] * b0 + p.first[v1] * c.x + p.first[v2] * c.y;
+			for (const auto &p : alphaPairs)
+				p.second[i] = p.first[v0] * b0 + p.first[v1] * c.x + p.first[v2] * c.y;
+			for (const auto &p : vertAOVPairs)
+				p.second[i] = p.first[v0] * b0 + p.first[v1] * c.x + p.first[v2] * c.y;
 		}
 	});
 
-	return std::make_unique<ExtTriangleMesh>(
-		std::move(points), std::move(tris), NormalBuffer()
+	// Per-triangle data: each tessellated triangle lies inside one source
+	// face (source face = t / (N*N)), so triangle AOV layers are broadcast
+	// unchanged. Triangle normals need no work here: Preprocess() recomputes
+	// them from the tessellated (flat) geometry.
+	std::vector<std::pair<const float *, float *>> triAOVPairs;
+	std::vector<std::pair<u_int, std::shared_ptr<float[]>>> triAOVLayers;
+	CollectLayers(srcMesh.triAOV, numTriangles, triAOVPairs, triAOVLayers);
+	if (!triAOVPairs.empty()) {
+		const size_t NN = N * N;
+		tbb::parallel_for(tbb::blocked_range<u_int>(0, numTriangles, 4096),
+			[&](const tbb::blocked_range<u_int> &r) {
+			for (u_int t = r.begin(); t < r.end(); ++t) {
+				const size_t srcFace = t / NN;
+				for (const auto &p : triAOVPairs)
+					p.second[t] = p.first[srcFace];
+			}
+		});
+	}
+
+	auto mesh = std::make_unique<ExtTriangleMesh>(
+		std::move(points), std::move(tris), std::move(normals),
+		nullptr, nullptr, nullptr, srcMesh.GetBevelRadius()
 	);
+	for (const auto &p : uvLayers)
+		mesh->SetUVs(p.first, p.second, numPoints);
+	for (const auto &p : colLayers)
+		mesh->SetColors(p.first, p.second, numPoints);
+	for (const auto &p : alphaLayers)
+		mesh->SetAlphas(p.first, p.second, numPoints);
+	for (const auto &p : vertAOVLayers)
+		mesh->SetVertexAOV(p.first, p.second, numPoints);
+	for (const auto &p : triAOVLayers)
+		mesh->SetTriAOV(p.first, p.second, numTriangles);
+	return mesh;
 }
 
 }  // ~namespace slg

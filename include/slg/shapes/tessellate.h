@@ -32,12 +32,15 @@ namespace slg {
 
 // A standalone shape applying a flat (barycentric) tessellation of the
 // source mesh: each triangle is split in rate^2 triangles, the new points
-// being linearly interpolated inside the source triangles.
+// being linearly interpolated inside the source triangles. All mesh data
+// (UVs, colors, alphas, AOVs, and normals if interpolatedNormals) is
+// tessellated along with the vertices.
 class TessellateShape : public Shape {
 public:
 	TessellateShape(
 		luxrays::ExtTriangleMeshRef srcMesh,
-		const u_int rate
+		const u_int rate,
+		const bool interpolatedNormals = true
 	);
 	virtual ~TessellateShape();
 
@@ -45,7 +48,8 @@ public:
 
 	static luxrays::ExtTriangleMeshUPtr ApplyTessellate(
 		luxrays::ExtTriangleMeshRef srcMesh,
-		const u_int rate
+		const u_int rate,
+		const bool interpolatedNormals = true
 	);
 
 protected:

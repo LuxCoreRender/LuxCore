@@ -488,10 +488,14 @@ ExtTriangleMeshUPtr Scene::CreateShape(
 			throw runtime_error("Unknown shape name in a tessellate shape: " + shapeName);
 
 		const u_int rate = props.Get(Property(propName + ".rate")(4)).Get<u_int>();
+		const bool interpolatedNormals = props.Get(
+			Property(propName + ".interpolatednormals")(true)
+		).Get<bool>();
 
 		shape = std::make_unique<TessellateShape>(
 			getSourceMesh(sourceMeshName),
-			rate
+			rate,
+			interpolatedNormals
 		);
 
 	} else if (shapeType == "displacement") {
