@@ -31,10 +31,11 @@ namespace slg {
 // it builds upon lives in tessellate_core.h.
 
 // A standalone shape applying a flat (barycentric) tessellation of the
-// source mesh: each triangle is split in rate^2 triangles, the new points
-// being linearly interpolated inside the source triangles. All mesh data
-// (UVs, colors, alphas, AOVs, and normals if interpolatedNormals) is
-// tessellated along with the vertices.
+// source mesh: each edge is split into N = 2^rate segments (same convention
+// as the subdivision levels), i.e. each triangle is split in 4^rate
+// triangles, the new points being linearly interpolated inside the source
+// triangles. All mesh data (UVs, colors, alphas, AOVs, and normals if
+// interpolatedNormals) is tessellated along with the vertices.
 class TessellateShape : public Shape {
 public:
 	TessellateShape(

@@ -487,7 +487,9 @@ ExtTriangleMeshUPtr Scene::CreateShape(
 		if (!isSourceDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a tessellate shape: " + shapeName);
 
-		const u_int rate = props.Get(Property(propName + ".rate")(4)).Get<u_int>();
+		// rate is an exponent: each edge is split into N = 2^rate segments
+		// (default rate = 2, i.e. N = 4)
+		const u_int rate = props.Get(Property(propName + ".rate")(2)).Get<u_int>();
 		const bool interpolatedNormals = props.Get(
 			Property(propName + ".interpolatednormals")(true)
 		).Get<bool>();

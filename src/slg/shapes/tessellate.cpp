@@ -18,6 +18,9 @@
 
 #include "slg/shapes/tessellate.h"
 
+#include <stdexcept>
+
+#include "luxrays/utils/strutils.h"
 #include "slg/shapes/tessellate_core.h"
 #include "slg/scene/scene.h"
 
@@ -58,8 +61,16 @@ ExtTriangleMeshUPtr TessellateShape::ApplyTessellate(
 	const u_int rate,
 	const bool interpolatedNormals
 ) {
+	// N = 2^rate segments per edge, same convention as the subdivision
+	// levels (subdiv.cpp uses 1 << maxLevel). The core works in int
+	// internally, so N must stay well below INT_MAX.
+	if (rate > 30)
+		throw std::runtime_error(
+			"Tessellate rate too large (max 30): " + ToString(rate));
+	const size_t N = (size_t)1 << rate;
+
 	// Flat (ApplyTessellate) API flavor: mesh in, tessellated mesh out
-	return TessellateTopology(srcMesh, rate, interpolatedNormals);
+	return TessellateTopology(srcMesh, N, interpolatedNormals);
 }
 
 }  // ~namespace slg
