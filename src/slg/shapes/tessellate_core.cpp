@@ -56,10 +56,15 @@ struct EdgeTable {
 	std::vector<u_int> edgeV0, edgeV1;   // per edge
 	std::vector<u_int> edgeFirstFace;     // per edge: first incident face
 	std::vector<u_int> vertexFirstFace;   // per vertex: first incident face (NO_FACE if none)
-	std::map<std::pair<u_int, u_int>, u_int> edgeIndex;  // sorted vertex pair -> edge
+	// Per face, the edge ids of its 3 sides (side c = (v[c], v[c+1])): a
+	// contiguous array, so the parallel tessellation loops never touch the
+	// node-based map below (random reads)
+	std::vector<u_int> faceEdges;         // 3 entries per face
+	std::map<std::pair<u_int, u_int>, u_int> edgeIndex;  // sorted vertex pair -> edge (construction-time dedup only)
 
 	EdgeTable(u_int numVertices, std::span<const Triangle> faces) {
 		vertexFirstFace.assign(numVertices, NO_FACE);
+		faceEdges.reserve(faces.size() * 3);
 		for (u_int f = 0; f < faces.size(); ++f) {
 			for (u_int c = 0; c < 3; ++c) {
 				const u_int a = faces[f].v[c];
@@ -68,18 +73,18 @@ struct EdgeTable {
 					vertexFirstFace[a] = f;
 				const auto key = std::minmax(a, b);
 				const auto it = edgeIndex.find(key);
-				if (it != edgeIndex.end())
+				if (it != edgeIndex.end()) {
+					faceEdges.push_back(it->second);
 					continue;
-				edgeIndex[key] = numEdges++;
+				}
+				edgeIndex[key] = numEdges;
+				faceEdges.push_back(numEdges);
+				++numEdges;
 				edgeV0.push_back(a);
 				edgeV1.push_back(b);
 				edgeFirstFace.push_back(f);
 			}
 		}
-	}
-
-	u_int FindEdge(u_int v0, u_int v1) const {
-		return edgeIndex.at(std::minmax(v0, v1));
 	}
 };
 
@@ -238,9 +243,28 @@ TessellateTopologyData(
 	// Step #3 - Add interior points
 	tbb::parallel_for(tbb::blocked_range<u_int>(0, numFaces, 256),
 		[&](const tbb::blocked_range<u_int> &r) {
+		// One point map per worker chunk, reused across faces (it is rebuilt
+		// for every face): avoids a heap allocation per face
+		std::vector<u_int> pointMap;  // Map points between local numeration and global one
+		pointMap.reserve((N + 1) * (N + 2) / 2);
 		for (u_int f = r.begin(); f < r.end(); ++f) {  // for each face
 			const Triangle &ft = faces[f];
 			const u_int faceVertices[3] = { ft.v[0], ft.v[1], ft.v[2] };
+
+			// Side edge ids and orientation flips, read from the contiguous
+			// faceEdges/edgeV0 arrays (no map lookup in this loop).
+			// Side 0 = (v0,v1), 1 = (v1,v2), 2 = (v2,v0); pos is measured
+			// from v0 on sides 0 and 2, from v1 on side 1.
+			const u_int sideEdge[3] = {
+				edges.faceEdges[3 * f + 0],
+				edges.faceEdges[3 * f + 1],
+				edges.faceEdges[3 * f + 2]
+			};
+			const bool sideFlip[3] = {
+				edges.edgeV0[sideEdge[0]] != faceVertices[0],
+				edges.edgeV0[sideEdge[1]] != faceVertices[1],
+				edges.edgeV0[sideEdge[2]] != faceVertices[0]
+			};
 
 			// If (i,j) are local coordinates, and edge length is N,
 			// we have in the triangle: i >= 0, j >= 0, i + j <= N
@@ -251,7 +275,7 @@ TessellateTopologyData(
 			// Some of them will be shared with other faces, we'll have to deal
 			// with that.
 
-			std::vector<u_int> pointMap;  // Map points between local numeration and global one
+			pointMap.clear();
 
 			for (int j = 0; j <= (int)N ; ++j) {
 				for (int i = 0; i <= (int)N - j; ++i) {
@@ -262,27 +286,23 @@ TessellateTopologyData(
 						// Vertex point in initial triangle
 						vertex = faceVertices[(i + 2 * j) / (int)N];
 					} else if (i == 0 || j == 0 || k == 0) {  // Edge
-						// Find edge vertices
-						u_int v0, v1;
+						u_int edge;
 						int pos;
-						// Find edge
-						if (i == 0) {
-							v0 = faceVertices[0];
-							v1 = faceVertices[2];
+						if (i == 0) {          // side 2, pos from v0
+							edge = sideEdge[2];
 							pos = j;
-						} else if (j == 0) {
-							v0 = faceVertices[0];
-							v1 = faceVertices[1];
+							if (sideFlip[2])
+								pos = (int)N - pos;
+						} else if (j == 0) {   // side 0, pos from v0
+							edge = sideEdge[0];
 							pos = i;
-						} else if (k == 0) {
-							v0 = faceVertices[1];
-							v1 = faceVertices[2];
+							if (sideFlip[0])
+								pos = (int)N - pos;
+						} else {               // k == 0: side 1, pos from v1
+							edge = sideEdge[1];
 							pos = j;
-						}
-						u_int edge = edges.FindEdge(v0, v1);
-						if (v0 != edges.edgeV0[edge]) {
-							pos = (int)N - pos;
-							std::swap(v0, v1);
+							if (sideFlip[1])
+								pos = (int)N - pos;
 						}
 						vertex = numCoarseVertices + edge * numEdgeInteriorPoints + (pos - 1);
 
