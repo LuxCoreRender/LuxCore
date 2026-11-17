@@ -301,7 +301,9 @@ set(SLG_CORE_SRCS
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/subdiv.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/subdiv_envelope.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/subdiv_old.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shapes/subdiv_tessellate.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/tessellate.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shapes/tessellate_core.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/slg.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/textures/mapping/mapping.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/textures/band.cpp
