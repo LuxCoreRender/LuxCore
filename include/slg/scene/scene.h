@@ -22,6 +22,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <memory>
 #include <mutex>
 #include <unordered_map>
 #include <vector>
@@ -286,6 +287,32 @@ public:
 	std::mutex &GetSubdivEnvelopeMutex() const { return subdivEnvelopeMtx; }
 	void ClearSubdivEnvelopeCache();
 
+	// Displaced-points cache (see GetDisplacementCache): one displaced vertex
+	// buffer per shared source point buffer (+ texture and params), so that
+	// all submeshes of an object sharing one root point buffer get the SAME
+	// displaced points (watertight) instead of per-submesh displaced copies.
+	// Pure runtime cache (not serialized), invalidated when meshes are
+	// (re)defined, like the subdiv envelope cache.
+	auto &GetDisplacementCache() const { return displacementCache; }
+	std::mutex &GetDisplacementMutex() const { return displacementMtx; }
+	void ClearDisplacementCache();
+
+	// Welded-points cache for merge-on-distance (see GetMergeOnDistanceCache):
+	// one clustering + welded point buffer per shared source point buffer (+
+	// tolerance), so that all submeshes of an object sharing one root point
+	// buffer get the SAME welded points (and a downstream shape keyed on that
+	// buffer, e.g. displacement, is shared too). Pure runtime cache (not
+	// serialized), invalidated when meshes are (re)defined, like the subdiv
+	// envelope cache.
+	struct MergeOnDistanceCacheEntry {
+		std::vector<std::vector<size_t>> clusters;  // sorted by root vertex
+		luxrays::VertexBuffer points;               // welded centroids
+		std::vector<size_t> pointMap;               // source vertex -> welded point
+	};
+	auto &GetMergeOnDistanceCache() const { return mergeOnDistanceCache; }
+	std::mutex &GetMergeOnDistanceMutex() const { return mergeOnDistanceMtx; }
+	void ClearMergeOnDistanceCache();
+
 	auto& GetEditActions() { return editActions; }
 	const auto& GetEditActions() const { return editActions; }
 
@@ -343,6 +370,14 @@ protected:
 	// is filled lazily from const scene references during shape refinement
 	mutable std::mutex subdivEnvelopeMtx;
 	mutable std::unordered_map<std::string, SubdivEnvelopeCacheEntry> subdivEnvelopeCache;
+
+	// Displacement cache (see GetDisplacementCache)
+	mutable std::mutex displacementMtx;
+	mutable std::unordered_map<std::string, luxrays::VertexBuffer> displacementCache;
+
+	// Merge-on-distance cache (see GetMergeOnDistanceCache)
+	mutable std::mutex mergeOnDistanceMtx;
+	mutable std::unordered_map<std::string, std::shared_ptr<const MergeOnDistanceCacheEntry>> mergeOnDistanceCache;
 
 	// DataSet ownership is not very clear, we set it shared
 	luxrays::DataSetSPtr dataSet;

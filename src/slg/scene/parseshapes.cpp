@@ -540,7 +540,8 @@ ExtTriangleMeshUPtr Scene::CreateShape(
 		shape = std::make_unique<DisplacementShape>(
 			getSourceMesh(sourceMeshName),
 			tex,
-			params
+			params,
+			*this
 		);
 
 	} else if (shapeType == "harlequin") {
@@ -692,7 +693,8 @@ ExtTriangleMeshUPtr Scene::CreateShape(
 		shape = std::make_unique<MergeOnDistanceShape>(
 			getSourceMesh(sourceMeshName),
 			tolerance,
-			importNormals
+			importNormals,
+			*this
 		);
 	} else
 

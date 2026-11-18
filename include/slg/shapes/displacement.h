@@ -43,8 +43,12 @@ public:
 		bool normalSmooth;
 	} Params;
 
+	// The scene gives access to the displaced-points cache: when several
+	// meshes share one point buffer (all submeshes of an exported object),
+	// the displacement is computed once on that common buffer and the result
+	// is shared, so shared edges stay welded (watertight) after displacement.
 	DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const Texture &dispMap,
-			const Params &params);
+			const Params &params, SceneConstRef scene);
 	virtual ~DisplacementShape();
 
 	virtual ShapeType GetType() const override { return DISPLACEMENT; }

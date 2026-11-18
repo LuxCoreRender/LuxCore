@@ -20,6 +20,9 @@
 // a given threshold
 
 #include <cassert>
+#include <cstdint>
+#include <memory>
+#include <mutex>
 #include <vector>
 #include <cmath>
 #include <algorithm>
@@ -35,6 +38,7 @@
 #include "oneapi/tbb/cache_aligned_allocator.h"
 
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/utils/strutils.h"
 #include "slg/shapes/merge_on_distance.h"
 #include "slg/utils/group_by_equivalence.h"
 #include "slg/scene/scene.h"
@@ -493,40 +497,82 @@ ClusterMap mergePoints(
 }
 
 
-// Recreate a mesh, based on a source mesh and a clusterisation
-// Replace each variable with interpolated value
-luxrays::ExtTriangleMeshUPtr RecreateMesh(
-	const luxrays::ExtTriangleMesh& srcMesh,
-	const ClusterMap& clustermap,
-	bool importNormals
+// Compute the clustering, the welded (merged) points and the source->welded
+// point map of a source mesh. The result is cached on the scene and shared by
+// all the submeshes of an object: they all share one root point buffer, so
+// the clustering is identical and the welded point buffer is stored once (a
+// Buffer copy shares storage), keeping shared edges welded.
+slg::Scene::MergeOnDistanceCacheEntry ComputeWeldedData(
+	const luxrays::ExtTriangleMesh &srcMesh,
+	u_int tolerance
 ) {
 	const auto numPoints = srcMesh.GetTotalVertexCount();
 	const auto srcPoints = srcMesh.GetVertices();
-	const auto numNewPoints = clustermap.size();
 
-	// Nota: we use smart pointers until the creation of the ExtTriangleMesh,
-	// so that the memory is automatically released if something goes wrong in
-	// the process. Please keep it so.
+	ClusterMap clusterMap = mergePoints(srcPoints, numPoints, tolerance, false);
 
-	std::vector<Cluster> clusters;
-	clusters.reserve(numNewPoints);
-	std::transform(
-		std::make_move_iterator(clustermap.begin()),
-		std::make_move_iterator(clustermap.end()),
-		std::back_inserter(clusters),
-		[](auto &kv){ return kv.second;}
+	// Sort the clusters by root vertex, so that the welded point order is
+	// deterministic and can be shared between submeshes
+	std::vector<std::pair<size_t, Cluster>> sortedClusters(
+		std::make_move_iterator(clusterMap.begin()),
+		std::make_move_iterator(clusterMap.end()));
+	std::sort(sortedClusters.begin(), sortedClusters.end(),
+		[](const auto &a, const auto &b) { return a.first < b.first; });
+
+	slg::Scene::MergeOnDistanceCacheEntry welded;
+	welded.clusters.reserve(sortedClusters.size());
+	for (auto &kv : sortedClusters)
+		welded.clusters.emplace_back(kv.second.begin(), kv.second.end());
+
+	const size_t numNewPoints = welded.clusters.size();
+	welded.points = luxrays::VertexBuffer(numNewPoints);
+	welded.pointMap.assign(numPoints, 0);
+
+	// Compute the point map (mapping between old and new points) and the
+	// welded points (centroids)
+	tbb::parallel_for(
+		tbb::blocked_range<size_t>(0, numNewPoints, 1024),
+		[&](const tbb::blocked_range<size_t> &r) {
+			for (size_t newIdx = r.begin(); newIdx != r.end(); ++newIdx) {
+				const auto &cluster = welded.clusters[newIdx];
+				const auto clusterSize = cluster.size();
+				if (!clusterSize) continue;
+
+				for (auto oldIdx : cluster)
+					welded.pointMap[oldIdx] = newIdx;
+
+				welded.points[newIdx] = std::transform_reduce(
+					cluster.cbegin(),
+					cluster.cend(),
+					Point(0, 0, 0),
+					std::plus{},
+					[&srcPoints](auto idx) -> Point { return srcPoints[idx]; }
+				) / clusterSize;
+			}
+		}
 	);
 
-	std::vector<size_t> pointMap(numPoints);
+	return welded;
+}
+
+
+// Recreate a mesh, based on a source mesh and a (cached) welded-points entry.
+// Replace each vertex variable with the interpolated value of its cluster.
+// The welded point buffer is shared with the cache entry (a Buffer copy
+// shares storage); the other vertex data are merged per source mesh.
+luxrays::ExtTriangleMeshUPtr RecreateMesh(
+	const luxrays::ExtTriangleMesh& srcMesh,
+	const slg::Scene::MergeOnDistanceCacheEntry& welded,
+	bool importNormals
+) {
+	const auto numPoints = srcMesh.GetTotalVertexCount();
+	const auto &clusters = welded.clusters;
+	const size_t numNewPoints = clusters.size();
+	const auto &pointMap = welded.pointMap;
 
 	// Allocate mesh data structures
-	// Points
-	luxrays::VertexBuffer newPoints(numNewPoints);
-	//TODO
-	//std::unique_ptr<Point> newPoints{
-		//luxrays::ExtTriangleMesh::AllocVerticesBuffer(numNewPoints)
-	//};
-	//auto newPointsPtr = newPoints.get();
+	// Points: share the cached welded buffer
+	luxrays::VertexBuffer newPoints = welded.points;
 
 	// Normals
 	luxrays::NormalBuffer newNormals;
@@ -585,21 +631,6 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 				const auto& cluster = clusters[newIdx];
 				auto cluster_size = cluster.size();
 				if (!cluster_size) continue;
-
-				// Compute point map (mapping between old and new points)
-				for (auto oldIdx: cluster) {
-					pointMap[oldIdx] = newIdx;
-				}
-
-				// Compute merged points (centroids)
-				Point newPoint = std::transform_reduce(
-					cluster.cbegin(),
-					cluster.cend(),
-					Point(0, 0, 0),
-					std::plus{},
-					[&srcPoints](auto idx) -> Point { return srcPoints[idx]; }
-				) / cluster_size;
-				newPoints[newIdx] = newPoint;
 
 				// Compute merged normals
 				if (importNormals && srcMesh.HasNormals()) {
@@ -768,14 +799,49 @@ namespace slg {
 MergeOnDistanceShape::MergeOnDistanceShape(
 	luxrays::ExtTriangleMeshRef  srcMesh,
 	u_int tolerance,
-	bool importNormals
+	bool importNormals,
+	SceneConstRef scene
 ) {
 
 	SDL_LOG("Merge On Distance - Applying to " << srcMesh.GetName());
 
 	const double startTime = WallClockTime();
 
-	mesh = std::move(ApplyMergeOnDistance(srcMesh, tolerance, importNormals));
+	// Welded-points cache key: the shared source point buffer + the
+	// tolerance. All submeshes of an object share one root point buffer, so
+	// the merge is computed once and the welded points are shared between
+	// the per-submesh result meshes (a Buffer copy shares storage).
+	const std::string cacheKey =
+		luxrays::ToString(reinterpret_cast<uintptr_t>(srcMesh.GetVertexBuffer().Data()))
+		+ "|" + luxrays::ToString(tolerance);
+
+	std::shared_ptr<const Scene::MergeOnDistanceCacheEntry> welded;
+	{
+		std::lock_guard<std::mutex> lock(scene.GetMergeOnDistanceMutex());
+		auto it = scene.GetMergeOnDistanceCache().find(cacheKey);
+		if (it != scene.GetMergeOnDistanceCache().end())
+			welded = it->second;
+	}
+	if (!welded) {
+		// Compute outside the lock (the merge can be expensive); if another
+		// thread inserted the same key meanwhile, adopt its entry so that
+		// all submeshes share the same welded buffer
+		welded = std::make_shared<Scene::MergeOnDistanceCacheEntry>(
+			ComputeWeldedData(srcMesh, tolerance));
+		std::lock_guard<std::mutex> lock(scene.GetMergeOnDistanceMutex());
+		welded = scene.GetMergeOnDistanceCache()
+			.emplace(cacheKey, welded).first->second;
+	}
+
+	mesh = RecreateMesh(srcMesh, *welded, importNormals);
+
+	SDL_LOG(
+		"Merge On Distance - Reduced from "
+		<< srcMesh.GetTotalVertexCount()
+		<< " to "
+		<< mesh->GetTotalVertexCount()
+		<< " vertices"
+	);
 
 	const double endTime = WallClockTime();
 	SDL_LOG(
@@ -794,15 +860,10 @@ MergeOnDistanceShape::ApplyMergeOnDistance(
 ) {
 
 
-	// Get merged points
-	auto clusters = mergePoints(
-		srcMesh.GetVertices(),
-		srcMesh.GetTotalVertexCount(),
-		tolerance,
-		importNormals
-	);
+	// Get merged points (uncached path, kept for direct API users)
+	auto welded = ComputeWeldedData(srcMesh, tolerance);
 
-	auto dstMesh = RecreateMesh(srcMesh, clusters, importNormals);
+	auto dstMesh = RecreateMesh(srcMesh, welded, importNormals);
 
 
 	SDL_LOG(

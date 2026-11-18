@@ -242,8 +242,11 @@ Scene::ReturnType<ExtMesh> Scene::DefineMesh(ExtMeshUPtr&& mesh) {
 	// subdivided envelope is stale. New meshes (initial parse, refined shape
 	// registrations) must NOT clear the cache, or the shared subdiv run would
 	// be lost between the matslot shapes of one source mesh.
-	if (oldMeshPtr)
+	if (oldMeshPtr) {
 		ClearSubdivEnvelopeCache();
+		ClearDisplacementCache();
+		ClearMergeOnDistanceCache();
+	}
 
 	editActions.AddAction(GEOMETRY_EDIT);
 
@@ -629,8 +632,11 @@ void Scene::RemoveUnusedMeshes() {
 	}
 
 	if (deleted) {
-		// Meshes changed: any cached subdivided envelope is stale
+		// Meshes changed: any cached subdivided envelope / displaced
+		// points / welded points are stale
 		ClearSubdivEnvelopeCache();
+		ClearDisplacementCache();
+		ClearMergeOnDistanceCache();
 		editActions.AddAction(GEOMETRY_EDIT);
 	}
 }
@@ -638,6 +644,16 @@ void Scene::RemoveUnusedMeshes() {
 void Scene::ClearSubdivEnvelopeCache() {
 	std::lock_guard<std::mutex> lock(subdivEnvelopeMtx);
 	subdivEnvelopeCache.clear();
+}
+
+void Scene::ClearDisplacementCache() {
+	std::lock_guard<std::mutex> lock(displacementMtx);
+	displacementCache.clear();
+}
+
+void Scene::ClearMergeOnDistanceCache() {
+	std::lock_guard<std::mutex> lock(mergeOnDistanceMtx);
+	mergeOnDistanceCache.clear();
 }
 
 void Scene::DeleteObject(const string &objName) {
