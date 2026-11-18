@@ -25,7 +25,7 @@
 
 namespace slg {
 
-class RandomTriangleAOVShape : public Shape {
+class RandomTriangleAOVShape : public ShapeModifier {
 public:
 	RandomTriangleAOVShape(luxrays::ExtTriangleMeshRef srcMesh,
 			const u_int srcDataIndex, const u_int dstDataIndex);

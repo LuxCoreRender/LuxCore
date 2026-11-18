@@ -215,8 +215,14 @@ private:
 
 class ExtMesh : virtual public Mesh, public NamedObject {
 public:
-	ExtMesh(float bRadius = 0.f) : bevelRadius(bRadius) { }
+	ExtMesh(float bRadius = 0.f, const std::string &shapeName = "") :
+		bevelRadius(bRadius), shapeName(shapeName) { }
 	virtual ~ExtMesh() = default;
+
+	// Name of the slg::Shape this mesh belongs to (empty = not grouped;
+	// Scene::DefineMesh then uses the mesh name as shape name)
+	const std::string &GetShapeName() const { return shapeName; }
+	void SetShapeName(const std::string &n) { shapeName = n; }
 
 	virtual float GetBevelRadius() const { return bevelRadius; }
 	virtual bool IntersectBevel(const luxrays::Ray &ray, const luxrays::RayHit &rayHit,
@@ -270,6 +276,9 @@ public:
 
 protected:
 	float bevelRadius;
+	// Runtime-only (not serialized): on load, DefineMesh re-registers the
+	// mesh into a shape named after the mesh when no shape name is set
+	std::string shapeName;
 
 private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
@@ -289,7 +298,8 @@ public:
 		ExtMeshProp<UV>::Layer meshUVs = nullptr,
 		ExtMeshProp<Spectrum>::Layer meshCols = nullptr,
 		ExtMeshProp<float>::Layer meshAlphas = nullptr,
-		const float bRadius = 0.f
+		const float bRadius = 0.f,
+		const std::string &shapeName = ""
 	);
 	ExtTriangleMesh(
 		VertexBuffer&& meshVertices,

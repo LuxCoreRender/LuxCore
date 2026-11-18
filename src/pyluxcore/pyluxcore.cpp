@@ -2078,6 +2078,16 @@ static void Scene_SetMeshTriangleAOV(
   Py_END_ALLOW_THREADS
 }
 
+static void Scene_SetMeshShapeName(
+    const SceneImplPtr & scene,
+    const std::string &meshName,
+    const std::string &shapeName
+) {
+  Py_BEGIN_ALLOW_THREADS
+  scene->SetMeshShapeName(meshName, shapeName);
+  Py_END_ALLOW_THREADS
+}
+
 static void Scene_SetMeshAppliedTransformation(
     const SceneImplPtr & scene,
     const std::string &meshName,
@@ -3100,6 +3110,7 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def("GetMeshCreaseCount", &Scene_GetMeshCreaseCount, py::arg("name"))
     .def("SetMeshVertexAOV", &Scene_SetMeshVertexAOV)
     .def("SetMeshTriangleAOV", &Scene_SetMeshTriangleAOV)
+    .def("SetMeshShapeName", &Scene_SetMeshShapeName)
     .def("SetMeshAppliedTransformation", &Scene_SetMeshAppliedTransformation)
     .def("SaveMesh", &luxcore::detail::SceneImpl::SaveMesh)
     .def("DefineStrands", &Scene_DefineStrands)

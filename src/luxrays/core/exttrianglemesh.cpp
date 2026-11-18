@@ -132,10 +132,11 @@ ExtTriangleMesh::ExtTriangleMesh(
 	std::shared_ptr<UV[]> mUVs,
 	std::shared_ptr<Spectrum[]> mCols,
 	std::shared_ptr<float[]> mAlphas,
-	const float bRadius
+	const float bRadius,
+	const std::string &shapeName
 ) :
 	TriangleMesh(std::move(meshVertices), std::move(meshTris)),
-	ExtMesh(bRadius),
+	ExtMesh(bRadius, shapeName),
 	bevelCylinders(nullptr),
 	bevelBoundingCylinders(nullptr),
 	bevelBVHArrayNodes(nullptr)

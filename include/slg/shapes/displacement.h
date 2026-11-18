@@ -27,7 +27,7 @@ namespace slg {
 
 class Texture;
 
-class DisplacementShape : public Shape {
+class DisplacementShape : public ShapeModifier {
 public:
 	typedef enum {
 		HIGHT_DISPLACEMENT,
@@ -46,6 +46,13 @@ public:
 	DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const Texture &dispMap,
 			const Params &params);
 	virtual ~DisplacementShape();
+
+	// Shape-level application: the displacement is computed ONCE on the
+	// shape common point buffer and the result submeshes share the displaced
+	// buffer (a Buffer copy shares storage), so shared edges stay welded
+	// (watertight). Normals/UVs are read from the first submesh.
+	static ShapeUPtr ApplyToShape(ShapeConstRef srcShape, const Texture &dispMap,
+			const Params &params, const std::string &resultName);
 
 	virtual ShapeType GetType() const override { return DISPLACEMENT; }
 

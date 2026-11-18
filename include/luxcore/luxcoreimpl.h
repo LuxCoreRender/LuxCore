@@ -358,6 +358,8 @@ public:
 	void SetMeshTriangleAOV(const std::string &meshName,
 		const unsigned int index, std::span<float> data);
 
+	void SetMeshShapeName(const std::string &meshName, const std::string &shapeName);
+
 	void SaveMesh(const std::string &meshName, const std::string &fileName);
 	void DefineStrands(
 		const std::string &shapeName,

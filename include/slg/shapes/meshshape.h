@@ -25,7 +25,7 @@
 
 namespace slg {
 
-class MeshShape : public Shape {
+class MeshShape : public ShapeModifier {
 public:
 	MeshShape(luxrays::ExtTriangleMeshUPtr&& mesh);
 	MeshShape(const std::string &fileName);

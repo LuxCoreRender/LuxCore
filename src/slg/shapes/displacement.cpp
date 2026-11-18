@@ -21,6 +21,8 @@
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/displacement.h"
+#include "slg/scene/shape.h"
+#include "luxrays/utils/strutils.h"
 #include "luxrays/core/trianglemesh.h"
 #include "slg/scene/scene.h"
 
@@ -133,20 +135,16 @@ void ComputeVertexDifferentials(const ExtTriangleMesh &mesh,
 } // namespace
 
 
-DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const Texture &dispMap,
-		const Params &params) {
-	SDL_LOG("Displacement shape " << srcMesh.GetName() << " with texture " << dispMap.GetName());
+namespace {
 
-	// I need vertex normals
-	if (!srcMesh.HasNormals())
-		srcMesh.ComputeNormals();
-
-	// I need vertex UVs for vector displacement
-	if ((params.mapType == VECTOR_DISPLACEMENT) && !srcMesh.HasUVs(params.uvIndex))
-		throw runtime_error("Displacement shape for vector displacement can be used only with mesh having UVs defined");
-
-	const double startTime = WallClockTime();
-
+// Compute the displaced positions of a mesh (height/vector displacement).
+// Runs once per shape: the result is shared by all the submeshes of the
+// result shape (a Buffer copy shares storage).
+static VertexBuffer ComputeDisplacedVertices(
+		luxrays::ExtTriangleMeshRef srcMesh,
+		const Texture &dispMap,
+		const DisplacementShape::Params &params
+) {
 	const u_int vertCount = srcMesh.GetTotalVertexCount();
 	const auto vertices = srcMesh.GetVertices();
 	VertexBuffer newVertices(vertCount);
@@ -220,7 +218,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 		hitPoint.throughShadowTransparency = false;
 
 		Vector disp;
-		if (params.mapType == HIGHT_DISPLACEMENT)
+		if (params.mapType == DisplacementShape::HIGHT_DISPLACEMENT)
 			disp = (dispMap.GetFloatValue(hitPoint) * params.scale + params.offset) *
 					Vector(hitPoint.shadeN);
 		else {
@@ -246,6 +244,28 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 		newVertices[i] = vertices[i] + disp;
 	});
 
+	return newVertices;
+}
+
+}  // namespace
+
+
+DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const Texture &dispMap,
+		const Params &params) {
+	SDL_LOG("Displacement shape " << srcMesh.GetName() << " with texture " << dispMap.GetName());
+
+	// I need vertex normals
+	if (!srcMesh.HasNormals())
+		srcMesh.ComputeNormals();
+
+	// I need vertex UVs for vector displacement
+	if ((params.mapType == VECTOR_DISPLACEMENT) && !srcMesh.HasUVs(params.uvIndex))
+		throw runtime_error("Displacement shape for vector displacement can be used only with mesh having UVs defined");
+
+	const double startTime = WallClockTime();
+
+	VertexBuffer newVertices = ComputeDisplacedVertices(srcMesh, dispMap, params);
+
 	// Make a copy of the original mesh and overwrite vertex information
 	//
 	// The source normals are copied only if they are not about to be entirely
@@ -266,6 +286,53 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 
 	const double endTime = WallClockTime();
 	SDL_LOG("Displacement time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");
+}
+
+ShapeUPtr DisplacementShape::ApplyToShape(
+		ShapeConstRef srcShape,
+		const Texture &dispMap,
+		const Params &params,
+		const std::string &resultName
+) {
+	SDL_LOG("Displacement shape " << resultName << " with texture " << dispMap.GetName());
+
+	if (srcShape.GetSubmeshCount() == 0)
+		throw runtime_error("Displacement shape on an empty shape: " + resultName);
+
+	// Normals/UVs are read from the first submesh; the displaced positions
+	// are computed ONCE on the shape common point buffer (shared with the
+	// first submesh buffer) and shared by all result submeshes, so shared
+	// edges stay welded (watertight)
+	ExtTriangleMesh &srcMesh = srcShape.GetSubmeshes()[0].get();
+	if (!srcMesh.HasNormals())
+		srcMesh.ComputeNormals();
+	if ((params.mapType == VECTOR_DISPLACEMENT) && !srcMesh.HasUVs(params.uvIndex))
+		throw runtime_error("Displacement shape for vector displacement can be used only with mesh having UVs defined");
+
+	VertexBuffer newVertices = ComputeDisplacedVertices(srcMesh, dispMap, params);
+
+	auto result = std::make_unique<Shape>(resultName, newVertices);
+	const bool single = srcShape.GetSubmeshCount() == 1;
+	u_int k = 0;
+	for (auto &sm : srcShape.GetSubmeshes()) {
+		ExtTriangleMesh &m = sm.get();
+		auto mesh = m.Copy(
+			VertexBuffer(newVertices),  // copy: shares the displaced buffer storage
+			std::nullopt,
+			params.normalSmooth ? std::optional<NormalBuffer>(NormalBuffer()) : std::nullopt,
+			std::nullopt,
+			std::nullopt,
+			std::nullopt
+		);
+		if (params.normalSmooth)
+			mesh->ComputeNormals();
+		mesh->SetName(single ? resultName : resultName + "i" + ToString(k));
+		mesh->SetShapeName(resultName);
+		result->AddSubmesh(std::move(mesh));
+		++k;
+	}
+
+	return result;
 }
 
 DisplacementShape::~DisplacementShape() {

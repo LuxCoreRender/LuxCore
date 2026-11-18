@@ -36,7 +36,7 @@ enum class SubdivCreaseMode {
 	            // falls back to NONE when the mesh carries no crease data
 };
 
-class SubdivShape : public Shape {
+class SubdivShape : public ShapeModifier {
 public:
 	SubdivShape(
 		CameraConstPtr camera,

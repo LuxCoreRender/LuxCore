@@ -22,7 +22,7 @@
 
 namespace slg {
 
-class MergeOnDistanceShape : public Shape {
+class MergeOnDistanceShape : public ShapeModifier {
 public:
 	MergeOnDistanceShape(
 		luxrays::ExtTriangleMeshRef srcMesh,
@@ -37,6 +37,16 @@ public:
 		luxrays::ExtTriangleMeshRef srcMesh,
 		u_int tolerance,
 		bool importNormals
+	);
+
+	// Shape-level application: the merge is computed ONCE on the shape
+	// common point buffer and the welded buffer is shared by all result
+	// submeshes (a Buffer copy shares storage), so shared edges stay welded
+	static ShapeUPtr ApplyToShape(
+		ShapeConstRef srcShape,
+		u_int tolerance,
+		bool importNormals,
+		const std::string &resultName
 	);
 
 protected:

@@ -30,7 +30,7 @@ namespace slg {
 
 // The former "simple" (uniform, non-adaptive) subdivision path, kept as a
 // distinct shape for backward compatibility
-class SubdivOldShape : public Shape {
+class SubdivOldShape : public ShapeModifier {
 public:
 	SubdivOldShape(
 		luxrays::ExtTriangleMeshRef srcMesh,

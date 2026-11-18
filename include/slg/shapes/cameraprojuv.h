@@ -25,7 +25,7 @@
 
 namespace slg {
 
-class CameraProjUVShape : public Shape {
+class CameraProjUVShape : public ShapeModifier {
 public:
 	CameraProjUVShape(luxrays::ExtTriangleMeshConstRef mesh, const u_int uvIndex);
 	virtual ~CameraProjUVShape();

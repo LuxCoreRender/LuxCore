@@ -36,7 +36,7 @@ namespace slg {
 // triangles, the new points being linearly interpolated inside the source
 // triangles. All mesh data (UVs, colors, alphas, AOVs, and normals if
 // interpolatedNormals) is tessellated along with the vertices.
-class TessellateShape : public Shape {
+class TessellateShape : public ShapeModifier {
 public:
 	TessellateShape(
 		luxrays::ExtTriangleMeshRef srcMesh,

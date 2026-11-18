@@ -104,15 +104,15 @@ void Scene::ParseShapes(const Properties &props) {
 	// via texDefMtx, the subdiv envelope cache). The DefineMesh calls stay
 	// serial, in the original key order, so mesh insertion order -- and
 	// therefore mesh indices -- are unchanged.
-	vector<ExtTriangleMeshUPtr> meshes(shapeTotal);
-	vector<std::mutex> meshMutexes(shapeTotal);
+	vector<ShapeUPtr> shapes(shapeTotal);
+	vector<std::mutex> shapeMutexes(shapeTotal);
 	std::function<void(size_t)> createShape = [&](size_t i) {
-		std::lock_guard<std::mutex> lock(meshMutexes[i]);
-		if (meshes[i])
+		std::lock_guard<std::mutex> lock(shapeMutexes[i]);
+		if (shapes[i])
 			return;
 		for (size_t d: deps[i])
 			createShape(d);
-		meshes[i] = CreateShape(shapeNames[i], props, &meshes, &shapeIndex);
+		shapes[i] = CreateShapeModifier(shapeNames[i], props, &shapes, &shapeIndex);
 	};
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, shapeTotal),
 		[&](const tbb::blocked_range<size_t> &r) {
@@ -124,7 +124,12 @@ void Scene::ParseShapes(const Properties &props) {
 	double lastPrint = startTime;
 	u_int shapeCount = 0;
 	for (size_t i = 0; i < shapeTotal; ++i) {
-		DefineMesh(std::move(meshes[i]));
+		// Define the result submesh meshes (serial, in the original key
+		// order, so mesh indices are unchanged), then the result shape
+		ShapeUPtr &shape = shapes[i];
+		for (auto &mesh : shape->ReleaseOwnedMeshes())
+			DefineMesh(std::move(mesh));
+		DefineShape(std::move(shape));
 		++shapeCount;
 
 		const double now = WallClockTime();
@@ -206,39 +211,113 @@ ExtTriangleMeshUPtr Scene::CreateInlinedMesh(const string &shapeName, const stri
 	);
 }
 
-ExtTriangleMeshUPtr Scene::CreateShape(
+ShapeUPtr Scene::CreateShapeModifier(
 	const string &shapeName,
 	const Properties &props,
-	const std::vector<ExtTriangleMeshUPtr> *blockMeshes,
+	const std::vector<ShapeUPtr> *blockShapes,
 	const std::unordered_map<std::string, size_t> *blockIndex
 ) {
 	const string propName = "scene.shapes." + shapeName;
 
-	// Source meshes of the same ParseShapes block being created in parallel
-	// are resolved from blockMeshes (only already-created ones); the rest
-	// come from the ext mesh cache
-	auto isSourceDefined = [&](const string &name) {
+	// The source of a shape modifier is a Shape (a group of submeshes), not
+	// a submesh. Source shapes of the same ParseShapes block being created
+	// in parallel are resolved from blockShapes (only already-created
+	// ones); the rest come from the shape cache
+	auto isSourceShapeDefined = [&](const string &name) {
 		if (blockIndex) {
 			const auto it = blockIndex->find(name);
 			if (it != blockIndex->end())
-				return (*blockMeshes)[it->second] != nullptr;
+				return (*blockShapes)[it->second] != nullptr;
 		}
-		return extMeshCache.IsExtMeshDefined(name);
+		return shapeDefs.IsShapeDefined(name);
 	};
-	auto getSourceMesh = [&](const string &name) -> ExtTriangleMesh& {
+	auto getSourceShape = [&](const string &name) -> Shape& {
 		if (blockIndex) {
 			const auto it = blockIndex->find(name);
-			if (it != blockIndex->end() && (*blockMeshes)[it->second])
-				return *(*blockMeshes)[it->second];
+			if (it != blockIndex->end() && (*blockShapes)[it->second])
+				return *(*blockShapes)[it->second];
 		}
-		return static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(name));
+		return shapeDefs.GetShape(name);
 	};
 
 	// Get the shape type
 	const string shapeType = props.Get(Property(propName + ".type")("mesh")).Get<string>();
+	const string sourceName = props.Get(Property(propName + ".source")("")).Get<string>();
 
-	// Define the shape
-	ShapeUPtr shape;
+	// Vertex-level modifiers (displacement, merge on distance) are applied
+	// ONCE on the source shape, on its common point buffer: all the result
+	// submeshes share the same displaced/welded buffer, so shared edges stay
+	// welded (watertight)
+	if (shapeType == "displacement") {
+		if (!isSourceShapeDefined(sourceName))
+			throw runtime_error("Unknown shape name in a displacement shape: " + shapeName);
+
+		auto& tex = GetTexture(props.Get(Property(propName + ".map")(0.f)));
+
+		DisplacementShape::Params params;
+
+		const string vectorSpaceStr =
+			props.Get(Property(propName + ".map.type")("height")).Get<string>();
+		if (vectorSpaceStr == "height")
+			params.mapType = DisplacementShape::HIGHT_DISPLACEMENT;
+		else if (vectorSpaceStr == "vector")
+			params.mapType = DisplacementShape::VECTOR_DISPLACEMENT;
+		else
+			throw runtime_error("Unknown map type in displacement shape: " + shapeName);
+
+		// Blender standard: R is an offset along
+		// the tangent, G along the normal and B along the bitangent.
+		// So map.channels = 2 0 1
+		//
+		// Mudbox standard: map.channels = 0 2 1
+		const Property defaultPropChannels = Property(propName + ".map.channels")(2u, 0u, 1u);
+		const Property propChannels = props.Get(defaultPropChannels);
+		if (propChannels.GetSize() != 3)
+			throw runtime_error("Wrong number of map channel indices in a displacement shape: " + shapeName);
+		params.mapChannels[0] = Min(propChannels.Get<u_int>(0), 2u);
+		params.mapChannels[1] = Min(propChannels.Get<u_int>(1), 2u);
+		params.mapChannels[2] = Min(propChannels.Get<u_int>(2), 2u);
+
+		params.scale = props.Get(Property(propName + ".scale")(1.f)).Get<double>();
+		params.offset = props.Get(Property(propName + ".offset")(0.f)).Get<double>();
+		params.uvIndex = Clamp(props.Get(Property(propName + ".uvindex")(0)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+		params.normalSmooth = props.Get(Property(propName + ".normalsmooth")(true)).Get<bool>();
+
+		return DisplacementShape::ApplyToShape(
+			getSourceShape(sourceName),
+			tex,
+			params,
+			shapeName
+		);
+	}
+
+	if (shapeType == "mergeondistance") {
+		if (!isSourceShapeDefined(sourceName))
+			throw runtime_error(
+				"Unknown source shape name '" + sourceName + "'"
+				+ "in mergeondistance shape '" + shapeName + "'"
+			);
+
+		const u_int tolerance = Clamp(
+			props.Get(Property(propName + ".tolerance")(1)).Get<u_int>(),
+			1u,
+			std::numeric_limits<u_int>::max()
+		);
+
+		bool importNormals = props.Get(Property(propName + ".importnormals")(false)).Get<bool>();
+
+		return MergeOnDistanceShape::ApplyToShape(
+			getSourceShape(sourceName),
+			tolerance,
+			importNormals,
+			shapeName
+		);
+	}
+
+	// Mesh-level modifiers are applied per submesh of the source shape; the
+	// results are grouped into the result shape
+	auto createModifier = [&](ExtTriangleMesh *srcMesh) -> ShapeModifierUPtr {
+	ShapeModifierUPtr shape;
 
 	if (shapeType == "mesh") {
 
@@ -286,7 +365,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(
 			Property(propName + ".source")("")
 		).Get<string>();
 
-		if (!isSourceDefined(sourceMeshName))
+		if (!isSourceShapeDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a pointiness shape: " + shapeName);
 
 		const u_int aovIndex = props.Get(
@@ -300,7 +379,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(
 			);
 
 		shape = std::make_unique<PointinessShape>(
-			getSourceMesh(sourceMeshName),
+			*srcMesh,
 			aovIndex
 		);
 
@@ -393,15 +472,13 @@ ExtTriangleMeshUPtr Scene::CreateShape(
 				const auto name = props.Get(
 					Property(prefix + ".shape")("shape")
 				).Get<string>();
-				if (!isSourceDefined(name))
+				if (!isSourceShapeDefined(name))
 					throw runtime_error(
 						"Unknown shape name in a group shape " + shapeName + ": " + name
 					);
 
-				//auto& mesh = static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(name));
-				meshes.emplace_back(
-					dynamic_cast<const ExtTriangleMesh&>(getSourceMesh(name))
-				);
+				for (auto &sub : getSourceShape(name).GetSubmeshes())
+					meshes.emplace_back(sub.get());
 
 				if (props.IsDefined(prefix + ".transformation")) {
 					const Matrix4x4 mat = props.Get(
@@ -424,7 +501,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(
 			Property(propName + ".source")("")
 		).Get<string>();
 
-		if (!isSourceDefined(sourceMeshName))
+		if (!isSourceShapeDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a subdiv shape: " + shapeName);
 
 		const u_int maxLevel = props.Get(Property(propName + ".maxlevel")(2)).Get<u_int>();
@@ -453,7 +530,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(
 		shape = std::make_unique<SubdivShape>(
 			//camera,
 			CameraPtr(&GetCamera()),
-			getSourceMesh(sourceMeshName),
+			*srcMesh,
 			maxLevel,
 			maxEdgeScreenSize,
 			sharpnessThresholdRadians,
@@ -468,13 +545,13 @@ ExtTriangleMeshUPtr Scene::CreateShape(
 			Property(propName + ".source")("")
 		).Get<string>();
 
-		if (!isSourceDefined(sourceMeshName))
+		if (!isSourceShapeDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a subdiv_old shape: " + shapeName);
 
 		const u_int maxLevel = props.Get(Property(propName + ".maxlevel")(2)).Get<u_int>();
 
 		shape = std::make_unique<SubdivOldShape>(
-			getSourceMesh(sourceMeshName),
+			*srcMesh,
 			maxLevel
 		);
 
@@ -484,7 +561,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(
 			Property(propName + ".source")("")
 		).Get<string>();
 
-		if (!isSourceDefined(sourceMeshName))
+		if (!isSourceShapeDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a tessellate shape: " + shapeName);
 
 		// rate is an exponent: each edge is split into N = 2^rate segments
@@ -495,52 +572,9 @@ ExtTriangleMeshUPtr Scene::CreateShape(
 		).Get<bool>();
 
 		shape = std::make_unique<TessellateShape>(
-			getSourceMesh(sourceMeshName),
+			*srcMesh,
 			rate,
 			interpolatedNormals
-		);
-
-	} else if (shapeType == "displacement") {
-
-		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
-		if (!isSourceDefined(sourceMeshName))
-			throw runtime_error("Unknown shape name in a displacement shape: " + shapeName);
-
-		auto& tex = GetTexture(props.Get(Property(propName + ".map")(0.f)));
-
-		DisplacementShape::Params params;
-
-		const string vectorSpaceStr =
-			props.Get(Property(propName + ".map.type")("height")).Get<string>();
-		if (vectorSpaceStr == "height")
-			params.mapType = DisplacementShape::HIGHT_DISPLACEMENT;
-		else if (vectorSpaceStr == "vector")
-			params.mapType = DisplacementShape::VECTOR_DISPLACEMENT;
-		else
-			throw runtime_error("Unknown map type in displacement shape: " + shapeName);
-
-		// Blender standard: R is an offset along
-		// the tangent, G along the normal and B along the bitangent.
-		// So map.channels = 2 0 1
-		//
-		// Mudbox standard: map.channels = 0 2 1
-		const Property defaultPropChannels = Property(propName + ".map.channels")(2u, 0u, 1u);
-		const Property propChannels = props.Get(defaultPropChannels);
-		if (propChannels.GetSize() != 3)
-			throw runtime_error("Wrong number of map channel indices in a displacement shape: " + shapeName);
-		params.mapChannels[0] = Min(propChannels.Get<u_int>(0), 2u);
-		params.mapChannels[1] = Min(propChannels.Get<u_int>(1), 2u);
-		params.mapChannels[2] = Min(propChannels.Get<u_int>(2), 2u);
-
-		params.scale = props.Get(Property(propName + ".scale")(1.f)).Get<double>();
-		params.offset = props.Get(Property(propName + ".offset")(0.f)).Get<double>();
-		params.uvIndex = Clamp(props.Get(Property(propName + ".uvindex")(0)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
-		params.normalSmooth = props.Get(Property(propName + ".normalsmooth")(true)).Get<bool>();
-
-		shape = std::make_unique<DisplacementShape>(
-			getSourceMesh(sourceMeshName),
-			tex,
-			params
 		);
 
 	} else if (shapeType == "harlequin") {
@@ -548,13 +582,13 @@ ExtTriangleMeshUPtr Scene::CreateShape(
 		const string sourceMeshName = props.Get(
 			Property(propName + ".source")("")
 		).Get<string>();
-		if (!isSourceDefined(sourceMeshName))
+		if (!isSourceShapeDefined(sourceMeshName))
 			throw runtime_error(
 				"Unknown shape name in a harlequin shape: " + shapeName
 			);
 
 		shape = std::make_unique<HarlequinShape>(
-			getSourceMesh(sourceMeshName)
+			*srcMesh
 		);
 
 	} else if (shapeType == "simplify_old") {
@@ -563,7 +597,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(
 		const string sourceMeshName = props.Get(
 			Property(propName + ".source")("")
 		).Get<string>();
-		if (!isSourceDefined(sourceMeshName))
+		if (!isSourceShapeDefined(sourceMeshName))
 			throw runtime_error(
 				"Unknown shape name in a simplify_old shape: " + shapeName
 			);
@@ -582,7 +616,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(
 
 		shape = std::make_unique<SimplifyShape>(
 			CameraPtr(&GetCamera()),
-			getSourceMesh(sourceMeshName),
+			*srcMesh,
 			target,
 			edgeScreenSize,
 			preserveBorder
@@ -592,7 +626,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(
 		const string sourceMeshName = props.Get(
 			Property(propName + ".source")("")
 		).Get<string>();
-		if (!isSourceDefined(sourceMeshName))
+		if (!isSourceShapeDefined(sourceMeshName))
 			throw runtime_error(
 				"Unknown shape name in a simplify shape: " + shapeName
 			);
@@ -611,7 +645,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(
 
 		shape = std::make_unique<SimplifyShape2>(
 			CameraPtr(&GetCamera()),
-			getSourceMesh(sourceMeshName),
+			*srcMesh,
 			target,
 			edgeScreenSize,
 			preserveBorder
@@ -622,25 +656,25 @@ ExtTriangleMeshUPtr Scene::CreateShape(
 		const string sourceMeshName = props.Get(
 			Property(propName + ".source")("")
 		).Get<string>();
-		if (!isSourceDefined(sourceMeshName))
+		if (!isSourceShapeDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a islandaov shape: " + shapeName);
 
 		const u_int dataIndex = Clamp(props.Get(Property(propName + ".dataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 		
-		shape = std::make_unique<IslandAOVShape>(getSourceMesh(sourceMeshName), dataIndex);
+		shape = std::make_unique<IslandAOVShape>(*srcMesh, dataIndex);
 	} else if (shapeType == "randomtriangleaov") {
 		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
-		if (!isSourceDefined(sourceMeshName))
+		if (!isSourceShapeDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a randomtriangleaov shape: " + shapeName);
 
 		const u_int srcDataIndex = Clamp(props.Get(Property(propName + ".srcdataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 		const u_int dstDataIndex = Clamp(props.Get(Property(propName + ".dstdataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 
-		shape = std::make_unique<RandomTriangleAOVShape>(getSourceMesh(sourceMeshName),
+		shape = std::make_unique<RandomTriangleAOVShape>(*srcMesh,
 				srcDataIndex, dstDataIndex);
 	} else if (shapeType == "edgedetectoraov") {
 		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
-		if (!isSourceDefined(sourceMeshName))
+		if (!isSourceShapeDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a edgedetectoraov shape: " + shapeName);
 
 		const u_int aovIndex0 = props.Get(Property(propName + ".aovindex0")(0)).Get<u_int>();
@@ -655,52 +689,61 @@ ExtTriangleMeshUPtr Scene::CreateShape(
 		if (aovIndex2 >= EXTMESH_MAX_DATA_COUNT)
 			throw runtime_error("Edgedetectoraov aov index 2 must be less than: " + ToString(EXTMESH_MAX_DATA_COUNT));
 
-		shape = std::make_unique<EdgeDetectorAOVShape>(getSourceMesh(sourceMeshName),
+		shape = std::make_unique<EdgeDetectorAOVShape>(*srcMesh,
 				aovIndex0, aovIndex1, aovIndex2);
 	} else if (shapeType == "bevel") {
 		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
-		if (!isSourceDefined(sourceMeshName))
+		if (!isSourceShapeDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a bevel shape: " + shapeName);
 
 		const float geometryBevel = props.Get(Property(propName + ".bevel.radius")(0.f)).Get<double>();
 
-		shape = std::make_unique<BevelShape>(getSourceMesh(sourceMeshName), geometryBevel);
+		shape = std::make_unique<BevelShape>(*srcMesh, geometryBevel);
 	} else if (shapeType == "cameraprojuv") {
 		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
-		if (!isSourceDefined(sourceMeshName))
+		if (!isSourceShapeDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a cameraprojuv shape: " + shapeName);
 
 		const u_int uvIndex = Clamp(props.Get(Property(propName + ".uvindex")(0)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 
-		shape = std::make_unique<CameraProjUVShape>(getSourceMesh(sourceMeshName), uvIndex);
-	} else if (shapeType == "mergeondistance") {
-		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
-		if (!isSourceDefined(sourceMeshName))
-			throw runtime_error(
-				"Unknown source shape name '" + sourceMeshName + "'"
-				+ "in mergeondistance shape '" + shapeName + "'"
-			);
-
-		const u_int tolerance = Clamp(
-			props.Get(Property(propName + ".tolerance")(1)).Get<u_int>(),
-			1u,
-			std::numeric_limits<u_int>::max()
-		);
-
-		bool importNormals = props.Get(Property(propName + ".importnormals")(false)).Get<bool>();
-
-		shape = std::make_unique<MergeOnDistanceShape>(
-			getSourceMesh(sourceMeshName),
-			tolerance,
-			importNormals
-		);
+		shape = std::make_unique<CameraProjUVShape>(*srcMesh, uvIndex);
 	} else
 
 		throw runtime_error("Unknown shape type: " + shapeType);
 
-	luxrays::ExtTriangleMeshUPtr mesh = shape->Refine(*this);
-	mesh->SetName(shapeName);
+	return shape;
+	};
 
-	return mesh;
+	// Source-less types: a single result submesh named after the shape
+	if (shapeType == "mesh" || shapeType == "inlinedmesh" ||
+			shapeType == "strands" || shapeType == "group") {
+		ShapeModifierUPtr shape = createModifier(nullptr);
+		ExtTriangleMeshUPtr mesh = shape->Refine(*this);
+		mesh->SetName(shapeName);
+		mesh->SetShapeName(shapeName);
+		auto result = std::make_unique<Shape>(shapeName, mesh->GetVertexBuffer());
+		result->AddSubmesh(std::move(mesh));
+		return result;
+	}
+
+	// Sourced mesh-level types: apply per submesh of the source shape
+	if (!isSourceShapeDefined(sourceName))
+		throw runtime_error("Unknown shape name in a " + shapeType + " shape: " + shapeName);
+	Shape &srcShape = getSourceShape(sourceName);
+	const bool single = srcShape.GetSubmeshCount() == 1;
+	std::unique_ptr<Shape> result;
+	u_int k = 0;
+	for (auto &sm : srcShape.GetSubmeshes()) {
+		ShapeModifierUPtr shape = createModifier(&sm.get());
+		ExtTriangleMeshUPtr mesh = shape->Refine(*this);
+		mesh->SetName(single ? shapeName : shapeName + "i" + ToString(k));
+		mesh->SetShapeName(shapeName);
+		if (!result)
+			result = std::make_unique<Shape>(shapeName, mesh->GetVertexBuffer());
+		result->AddSubmesh(std::move(mesh));
+		++k;
+	}
+
+	return result;
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

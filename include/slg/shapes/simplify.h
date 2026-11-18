@@ -26,7 +26,7 @@
 
 namespace slg {
 
-class SimplifyShape2 : public Shape {
+class SimplifyShape2 : public ShapeModifier {
 public:
 	SimplifyShape2(CameraConstPtr camera, luxrays::ExtTriangleMeshRef srcMesh,
 			const float target, const float edgeScreenSize, const bool preserveBorder);

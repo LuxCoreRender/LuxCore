@@ -38,7 +38,7 @@ using luxrays::ExtTriangleMeshRef;
 using luxrays::ExtTriangleMeshUPtr;
 using luxrays::Transform;
 
-class GroupShape : public Shape {
+class GroupShape : public ShapeModifier {
 public:
 	using MeshRefWrapper = std::reference_wrapper<const ExtTriangleMesh>;
 

@@ -31,7 +31,7 @@ namespace slg {
 
 class Scene;
 
-class Shape {
+class ShapeModifier {
 public:
 	typedef enum {
 		MESH,
@@ -56,12 +56,12 @@ public:
 	// Defined in shape.cpp: inline ctor/dtor would instantiate
 	// std::unique_ptr<ExtTriangleMesh>'s destructor in every TU including
 	// this header, requiring the complete ExtTriangleMesh type there
-	Shape();
-	virtual ~Shape();
+	ShapeModifier();
+	virtual ~ShapeModifier();
 
 	virtual ShapeType GetType() const = 0;
 
-	// Shape::Refine is the main method of the API. It is intended to be called
+	// ShapeModifier::Refine is the main method of the API. It is intended to be called
 	// during shape parsing (see Scene::ParseShapes)
 	// Note: it can be called only once and the object is not usable anymore
 	// (it is moved to caller)
@@ -69,7 +69,7 @@ public:
 
 protected:
 	// RefineImpl implements refining for derived classes. It is called by
-	// Shape::Refine under the hood.
+	// ShapeModifier::Refine under the hood.
 	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) = 0;
 
 	bool refined;

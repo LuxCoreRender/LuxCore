@@ -1087,6 +1087,15 @@ void SceneImpl::SetMeshTriangleAOV(const string &meshName,
 	API_END();
 }
 
+void SceneImpl::SetMeshShapeName(const string &meshName, const string &shapeName) {
+	API_BEGIN("{}, {}", ToArgString(meshName), ToArgString(shapeName));
+
+	std::lock_guard<std::recursive_mutex> meshLock(GetSlgScene().MeshDefMutex());
+	GetSlgScene().SetMeshShapeName(meshName, shapeName);
+
+	API_END();
+}
+
 void SceneImpl::SaveMesh(const string &meshName, const string &fileName) {
 	API_BEGIN("{}, {}", ToArgString(meshName), ToArgString(fileName));
 

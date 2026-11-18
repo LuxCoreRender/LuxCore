@@ -238,6 +238,10 @@ Scene::ReturnType<ExtMesh> Scene::DefineMesh(ExtMeshUPtr&& mesh) {
 	// This is the only place where it is safe to call extMeshCache.DefineExtMesh()
 	auto [newMeshRef, oldMeshPtr] = extMeshCache.DefineExtMesh(std::move(mesh));
 
+	// Register the triangle mesh into its Shape handle (created on demand)
+	if (auto *triMesh = dynamic_cast<ExtTriangleMesh *>(&newMeshRef))
+		RegisterMeshShape(*triMesh);
+
 	// A mesh was REPLACED (redefinition, e.g. viewport update): any cached
 	// subdivided envelope is stale. New meshes (initial parse, refined shape
 	// registrations) must NOT clear the cache, or the shared subdiv run would
@@ -251,6 +255,45 @@ Scene::ReturnType<ExtMesh> Scene::DefineMesh(ExtMeshUPtr&& mesh) {
 		std::ref(newMeshRef),
 		oldMeshPtr ? std::move(oldMeshPtr) : nullptr
 	);
+}
+
+void Scene::RegisterMeshShape(ExtTriangleMesh &mesh) {
+	std::string shapeName = mesh.GetShapeName();
+	if (shapeName.empty()) {
+		// Default: one shape per mesh, named after the mesh (backward
+		// compatible with sources referencing a mesh name)
+		shapeName = mesh.GetName();
+		mesh.SetShapeName(shapeName);
+	}
+
+	if (!shapeDefs.IsShapeDefined(shapeName)) {
+		// The Shape owns the canonical vertex buffer; the mesh buffer is
+		// copied, sharing storage (Buffer copy semantics)
+		shapeDefs.DefineShape(
+			std::make_unique<Shape>(shapeName, mesh.GetVertexBuffer()));
+	}
+
+	Shape &shape = shapeDefs.GetShape(shapeName);
+	// Avoid double registration when a mesh is redefined
+	for (auto &sm : shape.GetSubmeshes())
+		if (&sm.get() == &mesh)
+			return;
+	shape.AddSubmesh(mesh);
+}
+
+void Scene::SetMeshShapeName(const std::string &meshName, const std::string &shapeName) {
+	std::lock_guard<std::recursive_mutex> lock(meshDefMtx);
+
+	auto &mesh = dynamic_cast<ExtTriangleMesh &>(extMeshCache.GetExtMesh(meshName));
+	const std::string oldShapeName =
+		mesh.GetShapeName().empty() ? mesh.GetName() : mesh.GetShapeName();
+	if (oldShapeName == shapeName)
+		return;
+
+	mesh.SetShapeName(shapeName);
+	if (shapeDefs.IsShapeDefined(oldShapeName))
+		shapeDefs.GetShape(oldShapeName).RemoveSubmesh(mesh);
+	RegisterMeshShape(mesh);
 }
 
 Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(ExtTriangleMeshUPtr&& mesh) {
