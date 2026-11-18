@@ -19,11 +19,7 @@
 #include <boost/format.hpp>
 #include <oneapi/tbb.h>
 
-#include <cstdint>
-#include <mutex>
-
 #include "luxrays/core/exttrianglemesh.h"
-#include "luxrays/utils/strutils.h"
 #include "slg/shapes/displacement.h"
 #include "luxrays/core/trianglemesh.h"
 #include "slg/scene/scene.h"
@@ -137,13 +133,20 @@ void ComputeVertexDifferentials(const ExtTriangleMesh &mesh,
 } // namespace
 
 
-// Compute the displaced positions of a mesh (height/vector displacement).
-// Runs once per shared point buffer; the result is cached on the scene.
-static VertexBuffer ComputeDisplacedVertices(
-		luxrays::ExtTriangleMeshRef srcMesh,
-		const Texture &dispMap,
-		const DisplacementShape::Params &params
-) {
+DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const Texture &dispMap,
+		const Params &params) {
+	SDL_LOG("Displacement shape " << srcMesh.GetName() << " with texture " << dispMap.GetName());
+
+	// I need vertex normals
+	if (!srcMesh.HasNormals())
+		srcMesh.ComputeNormals();
+
+	// I need vertex UVs for vector displacement
+	if ((params.mapType == VECTOR_DISPLACEMENT) && !srcMesh.HasUVs(params.uvIndex))
+		throw runtime_error("Displacement shape for vector displacement can be used only with mesh having UVs defined");
+
+	const double startTime = WallClockTime();
+
 	const u_int vertCount = srcMesh.GetTotalVertexCount();
 	const auto vertices = srcMesh.GetVertices();
 	VertexBuffer newVertices(vertCount);
@@ -217,7 +220,7 @@ static VertexBuffer ComputeDisplacedVertices(
 		hitPoint.throughShadowTransparency = false;
 
 		Vector disp;
-		if (params.mapType == DisplacementShape::HIGHT_DISPLACEMENT)
+		if (params.mapType == HIGHT_DISPLACEMENT)
 			disp = (dispMap.GetFloatValue(hitPoint) * params.scale + params.offset) *
 					Vector(hitPoint.shadeN);
 		else {
@@ -242,50 +245,6 @@ static VertexBuffer ComputeDisplacedVertices(
 
 		newVertices[i] = vertices[i] + disp;
 	});
-
-	return newVertices;
-}
-
-DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const Texture &dispMap,
-		const Params &params, SceneConstRef scene) {
-	SDL_LOG("Displacement shape " << srcMesh.GetName() << " with texture " << dispMap.GetName());
-
-	// I need vertex normals
-	if (!srcMesh.HasNormals())
-		srcMesh.ComputeNormals();
-
-	// I need vertex UVs for vector displacement
-	if ((params.mapType == VECTOR_DISPLACEMENT) && !srcMesh.HasUVs(params.uvIndex))
-		throw runtime_error("Displacement shape for vector displacement can be used only with mesh having UVs defined");
-
-	const double startTime = WallClockTime();
-
-	// Displaced-points cache key: the shared source point buffer plus the
-	// texture and parameters. All submeshes of an object share one root
-	// point buffer, so the first displacement shape computes the displaced
-	// points once and the others share them (a Buffer copy shares storage).
-	const std::string cacheKey =
-		ToString(reinterpret_cast<uintptr_t>(srcMesh.GetVertexBuffer().Data())) + "|" +
-		dispMap.GetName() + "|" +
-		ToString((int)params.mapType) + "|" +
-		ToString(params.mapChannels[0]) + "," + ToString(params.mapChannels[1]) + "," +
-		ToString(params.mapChannels[2]) + "|" +
-		ToString(params.scale) + "|" + ToString(params.offset) + "|" +
-		ToString(params.uvIndex) + "|" + ToString(params.normalSmooth);
-
-	VertexBuffer newVertices;
-	{
-		std::lock_guard<std::mutex> lock(scene.GetDisplacementMutex());
-		auto &cache = scene.GetDisplacementCache();
-		auto it = cache.find(cacheKey);
-		if (it != cache.end())
-			newVertices = it->second;  // share the already displaced buffer
-		else {
-			newVertices = ComputeDisplacedVertices(srcMesh, dispMap, params);
-			cache.emplace(cacheKey, newVertices);
-		}
-	}
-
 
 	// Make a copy of the original mesh and overwrite vertex information
 	//

@@ -24,16 +24,10 @@ namespace slg {
 
 class MergeOnDistanceShape : public Shape {
 public:
-	// The scene gives access to the welded-points cache: when several meshes
-	// share one point buffer (all submeshes of an exported object), the merge
-	// is computed once on that common buffer and the welded points are shared,
-	// so shared edges stay welded (and watertight) after the merge and after
-	// any downstream shape modifier (e.g. displacement).
 	MergeOnDistanceShape(
 		luxrays::ExtTriangleMeshRef srcMesh,
 		u_int tolerance,
-		bool importNormals,
-		SceneConstRef scene
+		bool importNormals
 	);
 
 	virtual ~MergeOnDistanceShape();
