@@ -223,13 +223,27 @@ ShapeUPtr Scene::CreateShapeModifier(
 	// a submesh. Source shapes of the same ParseShapes block being created
 	// in parallel are resolved from blockShapes (only already-created
 	// ones); the rest come from the shape cache
+	// A source name may also be a mesh name (e.g. old scene files): resolve
+	// it through the mesh's shape name
+	auto resolveSourceShapeName = [&](const string &name) -> string {
+		if (shapeDefs.IsShapeDefined(name))
+			return name;
+		if (extMeshCache.IsExtMeshDefined(name)) {
+			const auto &mesh = extMeshCache.GetExtMesh(name);
+			const string &meshShapeName =
+				mesh.GetShapeName().empty() ? name : mesh.GetShapeName();
+			if (shapeDefs.IsShapeDefined(meshShapeName))
+				return meshShapeName;
+		}
+		return name;
+	};
 	auto isSourceShapeDefined = [&](const string &name) {
 		if (blockIndex) {
 			const auto it = blockIndex->find(name);
 			if (it != blockIndex->end())
 				return (*blockShapes)[it->second] != nullptr;
 		}
-		return shapeDefs.IsShapeDefined(name);
+		return shapeDefs.IsShapeDefined(resolveSourceShapeName(name));
 	};
 	auto getSourceShape = [&](const string &name) -> Shape& {
 		if (blockIndex) {
@@ -237,7 +251,7 @@ ShapeUPtr Scene::CreateShapeModifier(
 			if (it != blockIndex->end() && (*blockShapes)[it->second])
 				return *(*blockShapes)[it->second];
 		}
-		return shapeDefs.GetShape(name);
+		return shapeDefs.GetShape(resolveSourceShapeName(name));
 	};
 
 	// Get the shape type

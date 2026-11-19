@@ -865,13 +865,25 @@ ShapeUPtr MergeOnDistanceShape::ApplyToShape(
 
 	const double startTime = WallClockTime();
 
-	WeldedData welded = ComputeWeldedData(srcShape.GetVertices(), tolerance);
+	// Submeshes sharing one point buffer are merged ONCE on that common
+	// buffer and share the welded buffer, so shared edges stay welded.
+	// Submeshes with their own buffer are merged per buffer group.
+	const auto &submeshes = srcShape.GetSubmeshes();
+	std::unordered_map<const void *, std::vector<size_t>> groups;
+	for (size_t i = 0; i < submeshes.size(); ++i)
+		groups[submeshes[i].get().GetVertexBuffer().Data()].push_back(i);
 
-	auto result = std::make_unique<Shape>(resultName, welded.points);
-	const bool single = srcShape.GetSubmeshCount() == 1;
+	std::unordered_map<const void *, WeldedData> weldedPerGroup;
+	for (auto &[bufPtr, indices] : groups)
+		weldedPerGroup.emplace(bufPtr,
+			ComputeWeldedData(submeshes[indices[0]].get().GetVertexBuffer(), tolerance));
+
+	auto result = std::make_unique<Shape>(resultName,
+		weldedPerGroup[submeshes[0].get().GetVertexBuffer().Data()].points);
+	const bool single = submeshes.size() == 1;
 	u_int k = 0;
-	for (auto &sm : srcShape.GetSubmeshes()) {
-		auto mesh = RecreateMesh(sm.get(), welded, importNormals);
+	for (auto &sm : submeshes) {
+		auto mesh = RecreateMesh(sm.get(), weldedPerGroup[sm.get().GetVertexBuffer().Data()], importNormals);
 		mesh->SetName(single ? resultName : resultName + "i" + luxrays::ToString(k));
 		mesh->SetShapeName(resultName);
 		result->AddSubmesh(std::move(mesh));
@@ -882,7 +894,7 @@ ShapeUPtr MergeOnDistanceShape::ApplyToShape(
 		"Merge On Distance - Reduced from "
 		<< srcShape.GetVertices().Count()
 		<< " to "
-		<< welded.points.Count()
+		<< result->GetVertices().Count()
 		<< " vertices"
 	);
 

@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <unordered_map>
+
 #include <boost/format.hpp>
 #include <oneapi/tbb.h>
 
@@ -299,23 +301,34 @@ ShapeUPtr DisplacementShape::ApplyToShape(
 	if (srcShape.GetSubmeshCount() == 0)
 		throw runtime_error("Displacement shape on an empty shape: " + resultName);
 
-	// Normals/UVs are read from the first submesh; the displaced positions
-	// are computed ONCE on the shape common point buffer (shared with the
-	// first submesh buffer) and shared by all result submeshes, so shared
-	// edges stay welded (watertight)
-	ExtTriangleMesh &srcMesh = srcShape.GetSubmeshes()[0].get();
-	if (!srcMesh.HasNormals())
-		srcMesh.ComputeNormals();
-	if ((params.mapType == VECTOR_DISPLACEMENT) && !srcMesh.HasUVs(params.uvIndex))
-		throw runtime_error("Displacement shape for vector displacement can be used only with mesh having UVs defined");
+	// Submeshes sharing one point buffer are displaced ONCE on that common
+	// buffer and share the displaced buffer (a Buffer copy shares storage),
+	// so shared edges stay welded (watertight). Submeshes with their own
+	// buffer (e.g. after a topology-changing modifier) are displaced per
+	// buffer group. Normals/UVs are read from each group's first submesh.
+	const auto &submeshes = srcShape.GetSubmeshes();
+	std::unordered_map<const void *, std::vector<size_t>> groups;
+	for (size_t i = 0; i < submeshes.size(); ++i)
+		groups[submeshes[i].get().GetVertexBuffer().Data()].push_back(i);
 
-	VertexBuffer newVertices = ComputeDisplacedVertices(srcMesh, dispMap, params);
+	// displaced buffer per vertex-buffer group
+	std::unordered_map<const void *, VertexBuffer> displacedPerGroup;
+	for (auto &[bufPtr, indices] : groups) {
+		ExtTriangleMesh &srcMesh = submeshes[indices[0]].get();
+		if (!srcMesh.HasNormals())
+			srcMesh.ComputeNormals();
+		if ((params.mapType == VECTOR_DISPLACEMENT) && !srcMesh.HasUVs(params.uvIndex))
+			throw runtime_error("Displacement shape for vector displacement can be used only with mesh having UVs defined");
+		displacedPerGroup.emplace(bufPtr, ComputeDisplacedVertices(srcMesh, dispMap, params));
+	}
 
-	auto result = std::make_unique<Shape>(resultName, newVertices);
-	const bool single = srcShape.GetSubmeshCount() == 1;
+	auto result = std::make_unique<Shape>(resultName,
+		displacedPerGroup[submeshes[0].get().GetVertexBuffer().Data()]);
+	const bool single = submeshes.size() == 1;
 	u_int k = 0;
-	for (auto &sm : srcShape.GetSubmeshes()) {
+	for (auto &sm : submeshes) {
 		ExtTriangleMesh &m = sm.get();
+		const VertexBuffer &newVertices = displacedPerGroup[m.GetVertexBuffer().Data()];
 		auto mesh = m.Copy(
 			VertexBuffer(newVertices),  // copy: shares the displaced buffer storage
 			std::nullopt,
