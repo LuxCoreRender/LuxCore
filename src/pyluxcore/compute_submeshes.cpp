@@ -339,9 +339,9 @@ py::array_t<T> wrap_owned(Vec &&vec, ScalableVector<py::ssize_t> shape) {
 	return py::array_t<T>(shape, strides, holder->data(), cap);
 }
 
-// Same as wrap_owned, but for an uninitialized buffer (rows that the submesh
-// never references are left untouched -- they are never read, exactly like
-// the numpy fallback's np.empty)
+// Same as wrap_owned, but for an owned raw buffer. Rows that the submesh never
+// references are zero-initialized at the allocation site (they can be read by
+// consumers over the shared root buffer, e.g. the subdiv envelope merge)
 template <typename T, typename Buf>
 py::array_t<T> wrap_owned_buf(Buf &&buf, ScalableVector<py::ssize_t> shape) {
 	T *data = buf.get();
@@ -904,10 +904,13 @@ py::tuple compute_submeshes_c(
 									return AttrRef{cand, {}};
 							}
 							AttrRef ref;
-							// uninitialized: rows outside the submesh's referenced
-							// points are never read (same as np.empty in the
-							// numpy fallback)
+							// zero-initialized: rows outside the submesh's referenced
+							// points stay 0.0 (the "unfilled" sentinel) -- they ARE
+							// read by consumers over the shared root buffer (e.g. the
+							// subdiv envelope's first-non-zero merge, SaveMesh), so
+							// they must not contain garbage
 							ref.owned = scalable_float_array(P * k);
+							std::memset(ref.owned.get(), 0, P * k * sizeof(float));
 							ref.owned_size = P * k;
 							for (size_t i = 0; i < isl_loops.size(); ++i)
 								std::memcpy(&ref.owned[isl_gw[i] * k], &loop_data[isl_loops[i] * k], k * 4);
