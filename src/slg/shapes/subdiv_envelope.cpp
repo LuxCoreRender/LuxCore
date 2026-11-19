@@ -306,20 +306,17 @@ void PropagateMaterialSlots(
 // FilterByMaterialSlot
 //------------------------------------------------------------------------------
 
-ExtTriangleMeshUPtr FilterByMaterialSlot(
+// Build a submesh from the kept triangles of a (subdivided) mesh, sharing
+// the vertex buffer. When per-corner data is given, the per-point varying
+// arrays (normals, UVs, colors, alphas) are rebuilt from the kept triangles'
+// own corners, so a point shared with another submesh (seam) gets this
+// submesh's value.
+static ExtTriangleMeshUPtr FilterByKeptTriangles(
 	const ExtTriangleMesh &mesh,
-	const int matSlot,
+	const std::vector<size_t> &kept,
 	const SubdivCornerData *corner
 ) {
-	const auto slots = mesh.GetTriAOVs(MATERIAL_TRI_AOV_INDEX);
 	const auto allTris = mesh.GetTriangles();
-	const size_t nTris = allTris.size();
-
-	std::vector<size_t> kept;
-	kept.reserve(nTris);
-	for (size_t i = 0; i < nTris; ++i)
-		if (static_cast<int>(slots[i]) == matSlot)
-			kept.push_back(i);
 
 	TriangleBuffer tris(kept.size());
 	for (size_t i = 0; i < kept.size(); ++i)
@@ -421,6 +418,40 @@ ExtTriangleMeshUPtr FilterByMaterialSlot(
 			filtered->SetTriAOV(l, triAOVs.GetLayer(l), kept.size());
 	filtered->SetName(mesh.GetName());
 	return filtered;
+}
+
+ExtTriangleMeshUPtr FilterByMaterialSlot(
+	const ExtTriangleMesh &mesh,
+	const int matSlot,
+	const SubdivCornerData *corner
+) {
+	const auto slots = mesh.GetTriAOVs(MATERIAL_TRI_AOV_INDEX);
+	const auto allTris = mesh.GetTriangles();
+	const size_t nTris = allTris.size();
+
+	std::vector<size_t> kept;
+	kept.reserve(nTris);
+	for (size_t i = 0; i < nTris; ++i)
+		if (static_cast<int>(slots[i]) == matSlot)
+			kept.push_back(i);
+
+	return FilterByKeptTriangles(mesh, kept, corner);
+}
+
+ExtTriangleMeshUPtr FilterByFaceRange(
+	const ExtTriangleMesh &mesh,
+	const std::vector<u_int> &triBaseFace,
+	const size_t face0,
+	const size_t face1,
+	const SubdivCornerData *corner
+) {
+	std::vector<size_t> kept;
+	kept.reserve(triBaseFace.size());
+	for (size_t i = 0; i < triBaseFace.size(); ++i)
+		if (triBaseFace[i] >= face0 && triBaseFace[i] < face1)
+			kept.push_back(i);
+
+	return FilterByKeptTriangles(mesh, kept, corner);
 }
 
 }

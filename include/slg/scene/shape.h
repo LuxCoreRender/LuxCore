@@ -21,12 +21,15 @@
 
 #include <algorithm>
 #include <functional>
+#include <mutex>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "luxrays/core/namedobject.h"
 #include "luxrays/utils/buffer.h"
 #include "slg/usings.h"
+#include "slg/shapes/subdiv_corner_data.h"
 
 namespace luxrays {
 class ExtTriangleMesh;
@@ -75,6 +78,25 @@ public:
 	GetSubmeshes() const { return submeshes; }
 	u_int GetSubmeshCount() const { return (u_int)submeshes.size(); }
 
+	// Cache of subdivided envelopes: ONE subdivision run per subdiv
+	// parameter set, shared by all the per-material-slot (matslot) shapes
+	// subdividing this Shape, which then resplit the result per slot.
+	// The Shape replaces the old scene-level cache keyed by the point-buffer
+	// pointer: the buffer identity is the Shape itself. Pure runtime cache
+	// (not serialized), cleared when meshes are (re)defined
+	// (Scene::ClearSubdivEnvelopeCache).
+	struct SubdivEnvelopeCacheEntry {
+		luxrays::ExtTriangleMeshSPtr mesh;  // full subdivided envelope
+		std::vector<u_int> triBaseFace;
+		SubdivCornerData corner;  // per-corner varying data of the subdivided mesh
+	};
+	std::mutex &GetSubdivEnvelopeMutex() const { return subdivEnvelopeMtx; }
+	auto &GetSubdivEnvelopeCache() const { return subdivEnvelopeCache; }
+	void ClearSubdivEnvelopeCache() {
+		std::lock_guard<std::mutex> lock(subdivEnvelopeMtx);
+		subdivEnvelopeCache.clear();
+	}
+
 	// Hands over the owned submesh meshes (factory results) to the caller,
 	// typically to define them into the scene mesh cache. The submesh
 	// references stay valid: moving a unique_ptr does not move the object.
@@ -86,6 +108,11 @@ private:
 	luxrays::VertexBuffer vertices;
 	std::vector<std::reference_wrapper<luxrays::ExtTriangleMesh>> submeshes;
 	std::vector<luxrays::ExtTriangleMeshUPtr> ownedMeshes;
+
+	// Subdivided-envelope cache (see above); mutable because it is filled
+	// lazily from const shape references during shape refinement
+	mutable std::mutex subdivEnvelopeMtx;
+	mutable std::unordered_map<std::string, SubdivEnvelopeCacheEntry> subdivEnvelopeCache;
 };
 
 }

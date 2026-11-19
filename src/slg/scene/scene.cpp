@@ -684,8 +684,8 @@ void Scene::RemoveUnusedMeshes() {
 }
 
 void Scene::ClearSubdivEnvelopeCache() {
-	std::lock_guard<std::mutex> lock(subdivEnvelopeMtx);
-	subdivEnvelopeCache.clear();
+	for (const auto &name : shapeDefs.GetShapeNames())
+		shapeDefs.GetShape(name).ClearSubdivEnvelopeCache();
 }
 
 void Scene::DeleteObject(const string &objName) {

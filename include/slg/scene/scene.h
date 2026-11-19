@@ -287,17 +287,9 @@ public:
 	// Move a mesh to another Shape handle (created on demand)
 	void SetMeshShapeName(const std::string &meshName, const std::string &shapeName);
 
-	// Cache of subdivided envelopes: ONE subdivision run per (source mesh,
-	// subdiv params), shared by all the per-material-slot (matslot) shapes of
-	// the same source mesh, which then resplit the result per slot. Pure
-	// runtime cache (not serialized), invalidated when meshes are (re)defined.
-	struct SubdivEnvelopeCacheEntry {
-		luxrays::ExtTriangleMeshSPtr mesh;  // full subdivided envelope
-		std::vector<u_int> triBaseFace;
-		SubdivCornerData corner;  // per-corner varying data of the subdivided mesh
-	};
-	auto &GetSubdivEnvelopeCache() const { return subdivEnvelopeCache; }
-	std::mutex &GetSubdivEnvelopeMutex() const { return subdivEnvelopeMtx; }
+	// Clear the subdivided-envelope caches of all the Shape handles (the
+	// caches live on the Shape since it groups the submeshes sharing one
+	// point buffer); called when meshes are (re)defined
 	void ClearSubdivEnvelopeCache();
 
 	auto& GetEditActions() { return editActions; }
@@ -353,11 +345,6 @@ protected:
 	// Guards texDefs during the parallel material creation of ParseMaterials:
 	// Scene::GetTexture implicitly defines constant textures on first use
 	mutable std::recursive_mutex texDefMtx;
-
-	// Subdivided-envelope cache (see GetSubdivEnvelopeCache); mutable because it
-	// is filled lazily from const scene references during shape refinement
-	mutable std::mutex subdivEnvelopeMtx;
-	mutable std::unordered_map<std::string, SubdivEnvelopeCacheEntry> subdivEnvelopeCache;
 
 	// DataSet ownership is not very clear, we set it shared
 	luxrays::DataSetSPtr dataSet;

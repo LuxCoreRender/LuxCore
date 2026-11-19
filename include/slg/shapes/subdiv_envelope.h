@@ -83,6 +83,16 @@ luxrays::ExtTriangleMeshUPtr FilterByMaterialSlot(
 	const SubdivCornerData *corner = nullptr
 );
 
+// Same resplit, but keeping the triangles whose base (envelope) face is in
+// [face0, face1): one output submesh per source submesh of a Shape.
+luxrays::ExtTriangleMeshUPtr FilterByFaceRange(
+	const luxrays::ExtTriangleMesh &mesh,
+	const std::vector<u_int> &triBaseFace,
+	const size_t face0,
+	const size_t face1,
+	const SubdivCornerData *corner = nullptr
+);
+
 }
 
 #endif	/* _SLG_SUBDIV_ENVELOPE_H */

@@ -354,6 +354,54 @@ ShapeUPtr Scene::CreateShapeModifier(
 		);
 	}
 
+	if (shapeType == "subdiv") {
+
+		const u_int maxLevel = props.Get(Property(propName + ".maxlevel")(2)).Get<u_int>();
+		const float maxEdgeScreenSize = Max(
+			props.Get(Property(propName + ".maxedgescreensize")(0.0)).Get<double>(),
+			0.0
+		);
+
+		if (maxEdgeScreenSize <= 0.f) {
+			// Uniform path: Shape-level subdivision. The merged envelope of
+			// the source shape's submeshes is subdivided ONCE (cached on the
+			// source Shape), then the result is split back per source submesh
+			// (or per material slot when matslot is set).
+			if (!isSourceShapeDefined(sourceName))
+				throw runtime_error("Unknown shape name in a subdiv shape: " + shapeName);
+
+			const float sharpnessThresholdRadians = props.Get(
+				Property(propName + ".sharpnessthreshold")(0.512)).Get<double>();
+			const float creaseWeight = props.Get(
+				Property(propName + ".creaseweight")(10.0)).Get<double>();
+
+			const string creasesProp = props.Get(
+				Property(propName + ".creases")("computed")).Get<string>();
+			SubdivCreaseMode creaseMode;
+			if (creasesProp == "none")
+				creaseMode = SubdivCreaseMode::NONE;
+			else if (creasesProp == "imported")
+				creaseMode = SubdivCreaseMode::IMPORTED;
+			else if (creasesProp == "computed")
+				creaseMode = SubdivCreaseMode::COMPUTED;
+			else
+				throw runtime_error("Unknown creases mode in a subdiv shape: " + creasesProp);
+
+			const int matSlot = props.Get(Property(propName + ".matslot")(-1)).Get<int>();
+
+			return SubdivShape::ApplyToShape(
+				getSourceShape(sourceName),
+				maxLevel,
+				sharpnessThresholdRadians,
+				creaseWeight,
+				creaseMode,
+				matSlot,
+				shapeName
+			);
+		}
+		// Adaptive path (maxedgescreensize): handled per submesh below
+	}
+
 	// Mesh-level modifiers are applied per submesh of the source shape; the
 	// results are grouped into the result shape
 	auto createModifier = [&](ExtTriangleMesh *srcMesh) -> ShapeModifierUPtr {

@@ -1267,54 +1267,132 @@ SubdivShape::~SubdivShape() {
 
 
 
-ExtTriangleMeshUPtr SubdivShape::RefineImpl(SceneConstRef scene) {
+ShapeUPtr SubdivShape::ApplyToShape(
+	ShapeConstRef srcShape,
+	const u_int maxLevel,
+	const float sharpnessThresholdRadians,
+	const float creaseWeight,
+	const SubdivCreaseMode creaseMode,
+	const int matSlot,
+	const std::string &resultName
+) {
 	const double startTime = WallClockTime();
+	if (srcShape.GetSubmeshCount() == 0)
+		throw std::runtime_error("Subdiv shape on an empty shape: " + resultName);
 
-	const bool adaptive = camera && (maxEdgeScreenSize > 0.f);
+	// Group the submeshes by point-buffer storage (like the other shape-level
+	// modifiers): the submeshes of one object share the root buffer, but e.g.
+	// after another topology-changing modifier they may have their own.
+	const auto &submeshes = srcShape.GetSubmeshes();
+	std::unordered_map<const void *, std::vector<size_t>> groups;
+	for (size_t i = 0; i < submeshes.size(); ++i)
+		groups[submeshes[i].get().GetVertexBuffer().Data()].push_back(i);
 
-	// When splitting per material slot on the uniform path, all the matslot
-	// shapes of the same source mesh share ONE subdivision run of the
-	// envelope (cached on the scene, keyed by the shared point buffer), then
-	// each resplits its own slot.
-	if (matSlot >= 0 && maxLevel > 0 && !adaptive) {
-		const std::string shareKey =
-			std::to_string(reinterpret_cast<uintptr_t>(srcMesh.GetVertexBuffer().Data()))
+	const bool single = submeshes.size() == 1;
+
+	// The subdivision run of each buffer group's envelope is cached ON THE
+	// SOURCE SHAPE (keyed by buffer + subdiv params), so several subdiv
+	// shapes of the same source shape (e.g. one per material) share it.
+	// The lock is held for the whole build+resplit: cache entries must stay
+	// valid while referenced.
+	std::lock_guard<std::mutex> cacheLock(srcShape.GetSubdivEnvelopeMutex());
+	auto &cache = srcShape.GetSubdivEnvelopeCache();
+
+	struct GroupResult {
+		const Shape::SubdivEnvelopeCacheEntry *entry = nullptr;
+		std::vector<std::pair<size_t, size_t>> ranges;  // source face range per submesh
+	};
+	std::unordered_map<const void *, GroupResult> perGroup;
+
+	for (auto &[bufPtr, indices] : groups) {
+		std::vector<const ExtTriangleMesh *> siblings;
+		siblings.reserve(indices.size());
+		for (size_t idx : indices)
+			siblings.push_back(&submeshes[idx].get());
+
+		GroupResult g;
+		size_t faceOffset = 0;
+		for (const auto *m : siblings) {
+			const size_t c = m->GetTotalTriangleCount();
+			g.ranges.emplace_back(faceOffset, faceOffset + c);
+			faceOffset += c;
+		}
+
+		const std::string key =
+			std::to_string(reinterpret_cast<uintptr_t>(bufPtr))
 			+ "|lvl=" + std::to_string(maxLevel)
 			+ "|sharp=" + std::to_string(sharpnessThresholdRadians)
 			+ "|cw=" + std::to_string(creaseWeight)
 			+ "|cm=" + std::to_string(static_cast<int>(creaseMode));
 
-		std::lock_guard<std::mutex> lock(scene.GetSubdivEnvelopeMutex());
-		auto &cache = scene.GetSubdivEnvelopeCache();
-		auto it = cache.find(shareKey);
+		auto it = cache.find(key);
 		if (it == cache.end()) {
 			SubdivCornerData cornerIn;
-			auto envelope = BuildSubdivEnvelope(scene, srcMesh, &cornerIn);
-			if (envelope) {
-				SDL_LOG("Subdividing envelope " << envelope->GetName()
-					<< " once for all material slots at level: " << maxLevel);
-				std::vector<u_int> triBaseFace;
-				SubdivCornerData cornerOut;
-				auto subdivided = ApplySubdiv(
+			auto envelope = BuildEnvelopeFromMeshes(siblings, &cornerIn);
+			SDL_LOG("Subdividing envelope " << envelope->GetName()
+				<< " - " << envelope->GetTotalTriangleCount() << " triangles over "
+				<< envelope->GetTotalVertexCount() << " shared points"
+				<< " at level: " << maxLevel);
+			std::vector<u_int> triBaseFace;
+			SubdivCornerData cornerOut;
+			ExtTriangleMeshUPtr subdivided;
+			if (maxLevel > 0) {
+				subdivided = ApplySubdiv(
 					*envelope, maxLevel, sharpnessThresholdRadians, creaseWeight,
 					creaseMode, &triBaseFace, &cornerIn, &cornerOut
 				);
 				PropagateMaterialSlots(*envelope, triBaseFace, *subdivided);
-				it = cache.emplace(shareKey, Scene::SubdivEnvelopeCacheEntry{
-					std::move(subdivided), std::move(triBaseFace), std::move(cornerOut)
-				}).first;
 			} else {
-				// No point-buffer siblings: nothing to share, remember it
-				it = cache.emplace(shareKey, Scene::SubdivEnvelopeCacheEntry{nullptr, {}, {}}).first;
+				subdivided = envelope->Copy();
+				triBaseFace.resize(subdivided->GetTotalTriangleCount());
+				for (size_t t = 0; t < triBaseFace.size(); ++t)
+					triBaseFace[t] = (u_int)t;
 			}
+			it = cache.emplace(key, Shape::SubdivEnvelopeCacheEntry{
+				std::move(subdivided), std::move(triBaseFace), std::move(cornerOut)
+			}).first;
 		}
-		if (it->second.mesh) {
-			mesh = FilterByMaterialSlot(*it->second.mesh, matSlot, &it->second.corner);
-			SDL_LOG("Subdivided shape in " << WallClockTime() - startTime << " secs");
-			return std::move(mesh);
-		}
-		// No envelope: fall through to the normal path
+		g.entry = &it->second;
+		perGroup.emplace(bufPtr, std::move(g));
 	}
+
+	const void *firstBuf = submeshes[0].get().GetVertexBuffer().Data();
+	auto result = std::make_unique<Shape>(
+		resultName, perGroup[firstBuf].entry->mesh->GetVertexBuffer());
+
+	// Resplit the subdivided envelope(s) per source submesh, in source order
+	std::vector<ExtTriangleMeshUPtr> resultMeshes(submeshes.size());
+	for (const auto &[bufPtr, indices] : groups) {
+		const GroupResult &g = perGroup[bufPtr];
+		for (size_t li = 0; li < indices.size(); ++li) {
+			const size_t gi = indices[li];
+			ExtTriangleMeshUPtr mesh;
+			if (matSlot >= 0) {
+				// Backward-compatible per-material-slot filter
+				mesh = FilterByMaterialSlot(*g.entry->mesh, matSlot, &g.entry->corner);
+			} else {
+				const auto [f0, f1] = g.ranges[li];
+				mesh = FilterByFaceRange(
+					*g.entry->mesh, g.entry->triBaseFace, f0, f1, &g.entry->corner);
+			}
+			mesh->SetName(single ? resultName : resultName + "i" + ToString(gi));
+			mesh->SetShapeName(resultName);
+			resultMeshes[gi] = std::move(mesh);
+		}
+	}
+	for (auto &m : resultMeshes)
+		result->AddSubmesh(std::move(m));
+
+	SDL_LOG("Subdivided shape " << resultName << " in "
+		<< WallClockTime() - startTime << " secs");
+
+	return result;
+}
+
+ExtTriangleMeshUPtr SubdivShape::RefineImpl(SceneConstRef scene) {
+	const double startTime = WallClockTime();
+
+	const bool adaptive = camera && (maxEdgeScreenSize > 0.f);
 
 	// Watertight envelope over all submeshes sharing the source point buffer,
 	// so shared edges stay interior during subdivision (no cracks/warping)
