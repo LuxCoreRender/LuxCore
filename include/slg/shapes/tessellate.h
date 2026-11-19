@@ -21,6 +21,7 @@
 
 #include "slg/usings.h"
 #include "slg/shapes/shape.h"
+#include "slg/scene/shape.h"  // complete type: ApplyToShape returns ShapeUPtr
 #include "luxrays/core/exttrianglemesh.h"  // complete type: this header returns ExtTriangleMeshUPtr
 #include "luxrays/utils/utils.h"  // u_int (not provided by MSVC system headers)
 
@@ -51,6 +52,20 @@ public:
 		luxrays::ExtTriangleMeshRef srcMesh,
 		const u_int rate,
 		const bool interpolatedNormals = true
+	);
+
+	// Shape-level application: tessellate all the submeshes of the source
+	// shape TOGETHER when they share one point buffer (merged envelope
+	// tessellation, then resplit per submesh), so the result submeshes share
+	// a single tessellated buffer and shared edges stay welded (watertight).
+	// Submeshes with their own buffer are tessellated per buffer group.
+	// Result submeshes are named resultName ("i"+index appended when the
+	// source shape has several submeshes).
+	static ShapeUPtr ApplyToShape(
+		ShapeConstRef srcShape,
+		const u_int rate,
+		const bool interpolatedNormals,
+		const std::string &resultName
 	);
 
 protected:

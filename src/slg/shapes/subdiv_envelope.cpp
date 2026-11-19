@@ -18,6 +18,9 @@
 
 #include "slg/shapes/subdiv_envelope.h"
 
+#include <array>
+#include <memory>
+
 #include "slg/scene/scene.h"
 #include "slg/scene/extmeshcache.h"
 
@@ -50,14 +53,13 @@ static std::vector<const ExtTriangleMesh *> CollectPointBufferSiblings(
 	return siblings;
 }
 
-ExtTriangleMeshUPtr BuildSubdivEnvelope(
-	SceneConstRef scene,
-	const ExtTriangleMesh &srcMesh,
+ExtTriangleMeshUPtr BuildEnvelopeFromMeshes(
+	const std::vector<const ExtTriangleMesh *> &siblings,
 	SubdivCornerData *cornerData
 ) {
-	const auto siblings = CollectPointBufferSiblings(scene, srcMesh);
-	if (siblings.size() <= 1)
-		return nullptr;  // no sharing: subdivide the source directly
+	if (siblings.empty())
+		return nullptr;
+	const ExtTriangleMesh &srcMesh = *siblings[0];
 
 	// Union of all triangles (they all index the same shared point array)
 	size_t totalTris = 0;
@@ -66,6 +68,16 @@ ExtTriangleMeshUPtr BuildSubdivEnvelope(
 
 	TriangleBuffer tris(totalTris);
 	auto matSlots = std::make_shared<float[]>(totalTris);
+	// Per-triangle AOV layers of the envelope (all layers, concatenated)
+	std::array<bool, EXTMESH_MAX_DATA_COUNT> triAOVHas{};
+	for (const auto *m : siblings)
+		for (u_int l = 0; l < EXTMESH_MAX_DATA_COUNT; ++l)
+			if (m->HasTriAOV(l))
+				triAOVHas[l] = true;
+	std::array<std::shared_ptr<float[]>, EXTMESH_MAX_DATA_COUNT> triAOVs;
+	for (u_int l = 0; l < EXTMESH_MAX_DATA_COUNT; ++l)
+		if (triAOVHas[l] && l != MATERIAL_TRI_AOV_INDEX)
+			triAOVs[l] = std::make_shared<float[]>(totalTris);
 	size_t offset = 0;
 	for (const auto *m : siblings) {
 		const auto srcTris = m->GetTriangles();
@@ -81,6 +93,22 @@ ExtTriangleMeshUPtr BuildSubdivEnvelope(
 		} else {
 			for (size_t i = 0; i < srcTris.size(); ++i)
 				matSlots[offset + i] = defaultSlot;
+		}
+
+		// All other per-triangle AOV layers are concatenated like the
+		// triangles (0 where this submesh has no such layer)
+		for (u_int l = 0; l < EXTMESH_MAX_DATA_COUNT; ++l) {
+			if (l == MATERIAL_TRI_AOV_INDEX || !triAOVHas[l])
+				continue;
+			auto &dst = triAOVs[l];
+			if (m->HasTriAOV(l)) {
+				const auto layer = m->GetTriAOVs(l);
+				for (size_t i = 0; i < srcTris.size(); ++i)
+					dst[offset + i] = layer[i];
+			} else {
+				for (size_t i = 0; i < srcTris.size(); ++i)
+					dst[offset + i] = 0.f;
+			}
 		}
 
 		// Per-corner (face-varying) varying data: each face takes the values
@@ -202,6 +230,30 @@ ExtTriangleMeshUPtr BuildSubdivEnvelope(
 		}
 	}
 
+	// Per-point vertex AOV layers: same first-non-zero merge as the other
+	// per-point data
+	luxrays::ExtMeshProp<float> vertAOVs;
+	for (u_int l = 0; l < EXTMESH_MAX_DATA_COUNT; ++l) {
+		for (const auto *m : siblings) {
+			if (m->HasVertexAOV(l) && !vertAOVs.LayerHasValues(l)) {
+				const auto layer = m->GetVertexAOVs(l);
+				auto merged = std::make_shared<float[]>(numPoints);
+				for (size_t i = 0; i < numPoints; ++i)
+					merged[i] = layer[i];
+				vertAOVs.SetLayer(l, merged, numPoints);
+			}
+		}
+		for (const auto *m : siblings) {
+			if (vertAOVs.LayerHasValues(l) && m->HasVertexAOV(l)) {
+				const auto layer = m->GetVertexAOVs(l);
+				auto cur = vertAOVs.GetLayer(l);
+				for (size_t i = 0; i < numPoints; ++i)
+					if (cur[i] == 0.f && layer[i] != 0.f)
+						cur[i] = layer[i];
+			}
+		}
+	}
+
 	// Sharing ctor: the envelope uses the same vertex storage as the submeshes
 	auto envelope = std::make_unique<ExtTriangleMesh>(
 		srcMesh.GetVertexBuffer(),
@@ -210,8 +262,25 @@ ExtTriangleMeshUPtr BuildSubdivEnvelope(
 		uvs, cols, alphas
 	);
 	envelope->SetTriAOV(MATERIAL_TRI_AOV_INDEX, matSlots, totalTris);
+	for (u_int l = 0; l < EXTMESH_MAX_DATA_COUNT; ++l) {
+		if (triAOVHas[l] && l != MATERIAL_TRI_AOV_INDEX)
+			envelope->SetTriAOV(l, triAOVs[l], totalTris);
+		if (vertAOVs.LayerHasValues(l))
+			envelope->SetVertexAOV(l, vertAOVs.GetLayer(l), numPoints);
+	}
 	envelope->SetName(srcMesh.GetName() + "_env");
 	return envelope;
+}
+
+ExtTriangleMeshUPtr BuildSubdivEnvelope(
+	SceneConstRef scene,
+	const ExtTriangleMesh &srcMesh,
+	SubdivCornerData *cornerData
+) {
+	const auto siblings = CollectPointBufferSiblings(scene, srcMesh);
+	if (siblings.size() <= 1)
+		return nullptr;  // no sharing: subdivide the source directly
+	return BuildEnvelopeFromMeshes(siblings, cornerData);
 }
 
 //------------------------------------------------------------------------------

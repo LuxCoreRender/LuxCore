@@ -328,6 +328,32 @@ ShapeUPtr Scene::CreateShapeModifier(
 		);
 	}
 
+	if (shapeType == "tessellate") {
+
+		const string sourceName = props.Get(
+			Property(propName + ".source")("")
+		).Get<string>();
+
+		if (!isSourceShapeDefined(sourceName))
+			throw runtime_error("Unknown shape name in a tessellate shape: " + shapeName);
+
+		// rate is an exponent: each edge is split into N = 2^rate segments
+		// (default rate = 2, i.e. N = 4)
+		const u_int rate = props.Get(Property(propName + ".rate")(2)).Get<u_int>();
+		const bool interpolatedNormals = props.Get(
+			Property(propName + ".interpolatednormals")(true)
+		).Get<bool>();
+
+		// Tessellate the whole source shape as one merged mesh when its
+		// submeshes share the point buffer (watertight), resplit per submesh
+		return TessellateShape::ApplyToShape(
+			getSourceShape(sourceName),
+			rate,
+			interpolatedNormals,
+			shapeName
+		);
+	}
+
 	// Mesh-level modifiers are applied per submesh of the source shape; the
 	// results are grouped into the result shape
 	auto createModifier = [&](ExtTriangleMesh *srcMesh) -> ShapeModifierUPtr {
@@ -567,28 +593,6 @@ ShapeUPtr Scene::CreateShapeModifier(
 		shape = std::make_unique<SubdivOldShape>(
 			*srcMesh,
 			maxLevel
-		);
-
-	} else if (shapeType == "tessellate") {
-
-		const string sourceMeshName = props.Get(
-			Property(propName + ".source")("")
-		).Get<string>();
-
-		if (!isSourceShapeDefined(sourceMeshName))
-			throw runtime_error("Unknown shape name in a tessellate shape: " + shapeName);
-
-		// rate is an exponent: each edge is split into N = 2^rate segments
-		// (default rate = 2, i.e. N = 4)
-		const u_int rate = props.Get(Property(propName + ".rate")(2)).Get<u_int>();
-		const bool interpolatedNormals = props.Get(
-			Property(propName + ".interpolatednormals")(true)
-		).Get<bool>();
-
-		shape = std::make_unique<TessellateShape>(
-			*srcMesh,
-			rate,
-			interpolatedNormals
 		);
 
 	} else if (shapeType == "harlequin") {
