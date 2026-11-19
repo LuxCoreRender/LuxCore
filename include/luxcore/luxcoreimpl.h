@@ -347,7 +347,8 @@ public:
 		float *p, unsigned int *vi, float *n,
 		std::array<float *, LC_MESH_MAX_DATA_COUNT> *uv,
 		std::array<float *, LC_MESH_MAX_DATA_COUNT> *cols,
-		std::array<float *, LC_MESH_MAX_DATA_COUNT> *alphas);
+		std::array<float *, LC_MESH_MAX_DATA_COUNT> *alphas,
+		const std::optional<std::string> &submeshName = std::nullopt);
 	void SetMeshVertexAOV(const std::string &meshName,
 		const unsigned int index, float *data, size_t size) override;
 	void SetMeshTriangleAOV(const std::string &meshName,

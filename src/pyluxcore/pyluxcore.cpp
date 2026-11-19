@@ -1761,6 +1761,7 @@ struct ParsedExtMesh {
 	bool normals_pretransformed = false;
 	int tri_aov_index = -1;
 	float tri_aov_value = 0.0f;
+	std::optional<std::string> submeshName;  // shape name; default = mesh name
 	std::shared_ptr<void> triOwner;
 	std::shared_ptr<void> normalsOwner;
 };
@@ -1785,13 +1786,15 @@ static ParsedExtMesh parseExtMeshArgs(
 	const py::object &crease_weights,
 	const bool normals_pretransformed,
 	const int tri_aov_index,
-	const float tri_aov_value
+	const float tri_aov_value,
+	const std::optional<std::string> &submesh_name = std::nullopt
 ) {
 	ParsedExtMesh a;
 	a.meshName = meshName;
 	a.normals_pretransformed = normals_pretransformed;
 	a.tri_aov_index = tri_aov_index;
 	a.tri_aov_value = tri_aov_value;
+	a.submeshName = submesh_name;
 	if (py::isinstance<py::str>(p)) {
 		a.pointsIsName = true;
 		a.srcMeshName = py::cast<std::string>(p);
@@ -1938,6 +1941,8 @@ static luxrays::ExtTriangleMeshUPtr buildExtMesh(
 		a.alphas
 	);
 	newMesh->SetName(a.meshName);
+	if (a.submeshName)
+		newMesh->SetShapeName(*a.submeshName);
 	if (!a.upairs.empty())
 		newMesh->SetCreases(std::move(a.upairs), std::move(a.weights));
 	if (srcTriMesh)
@@ -1970,7 +1975,8 @@ static void Scene_DefineMeshExt3(
     const std::optional<py::object> crease_weights,
     const bool normals_pretransformed = false,
     const int tri_aov_index = -1,
-    const float tri_aov_value = 0.0f
+    const float tri_aov_value = 0.0f,
+    const std::optional<std::string> submesh_name = std::nullopt
 ) {
 	// NOTE: the GIL is released for the buffer copies / mesh build / scene
 	// insertion below. Scene mesh definition is serialized by the scene's
@@ -1983,7 +1989,7 @@ static void Scene_DefineMeshExt3(
 		transformation ? py::reinterpret_borrow<py::object>(*transformation) : py::none(),
 		crease_pairs ? *crease_pairs : py::none(),
 		crease_weights ? *crease_weights : py::none(),
-		normals_pretransformed, tri_aov_index, tri_aov_value);
+		normals_pretransformed, tri_aov_index, tri_aov_value, submesh_name);
 	Py_BEGIN_ALLOW_THREADS
 	auto newMesh = buildExtMesh(scene, a);
 	// Insert mesh into the scene
@@ -2009,7 +2015,10 @@ static void Scene_DefineMeshesExt(const SceneImplPtr &scene, const py::list &pay
 			d["transformation"], d["crease_pairs"], d["crease_weights"],
 			py::cast<bool>(d["normals_pretransformed"]),
 			d.contains("tri_aov_index") ? py::cast<int>(d["tri_aov_index"]) : -1,
-			d.contains("tri_aov_value") ? py::cast<float>(d["tri_aov_value"]) : 0.0f));
+			d.contains("tri_aov_value") ? py::cast<float>(d["tri_aov_value"]) : 0.0f,
+			(d.contains("submesh_name") && !d["submesh_name"].is_none())
+				? std::optional<std::string>(py::cast<std::string>(d["submesh_name"]))
+				: std::nullopt));
 	}
 	Py_BEGIN_ALLOW_THREADS
 	// Build all meshes first, WITHOUT the mesh-def lock: the build only copies
@@ -3094,7 +3103,8 @@ PYBIND11_MODULE(pyluxcore, m) {
 		py::arg("crease_weights") = py::none(),
 		py::arg("normals_pretransformed") = false,
 		py::arg("tri_aov_index") = -1,
-		py::arg("tri_aov_value") = 0.0
+		py::arg("tri_aov_value") = 0.0,
+		py::arg("submesh_name") = py::none()
 	)
 	.def(
 		"DefineMeshesExt",

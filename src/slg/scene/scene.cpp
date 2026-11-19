@@ -375,7 +375,8 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMeshExt(
 	NormalBuffer&& n,
 	std::optional<ExtMeshProp<UV>> uvs,
 	std::optional<ExtMeshProp<Spectrum>> cols,
-	std::optional<ExtMeshProp<float>> alphas
+	std::optional<ExtMeshProp<float>> alphas,
+	const std::optional<std::string> &submeshName
 ) {
 	std::lock_guard<std::recursive_mutex> lock(meshDefMtx);
 
@@ -384,6 +385,10 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMeshExt(
 			uvs, cols, alphas
 	);
 	mesh->SetName(shapeName);
+	// Shape (submesh group) name: if not given, DefineMesh defaults it to
+	// the mesh name
+	if (submeshName)
+		mesh->SetShapeName(*submeshName);
 
 	return DefineMesh(std::move(mesh));
 }

@@ -183,7 +183,8 @@ public:
 		luxrays::NormalBuffer&& n,
 		std::optional<luxrays::ExtMeshProp<luxrays::UV>> uvs,
 		std::optional<luxrays::ExtMeshProp<luxrays::Spectrum>> cols,
-		std::optional<luxrays::ExtMeshProp<float>> alphas
+		std::optional<luxrays::ExtMeshProp<float>> alphas,
+		const std::optional<std::string> &submeshName = std::nullopt
 	);
 
 	ReturnType<ExtInstanceTriangleMesh> DefineMesh(
