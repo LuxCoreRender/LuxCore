@@ -102,9 +102,25 @@ ShapeUPtr TessellateShape::ApplyToShape(
 	// welded (watertight) and a following vertex-level modifier (e.g.
 	// displacement) runs once on that buffer.
 	const auto &submeshes = srcShape.GetSubmeshes();
+	// Submeshes that reference the shape's canonical buffer through a vertex
+	// map (compact storage) are rebuilt as transient global-indexed views
+	// sharing that buffer, so the per-buffer grouping below still sees one
+	// group per shape
+	std::vector<ExtTriangleMeshUPtr> views;
+	std::vector<ExtTriangleMesh *> work(submeshes.size());
+	for (size_t i = 0; i < submeshes.size(); ++i) {
+		auto &sm = submeshes[i].get();
+		auto view = sm.HasVertexMap() ? MakeGlobalView(sm, srcShape.GetVertices()) : nullptr;
+		if (view) {
+			views.push_back(std::move(view));
+			work[i] = views.back().get();
+		} else {
+			work[i] = &sm;
+		}
+	}
 	std::unordered_map<const void *, std::vector<size_t>> groups;
-	for (size_t i = 0; i < submeshes.size(); ++i)
-		groups[submeshes[i].get().GetVertexBuffer().Data()].push_back(i);
+	for (size_t i = 0; i < work.size(); ++i)
+		groups[work[i]->GetVertexBuffer().Data()].push_back(i);
 
 	struct GroupData {
 		ExtTriangleMeshUPtr tess;                       // tessellated envelope
@@ -116,7 +132,7 @@ ShapeUPtr TessellateShape::ApplyToShape(
 		std::vector<const ExtTriangleMesh *> groupMeshes;
 		groupMeshes.reserve(indices.size());
 		for (size_t idx : indices)
-			groupMeshes.push_back(&submeshes[idx].get());
+			groupMeshes.push_back(work[idx]);
 
 		GroupData g;
 		if (groupMeshes.size() == 1) {
@@ -139,15 +155,15 @@ ShapeUPtr TessellateShape::ApplyToShape(
 		perGroup.emplace(bufPtr, std::move(g));
 	}
 
-	const void *firstBuf = submeshes[0].get().GetVertexBuffer().Data();
+	const void *firstBuf = work[0]->GetVertexBuffer().Data();
 	auto result = std::make_unique<Shape>(resultName, perGroup[firstBuf].tess->GetVertexBuffer());
 
 	// Resplit the tessellated envelope(s) per source submesh, in source
 	// order. The result submeshes share the tessellated vertex buffer (a
 	// Buffer copy shares storage) and the per-vertex data layers; only the
 	// triangles and the per-triangle AOVs are sliced.
-	const bool single = submeshes.size() == 1;
-	std::vector<ExtTriangleMeshUPtr> resultMeshes(submeshes.size());
+	const bool single = work.size() == 1;
+	std::vector<ExtTriangleMeshUPtr> resultMeshes(work.size());
 	for (const auto &[bufPtr, indices] : groups) {
 		const GroupData &g = perGroup[bufPtr];
 		const auto srcTris = g.tess->GetTriangles();

@@ -298,8 +298,9 @@ struct SubmeshOut {
 	char points_name[64];             // name of the first submesh (share mode)
 	bool points_shared = false;       // share mode, first submesh (uses welded points)
 	ScalableVector<float> points_owned;     // compact mode
-	ScalableVector<uint32_t> triangles;     // [g, 3] flat
-	size_t n_points = 0;              // P of the attr arrays
+	ScalableVector<uint32_t> triangles;     // [g, 3] flat, local indices
+	ScalableVector<uint32_t> vertex_indices; // [countVertices] local->global (welded) point map, share mode
+	size_t n_points = 0;              // countVertices: size of triangles' index space and of the attr arrays
 	AttrRef normals;
 	ScalableVector<AttrRef> uvs, colors, alphas;
 	bool has_transform = false;
@@ -876,56 +877,55 @@ py::tuple compute_submeshes_c(
 					}
 
 					if (share_points) {
-						sm.n_points = P;
+						// Local indexing over the shared root buffer: the submesh stores
+						// only its referenced points. vertex_indices[local] is the welded
+						// (global) point index; triangles and all attribute arrays are
+						// indexed locally (0..n_used-1 == countVertices).
+						ScalableVector<int64_t> used(gw.begin(), gw.end());
+						std::sort(used.begin(), used.end());
+						used.erase(std::unique(used.begin(), used.end()), used.end());
+						const size_t n_used = used.size();
+						sm.n_points = n_used;
+						sm.vertex_indices.resize(n_used);
+						for (size_t i = 0; i < n_used; ++i)
+							sm.vertex_indices[i] = (uint32_t)used[i];
+						ScalableVector<int64_t> local_idx(g_n * 3);
 						sm.triangles.resize(g_n * 3);
-						for (size_t i = 0; i < g_n * 3; ++i)
-							sm.triangles[i] = (uint32_t)gw[i];
-						// island loops of this submesh
-						ScalableVector<int64_t> isl_loops, isl_gw;
-						isl_loops.reserve(g_n * 3);
-						isl_gw.reserve(g_n * 3);
-						for (size_t i = 0; i < g_n * 3; ++i)
-							if (loop_island[g_loops[i]] == (int64_t)isl) {
-								isl_loops.push_back(g_loops[i]);
-								isl_gw.push_back(gw[i]);
-							}
-						auto submesh_attr = [&](int cand, const float *loop_data, size_t k) -> AttrRef {
-							// share the candidate if every corner agrees with it
-							if (cand >= 0) {
-								const float *c = R.candidates[cand].data();
-								bool equal = true;
-								for (size_t i = 0; i < g_n * 3 && equal; ++i) {
-									const float *a = &loop_data[g_loops[i] * k];
-									const float *b = &c[gw[i] * k];
-									for (size_t c2 = 0; c2 < k; ++c2)
-										if (a[c2] != b[c2]) { equal = false; break; }
-								}
-								if (equal)
-									return AttrRef{cand, {}};
-							}
+						for (size_t i = 0; i < g_n * 3; ++i) {
+							local_idx[i] = std::lower_bound(used.begin(), used.end(), gw[i]) - used.begin();
+							sm.triangles[i] = (uint32_t)local_idx[i];
+						}
+						// every used row is written (used is the unique set of gw), so the
+						// compact arrays are fully initialized -- no sentinel rows
+						auto submesh_attr = [&](const float *loop_data, size_t k) -> AttrRef {
 							AttrRef ref;
-							// zero-initialized: rows outside the submesh's referenced
-							// points stay 0.0 (the "unfilled" sentinel) -- they ARE
-							// read by consumers over the shared root buffer (e.g. the
-							// subdiv envelope's first-non-zero merge, SaveMesh), so
-							// they must not contain garbage
-							ref.owned = scalable_float_array(P * k);
-							std::memset(ref.owned.get(), 0, P * k * sizeof(float));
-							ref.owned_size = P * k;
-							for (size_t i = 0; i < isl_loops.size(); ++i)
-								std::memcpy(&ref.owned[isl_gw[i] * k], &loop_data[isl_loops[i] * k], k * 4);
+							ref.owned = scalable_float_array(n_used * k);
+							ref.owned_size = n_used * k;
+							for (size_t i = 0; i < g_n * 3; ++i)
+								std::memcpy(&ref.owned[local_idx[i] * k], &loop_data[g_loops[i] * k], k * 4);
 							return ref;
 						};
 						for (size_t u = 0; u < n_uv; ++u)
-							sm.uvs.push_back(submesh_attr((int)u, uv_ptrs[u], 2));
-						sm.normals = submesh_attr(NORMAL_CAND, ln, 3);
+							sm.uvs.push_back(submesh_attr(uv_ptrs[u], 2));
+						sm.normals = submesh_attr(ln, 3);
 						for (size_t i = 0; i < color_attrs.size(); ++i) {
 							if (color_domains[i] == "POINT") {
-								sm.colors.push_back(AttrRef{point_cand_rgb[i], {}});
-								sm.alphas.push_back(AttrRef{point_cand_alpha[i], {}});
+								AttrRef r, a;
+								r.owned = scalable_float_array(n_used * 3);
+								r.owned_size = n_used * 3;
+								a.owned = scalable_float_array(n_used);
+								a.owned_size = n_used;
+								const float *prgb = R.candidates[point_cand_rgb[i]].data();
+								const float *pal = R.candidates[point_cand_alpha[i]].data();
+								for (size_t q = 0; q < n_used; ++q) {
+									std::memcpy(&r.owned[q * 3], &prgb[used[q] * 3], 12);
+									a.owned[q] = pal[used[q]];
+								}
+								sm.colors.push_back(std::move(r));
+								sm.alphas.push_back(std::move(a));
 							} else {
-								sm.colors.push_back(submesh_attr(color_cand_rgb[i], corner_rgb[i], 3));
-								sm.alphas.push_back(submesh_attr(color_cand_alpha[i], corner_alpha[i], 1));
+								sm.colors.push_back(submesh_attr(corner_rgb[i], 3));
+								sm.alphas.push_back(submesh_attr(corner_alpha[i], 1));
 							}
 						}
 						if (g == 0) {
@@ -1028,6 +1028,11 @@ py::tuple compute_submeshes_c(
 			d["points"] = wrap_owned<float>(std::move(sm.points_owned), {(py::ssize_t)sm.n_points, 3});
 		d["triangles"] = wrap_owned<uint32_t>(std::move(sm.triangles),
 			{(py::ssize_t)(sm.triangles.size() / 3), 3});
+		if (!sm.vertex_indices.empty())
+			d["vertex_indices"] = wrap_owned<uint32_t>(std::move(sm.vertex_indices),
+				{(py::ssize_t)sm.vertex_indices.size()});
+		else
+			d["vertex_indices"] = py::none();
 		d["normals"] = wrap_attr(sm.normals, sm.n_points, 3);
 		py::list uvs, colors, alphas;
 		for (auto &a : sm.uvs) uvs.append(wrap_attr(a, sm.n_points, 2));

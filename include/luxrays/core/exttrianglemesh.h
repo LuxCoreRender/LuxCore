@@ -362,6 +362,7 @@ public:
 	}
 	void DeleteVertexAOV(const u_int layerIndex) { vertAOV.DeleteLayer(layerIndex); }
 	auto GetVertexAOVs(const u_int layerIndex) const { return vertAOV.GetLayer(layerIndex); }
+	const auto& GetAllVertexAOVs() const { return vertAOV; }
 	virtual bool HasVertexAOV(const u_int layerIndex) const {
 		return vertAOV.LayerHasValues(layerIndex);
 	}
@@ -424,6 +425,16 @@ public:
 	const std::vector<u_int>& GetCreasePairs() const { return creasePairs; }
 	const std::vector<float>& GetCreaseWeights() const { return creaseWeights; }
 	bool HasCreases() const { return !creaseWeights.empty(); }
+
+	// Optional local->global vertex map: when a submesh references the
+	// canonical vertex buffer of its Shape instead of owning its points,
+	// its triangles and attribute arrays are indexed locally
+	// (0..countVertices-1) and vertexMap[local] is the index in the Shape
+	// buffer. Empty for a mesh that owns its points. Runtime-only (not
+	// serialized: submesh maps are rebuilt by the exporter on each define).
+	void SetVertexMap(std::vector<u_int> &&m) { vertexMap = std::move(m); }
+	const std::vector<u_int>& GetVertexMap() const { return vertexMap; }
+	bool HasVertexMap() const { return !vertexMap.empty(); }
 
 
 	// Computes the vertex normals in place: the normal buffer of the mesh is
@@ -697,6 +708,8 @@ public:
 	// Imported creases (edge sharpness, OpenSubdiv units)
 	std::vector<u_int> creasePairs;    // flat (v0, v1) pairs
 	std::vector<float> creaseWeights;  // one sharpness per pair
+
+	std::vector<u_int> vertexMap;      // optional local->global vertex map
 
 	std::unique_ptr<BevelCylinder[]> bevelCylinders;
 	std::unique_ptr<BevelBoundingCylinder[]> bevelBoundingCylinders;

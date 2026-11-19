@@ -56,6 +56,8 @@ public:
 	// storage, so the submeshes of the shape reference the same points.
 	const luxrays::VertexBuffer &GetVertices() const { return vertices; }
 	luxrays::VertexBuffer &GetVertices() { return vertices; }
+	// Replace the canonical buffer (Buffer copy: shares the storage)
+	void SetVertices(const luxrays::VertexBuffer &v) { vertices = v; }
 
 	// Register a submesh already defined in the scene mesh cache
 	void AddSubmesh(luxrays::ExtTriangleMesh &mesh) {
@@ -114,6 +116,14 @@ private:
 	mutable std::mutex subdivEnvelopeMtx;
 	mutable std::unordered_map<std::string, SubdivEnvelopeCacheEntry> subdivEnvelopeCache;
 };
+
+// Rebuild a submesh that references the shape's canonical vertex buffer
+// (local triangles + vertex map, attribute arrays sized countVertices) as a
+// global-indexed mesh sharing that canonical buffer, with attribute layers
+// expanded to the canonical point count. Transient working view for shape
+// modifiers. Returns nullptr when the mesh owns its points (no vertex map).
+luxrays::ExtTriangleMeshUPtr MakeGlobalView(
+	const luxrays::ExtTriangleMesh &mesh, const luxrays::VertexBuffer &canonical);
 
 }
 

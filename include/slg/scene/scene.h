@@ -286,6 +286,10 @@ public:
 	}
 	// Move a mesh to another Shape handle (created on demand)
 	void SetMeshShapeName(const std::string &meshName, const std::string &shapeName);
+	// Set the canonical vertex buffer of a shape (Buffer copy shares the
+	// storage). Used when submeshes reference the shape buffer through a
+	// vertex map instead of sharing the buffer of a mesh directly.
+	void SetShapeVertexBuffer(const std::string &shapeName, const luxrays::VertexBuffer &vertices);
 
 	// Clear the subdivided-envelope caches of all the Shape handles (the
 	// caches live on the Shape since it groups the submeshes sharing one

@@ -307,14 +307,30 @@ ShapeUPtr DisplacementShape::ApplyToShape(
 	// buffer (e.g. after a topology-changing modifier) are displaced per
 	// buffer group. Normals/UVs are read from each group's first submesh.
 	const auto &submeshes = srcShape.GetSubmeshes();
+	// Submeshes that reference the shape's canonical buffer through a vertex
+	// map (compact storage) are rebuilt as transient global-indexed views
+	// sharing that buffer, so the per-buffer grouping below still sees one
+	// group per shape
+	std::vector<ExtTriangleMeshUPtr> views;
+	std::vector<ExtTriangleMesh *> work(submeshes.size());
+	for (size_t i = 0; i < submeshes.size(); ++i) {
+		auto &sm = submeshes[i].get();
+		auto view = sm.HasVertexMap() ? MakeGlobalView(sm, srcShape.GetVertices()) : nullptr;
+		if (view) {
+			views.push_back(std::move(view));
+			work[i] = views.back().get();
+		} else {
+			work[i] = &sm;
+		}
+	}
 	std::unordered_map<const void *, std::vector<size_t>> groups;
-	for (size_t i = 0; i < submeshes.size(); ++i)
-		groups[submeshes[i].get().GetVertexBuffer().Data()].push_back(i);
+	for (size_t i = 0; i < work.size(); ++i)
+		groups[work[i]->GetVertexBuffer().Data()].push_back(i);
 
 	// displaced buffer per vertex-buffer group
 	std::unordered_map<const void *, VertexBuffer> displacedPerGroup;
 	for (auto &[bufPtr, indices] : groups) {
-		ExtTriangleMesh &srcMesh = submeshes[indices[0]].get();
+		ExtTriangleMesh &srcMesh = *work[indices[0]];
 		if (!srcMesh.HasNormals())
 			srcMesh.ComputeNormals();
 		if ((params.mapType == VECTOR_DISPLACEMENT) && !srcMesh.HasUVs(params.uvIndex))
@@ -323,11 +339,11 @@ ShapeUPtr DisplacementShape::ApplyToShape(
 	}
 
 	auto result = std::make_unique<Shape>(resultName,
-		displacedPerGroup[submeshes[0].get().GetVertexBuffer().Data()]);
-	const bool single = submeshes.size() == 1;
+		displacedPerGroup[work[0]->GetVertexBuffer().Data()]);
+	const bool single = work.size() == 1;
 	u_int k = 0;
-	for (auto &sm : submeshes) {
-		ExtTriangleMesh &m = sm.get();
+	for (size_t wi = 0; wi < work.size(); ++wi) {
+		ExtTriangleMesh &m = *work[wi];
 		const VertexBuffer &newVertices = displacedPerGroup[m.GetVertexBuffer().Data()];
 		auto mesh = m.Copy(
 			VertexBuffer(newVertices),  // copy: shares the displaced buffer storage

@@ -1284,11 +1284,27 @@ ShapeUPtr SubdivShape::ApplyToShape(
 	// modifiers): the submeshes of one object share the root buffer, but e.g.
 	// after another topology-changing modifier they may have their own.
 	const auto &submeshes = srcShape.GetSubmeshes();
+	// Submeshes that reference the shape's canonical buffer through a vertex
+	// map (compact storage) are rebuilt as transient global-indexed views
+	// sharing that buffer, so the per-buffer grouping below still sees one
+	// group per shape
+	std::vector<ExtTriangleMeshUPtr> views;
+	std::vector<ExtTriangleMesh *> work(submeshes.size());
+	for (size_t i = 0; i < submeshes.size(); ++i) {
+		auto &sm = submeshes[i].get();
+		auto view = sm.HasVertexMap() ? MakeGlobalView(sm, srcShape.GetVertices()) : nullptr;
+		if (view) {
+			views.push_back(std::move(view));
+			work[i] = views.back().get();
+		} else {
+			work[i] = &sm;
+		}
+	}
 	std::unordered_map<const void *, std::vector<size_t>> groups;
-	for (size_t i = 0; i < submeshes.size(); ++i)
-		groups[submeshes[i].get().GetVertexBuffer().Data()].push_back(i);
+	for (size_t i = 0; i < work.size(); ++i)
+		groups[work[i]->GetVertexBuffer().Data()].push_back(i);
 
-	const bool single = submeshes.size() == 1;
+	const bool single = work.size() == 1;
 
 	// The subdivision run of each buffer group's envelope is cached ON THE
 	// SOURCE SHAPE (keyed by buffer + subdiv params), so several subdiv
@@ -1308,7 +1324,7 @@ ShapeUPtr SubdivShape::ApplyToShape(
 		std::vector<const ExtTriangleMesh *> siblings;
 		siblings.reserve(indices.size());
 		for (size_t idx : indices)
-			siblings.push_back(&submeshes[idx].get());
+			siblings.push_back(work[idx]);
 
 		GroupResult g;
 		size_t faceOffset = 0;
@@ -1356,7 +1372,7 @@ ShapeUPtr SubdivShape::ApplyToShape(
 		perGroup.emplace(bufPtr, std::move(g));
 	}
 
-	const void *firstBuf = submeshes[0].get().GetVertexBuffer().Data();
+	const void *firstBuf = work[0]->GetVertexBuffer().Data();
 	auto result = std::make_unique<Shape>(
 		resultName, perGroup[firstBuf].entry->mesh->GetVertexBuffer());
 

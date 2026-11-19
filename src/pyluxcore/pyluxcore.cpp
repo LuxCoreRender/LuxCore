@@ -1762,8 +1762,11 @@ struct ParsedExtMesh {
 	int tri_aov_index = -1;
 	float tri_aov_value = 0.0f;
 	std::optional<std::string> submeshName;  // shape name; default = mesh name
+	py::array_t<uint32_t, py::array::c_style> vertexIndices;  // local->global map, optional
+	bool hasVertexIndices = false;
 	std::shared_ptr<void> triOwner;
 	std::shared_ptr<void> normalsOwner;
+	std::shared_ptr<void> vertexIndicesOwner;
 };
 
 static std::optional<std::vector<py_float_array>> optLayers(const py::object &o) {
@@ -1787,6 +1790,7 @@ static ParsedExtMesh parseExtMeshArgs(
 	const bool normals_pretransformed,
 	const int tri_aov_index,
 	const float tri_aov_value,
+	const py::object &vertex_indices = py::none(),
 	const std::optional<std::string> &submesh_name = std::nullopt
 ) {
 	ParsedExtMesh a;
@@ -1834,6 +1838,11 @@ static ParsedExtMesh parseExtMeshArgs(
 	a.triOwner = pyOwner(a.tri);
 	if (a.n)
 		a.normalsOwner = pyOwner(a.n.value());
+	if (!vertex_indices.is_none()) {
+		a.vertexIndices = py::cast<py::array_t<uint32_t, py::array::c_style>>(vertex_indices);
+		a.hasVertexIndices = true;
+		a.vertexIndicesOwner = pyOwner(a.vertexIndices);
+	}
 	return a;
 }
 
@@ -1847,7 +1856,8 @@ static ParsedExtMesh parseExtMeshArgs(
 // sources outside the batch fall back to the locked scene-cache lookup.
 static luxrays::ExtTriangleMeshUPtr buildExtMesh(
 	const SceneImplPtr &scene, ParsedExtMesh &a,
-	const std::unordered_map<std::string, luxrays::ExtTriangleMesh *> *batchLocal = nullptr
+	const std::unordered_map<std::string, luxrays::ExtTriangleMesh *> *batchLocal = nullptr,
+	const luxrays::VertexBuffer *canonical = nullptr
 ) {
 	luxrays::VertexBuffer points;
 	const luxrays::VertexBuffer *sharedPoints = &points;
@@ -1855,7 +1865,30 @@ static luxrays::ExtTriangleMeshUPtr buildExtMesh(
 	// world space (the source mesh applied its transform when it was defined)
 	luxrays::ExtTriangleMesh *srcTriMesh = nullptr;
 	luxrays::Transform srcTrans;
-	if (a.pointsIsName) {
+	bool pointsAlreadyTransformed = false;
+	// True when points were gathered from the canonical buffer below (in that
+	// case the points refill from a.pointsArr must be skipped: the array may
+	// be the full shared buffer, or absent entirely for points-by-name payloads)
+	const bool gathered = (a.hasVertexIndices && canonical != nullptr);
+	if (gathered) {
+		// Submesh referencing the shape's canonical buffer: gather only its
+		// own points (countVertices) through the local->global vertex map.
+		// Triangles and attribute arrays stay local (sized countVertices).
+		const u_int n = (u_int)a.vertexIndices.size();
+		const uint32_t *vi = a.vertexIndices.data();
+		points.Allocate(n);
+		for (u_int i = 0; i < n; ++i) {
+			if (vi[i] >= canonical->Count())
+				throw std::runtime_error("Scene.DefineMeshExt: vertex_indices out of range in mesh '" + a.meshName + "'");
+			points[i] = (*canonical)[vi[i]];
+		}
+		sharedPoints = &points;
+		// The canonical buffer is already in world space
+		if (a.luxtrans.has_value()) {
+			srcTrans = a.luxtrans.value();
+			pointsAlreadyTransformed = true;
+		}
+	} else if (a.pointsIsName) {
 		if (batchLocal) {
 			auto it = batchLocal->find(a.srcMeshName);
 			if (it != batchLocal->end())
@@ -1876,7 +1909,7 @@ static luxrays::ExtTriangleMeshUPtr buildExtMesh(
 		srcTriMesh->GetLocal2World(0.f, srcTrans);
 	}
 
-	if (sharedPoints == &points)
+	if (sharedPoints == &points && !gathered)
 		points = dataCopyBuffer<float, 3, luxrays::VertexBuffer>(a.pointsArr, a.meshName, "Points");
 
 	// Triangles (zero-copy: wraps the numpy buffer, kept alive by triOwner)
@@ -1911,7 +1944,7 @@ static luxrays::ExtTriangleMeshUPtr buildExtMesh(
 	// LocalMapping3D) and its normals rotated to world space, exactly like
 	// ApplyTransform() would have done. The normals buffer may wrap
 	// read-only external memory, so deep-copy it before rotating.
-	if (srcTriMesh) {
+	if (srcTriMesh || pointsAlreadyTransformed) {
 		// normals_pretransformed: the caller already rotated the normals
 		// to world space (e.g. BlendLuxCore bakes the transform into the
 		// points itself and pre-rotates the normals in numpy). Skipping
@@ -1945,7 +1978,16 @@ static luxrays::ExtTriangleMeshUPtr buildExtMesh(
 		newMesh->SetShapeName(*a.submeshName);
 	if (!a.upairs.empty())
 		newMesh->SetCreases(std::move(a.upairs), std::move(a.weights));
-	if (srcTriMesh)
+	if (a.hasVertexIndices && canonical) {
+		// store the local->global map so shape modifiers can rebuild the
+		// global-indexed view over the shape's canonical buffer
+		const u_int n = (u_int)a.vertexIndices.size();
+		const uint32_t *vi = a.vertexIndices.data();
+		std::vector<u_int> vmap(vi, vi + n);
+		newMesh->SetVertexMap(std::move(vmap));
+		if (a.luxtrans.has_value())
+			newMesh->SetLocal2World(a.luxtrans.value());
+	} else if (srcTriMesh)
 		newMesh->SetLocal2World(srcTrans);
 	else if (a.luxtrans.has_value())
 		newMesh->ApplyTransform(a.luxtrans.value());
@@ -1959,6 +2001,20 @@ static luxrays::ExtTriangleMeshUPtr buildExtMesh(
 		newMesh->SetTriAOV((u_int)a.tri_aov_index, std::span<float>(aov.data(), aov.size()));
 	}
 	return newMesh;
+}
+
+// Build the canonical (shape) point buffer of a submesh batch from the
+// first payload's points array, applying the mesh transform once (world
+// space). Submeshes then gather their own points from it via vertex_indices.
+static luxrays::VertexBuffer buildCanonicalPoints(const ParsedExtMesh &a) {
+	luxrays::VertexBuffer canonical =
+		dataCopyBuffer<float, 3, luxrays::VertexBuffer>(a.pointsArr, a.meshName, "Points");
+	if (a.luxtrans.has_value()) {
+		const luxrays::Transform &t = a.luxtrans.value();
+		for (u_int i = 0; i < canonical.Count(); ++i)
+			canonical[i] = t * canonical[i];
+	}
+	return canonical;
 }
 
 static void Scene_DefineMeshExt3(
@@ -1976,6 +2032,7 @@ static void Scene_DefineMeshExt3(
     const bool normals_pretransformed = false,
     const int tri_aov_index = -1,
     const float tri_aov_value = 0.0f,
+    const py::object &vertex_indices = py::none(),
     const std::optional<std::string> submesh_name = std::nullopt
 ) {
 	// NOTE: the GIL is released for the buffer copies / mesh build / scene
@@ -1989,11 +2046,28 @@ static void Scene_DefineMeshExt3(
 		transformation ? py::reinterpret_borrow<py::object>(*transformation) : py::none(),
 		crease_pairs ? *crease_pairs : py::none(),
 		crease_weights ? *crease_weights : py::none(),
-		normals_pretransformed, tri_aov_index, tri_aov_value, submesh_name);
+		normals_pretransformed, tri_aov_index, tri_aov_value, vertex_indices, submesh_name);
 	Py_BEGIN_ALLOW_THREADS
-	auto newMesh = buildExtMesh(scene, a);
+	luxrays::VertexBuffer canonical;
+	const luxrays::VertexBuffer *canonicalPtr = nullptr;
+	if (a.hasVertexIndices && !a.pointsIsName) {
+		canonical = buildCanonicalPoints(a);
+		canonicalPtr = &canonical;
+	} else if (a.hasVertexIndices && a.submeshName) {
+		// Points-by-name submesh whose first sibling was defined earlier:
+		// gather from the shape's canonical buffer (shares its storage)
+		std::lock_guard<std::recursive_mutex> meshLock(scene->GetSlgScene().MeshDefMutex());
+		auto &shapes = scene->GetSlgScene().GetShapes();
+		if (shapes.IsShapeDefined(*a.submeshName)) {
+			canonical = shapes.GetShape(*a.submeshName).GetVertices();
+			canonicalPtr = &canonical;
+		}
+	}
+	auto newMesh = buildExtMesh(scene, a, nullptr, canonicalPtr);
 	// Insert mesh into the scene
 	scene->DefineMesh(std::move(newMesh));
+	if (canonicalPtr && a.submeshName)
+		scene->GetSlgScene().SetShapeVertexBuffer(*a.submeshName, canonical);
 	Py_END_ALLOW_THREADS
 }
 
@@ -2008,6 +2082,9 @@ static void Scene_DefineMeshesExt(const SceneImplPtr &scene, const py::list &pay
 	parsed.reserve(py::len(payloads));
 	for (py::handle h : payloads) {
 		py::dict d = py::cast<py::dict>(h);
+		py::object vertexIndices = py::none();
+		if (d.contains("vertex_indices") && !d["vertex_indices"].is_none())
+			vertexIndices = py::reinterpret_borrow<py::object>(d["vertex_indices"]);
 		parsed.push_back(parseExtMeshArgs(
 			py::cast<std::string>(d["name"]),
 			d["points"], d["triangles"], d["normals"],
@@ -2016,6 +2093,7 @@ static void Scene_DefineMeshesExt(const SceneImplPtr &scene, const py::list &pay
 			py::cast<bool>(d["normals_pretransformed"]),
 			d.contains("tri_aov_index") ? py::cast<int>(d["tri_aov_index"]) : -1,
 			d.contains("tri_aov_value") ? py::cast<float>(d["tri_aov_value"]) : 0.0f,
+			vertexIndices,
 			(d.contains("submesh_name") && !d["submesh_name"].is_none())
 				? std::optional<std::string>(py::cast<std::string>(d["submesh_name"]))
 				: std::nullopt));
@@ -2030,8 +2108,37 @@ static void Scene_DefineMeshesExt(const SceneImplPtr &scene, const py::list &pay
 	built.reserve(parsed.size());
 	std::unordered_map<std::string, luxrays::ExtTriangleMesh *> builtByName;
 	builtByName.reserve(parsed.size() * 2);
+	// Canonical (shape) point buffer, built once from the first payload that
+	// carries a points array; every submesh with vertex_indices gathers its
+	// own points from it
+	luxrays::VertexBuffer canonical;
+	const luxrays::VertexBuffer *canonicalPtr = nullptr;
+	std::string canonicalShapeName;
 	for (auto &a : parsed) {
-		auto newMesh = buildExtMesh(scene, a, &builtByName);
+		if (canonicalPtr == nullptr && a.hasVertexIndices && !a.pointsIsName) {
+			canonical = buildCanonicalPoints(a);
+			canonicalPtr = &canonical;
+			canonicalShapeName = a.submeshName ? *a.submeshName : a.meshName;
+		}
+	}
+	if (canonicalPtr == nullptr) {
+		// All vertex_indices payloads are points-by-name: the shape's
+		// canonical buffer was set when its first submesh was defined
+		for (auto &a : parsed) {
+			if (a.hasVertexIndices && a.submeshName) {
+				std::lock_guard<std::recursive_mutex> meshLock(scene->GetSlgScene().MeshDefMutex());
+				auto &shapes = scene->GetSlgScene().GetShapes();
+				if (shapes.IsShapeDefined(*a.submeshName)) {
+					canonical = shapes.GetShape(*a.submeshName).GetVertices();
+					canonicalPtr = &canonical;
+					canonicalShapeName = *a.submeshName;
+				}
+				break;
+			}
+		}
+	}
+	for (auto &a : parsed) {
+		auto newMesh = buildExtMesh(scene, a, &builtByName, canonicalPtr);
 		builtByName.emplace(a.meshName, newMesh.get());
 		built.push_back(std::move(newMesh));
 	}
@@ -2045,6 +2152,8 @@ static void Scene_DefineMeshesExt(const SceneImplPtr &scene, const py::list &pay
 		std::lock_guard<std::recursive_mutex> batchLock(scene->GetSlgScene().MeshDefMutex());
 		for (auto &m : built)
 			scene->DefineMesh(std::move(m));
+		if (canonicalPtr && !canonicalShapeName.empty())
+			scene->GetSlgScene().SetShapeVertexBuffer(canonicalShapeName, canonical);
 	}
 	Py_END_ALLOW_THREADS
 }
@@ -3104,6 +3213,7 @@ PYBIND11_MODULE(pyluxcore, m) {
 		py::arg("normals_pretransformed") = false,
 		py::arg("tri_aov_index") = -1,
 		py::arg("tri_aov_value") = 0.0,
+		py::arg("vertex_indices") = py::none(),
 		py::arg("submesh_name") = py::none()
 	)
 	.def(

@@ -281,6 +281,14 @@ void Scene::RegisterMeshShape(ExtTriangleMesh &mesh) {
 	shape.AddSubmesh(mesh);
 }
 
+void Scene::SetShapeVertexBuffer(const std::string &shapeName, const luxrays::VertexBuffer &vertices) {
+	std::lock_guard<std::recursive_mutex> lock(meshDefMtx);
+	if (shapeDefs.IsShapeDefined(shapeName))
+		shapeDefs.GetShape(shapeName).SetVertices(vertices);
+	else
+		shapeDefs.DefineShape(std::make_unique<Shape>(shapeName, vertices));
+}
+
 void Scene::SetMeshShapeName(const std::string &meshName, const std::string &shapeName) {
 	std::lock_guard<std::recursive_mutex> lock(meshDefMtx);
 
