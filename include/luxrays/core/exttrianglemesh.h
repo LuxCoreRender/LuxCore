@@ -31,6 +31,7 @@
 #include <boost/serialization/array.hpp>
 
 #include "luxrays/luxrays.h"
+#include "luxrays/core/extmeshprop.h"
 #include "luxrays/core/bvh/bvhbuild.h"
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/geometry/uv.h"
@@ -51,151 +52,6 @@ namespace ocl {
 
 class Ray;
 class RayHit;
-
-// ExtMeshProp: a container for a property of Extended Mesh (uv, colors, alphas...)
-//
-// We use shared pointer, as it allows shallow copy (can be useful for such
-// large data sets)
-// All methods run on a per layer basis, except those suffixed by 'All', which
-// run on all layers
-template <typename T>
-class ExtMeshProp : std::array<std::shared_ptr<T[]>, EXTMESH_MAX_DATA_COUNT> {
-public:
-	using Layer = std::shared_ptr<T[]>;
-	using Base = std::array<Layer, EXTMESH_MAX_DATA_COUNT>;
-
-	ExtMeshProp() { this->fill(nullptr); }
-
-	// Construct from a single layer of data
-	ExtMeshProp(Layer layer, size_t layerSize = 0) : ExtMeshProp() {
-		if (layer) {
-			(*this)[0] = layer;
-			if (layerSize) _size = layerSize;
-		}
-	}
-
-	// Per-layer
-	void AllocateLayer(const u_int layerIndex, size_t layerSize) {
-		assert(!_size || _size == layerSize);  // Should always be the same size once it
-										  // has been set
-		// A zero-size array is not null: keep the layer null or LayerHasValues
-		// would report it as having values
-		(*this)[layerIndex] = (layerSize > 0) ? std::make_shared<T[]>(layerSize) : Layer(nullptr);
-		if (layerSize) _size = layerSize;
-	}
-	auto GetLayer(const u_int layerIndex) const {
-		assert(layerIndex < GetMaxLayerNumber());
-		return (*this)[layerIndex];
-	}
-	void SetLayer(const u_int layerIndex, Layer values, size_t layerSize) {
-		assert(!_size || _size == layerSize);
-		(*this)[layerIndex] = values;
-		if (layerSize) _size = layerSize;
-	}
-	void SetLayer(const u_int layerIndex, std::tuple<Layer, size_t> in) {
-		auto [layer, layerSize] = in;
-		SetLayer(layerIndex, layer, layerSize);
-	}
-	void SetLayer(const u_int layerIndex, std::span<T> in) {
-		auto layerSize = in.size();
-		assert(!_size || _size == layerSize);
-
-		AllocateLayer(layerIndex, layerSize);
-		auto layerSpan = GetLayerSpan(layerIndex);
-
-		std::copy(
-#if !defined(__clang__)
-			std::execution::par,
-#endif
-			in.begin(),
-			in.end(),
-			layerSpan.begin()
-		);
-		if (layerSize) _size = layerSize;
-	}
-
-	void DeleteLayer(const u_int layerIndex) {
-		(*this)[layerIndex].reset();
-		(*this)[layerIndex] = nullptr;
-	}
-	bool LayerHasValues(const u_int layerIndex) const {
-		return (*this)[layerIndex] != nullptr;
-	}
-
-	std::span<T> GetLayerSpan(const u_int layerIndex) const {
-		auto& layer = (*this)[layerIndex];
-		if (!layer) return std::span<T>();
-		return std::span<T>(layer.get(), _size);
-	}
-
-	std::tuple<Layer, size_t> CopyLayer(
-		const u_int layerIndex,
-		const std::optional<ExtMeshProp<T>> force = std::nullopt
-	) const {
-		if (force) {
-			return std::make_tuple(force->GetLayer(layerIndex), force->GetLayerSize());
-		}
-
-		if (LayerHasValues(layerIndex)) {
-			auto res = std::make_shared<T[]>(GetLayerSize());
-
-			auto srcSpan = GetLayerSpan(layerIndex);
-			auto dstSpan = std::span(res.get(), GetLayerSize());
-			std::copy(
-#if !defined(__clang__)
-				std::execution::par,
-#endif
-				srcSpan.begin(),
-				srcSpan.end(),
-				dstSpan.begin()
-			);
-
-			return std::make_tuple(res, GetLayerSize());
-		}
-
-		return std::make_tuple(Layer(nullptr), 0);
-	};
-
-	// All layers
-	void DeleteAll() {
-		for (size_t i = 0; i < this->size(); ++i)
-			DeleteLayer(i);
-	}
-	size_t GetLayerSize() const { return _size; }
-
-	// Serialization
-	template<typename Archive>
-	void Serialize(const u_int layerIndex, Archive& ar, size_t count) const {
-		const bool hasValues = LayerHasValues(layerIndex);
-		ar & hasValues;
-		if (hasValues) {
-			auto data = (*this)[layerIndex].get();
-			ar & boost::serialization::make_array(data, count);
-		}
-	}
-
-	template<typename Archive>
-	void Deserialize(const u_int layerIndex, Archive& ar, size_t count) {
-		bool hasValues;
-		ar & hasValues;
-		if (hasValues) {
-			AllocateLayer(layerIndex, count);
-			auto data = (*this)[layerIndex].get();
-			ar & boost::serialization::make_array(data, count);
-		} else {
-			(*this)[layerIndex] = nullptr;
-		}
-	}
-
-	// Base
-	using Base::operator[];  // TODO Make private
-	auto GetMaxLayerNumber() const { return Base::size(); }  // Size of the array
-
-private:
-	size_t _size = 0;
-
-};
-
 
 /*
  * The inheritance scheme used here:
@@ -638,7 +494,7 @@ public:
 
 	void Preprocess();
 	void PreprocessBevel();
-	
+
 	virtual void SavePly(const std::string &fileName) const;
 	virtual void SaveSerialized(const std::string &fileName) const;
 
