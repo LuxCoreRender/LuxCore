@@ -202,6 +202,7 @@ private:
 			const float clearcoat, const float clearcoatGloss, const float anisotropic,
 			const float specTrans, const float eta,
 			const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
+            float *directPdfW, float *reversePdfW) const;
 	void DiffusePdf(const bool fromLight,
 			const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 			float *directPdfW, float *reversePdfW) const;
