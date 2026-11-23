@@ -95,7 +95,7 @@ float SpotLight::GetPower(SceneConstRef scene) const {
 static float LocalFalloff(const Vector &w, const float cosTotalWidth, const float cosFalloffStart) {
 	if (CosTheta(w) < cosTotalWidth)
 		return 0.f;
- 	if (CosTheta(w) > cosFalloffStart)
+	if (CosTheta(w) >= cosFalloffStart)
 		return 1.f;
 
 	// Compute falloff inside spotlight cone

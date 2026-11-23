@@ -912,7 +912,7 @@ OPENCL_FORCE_INLINE float3 MapSphereLight_Illuminate(__global const LightSource 
 OPENCL_FORCE_INLINE float SpotLight_LocalFalloff(const float3 w, const float cosTotalWidth, const float cosFalloffStart) {
 	if (CosTheta(w) < cosTotalWidth)
 		return 0.f;
- 	if (CosTheta(w) > cosFalloffStart)
+	if (CosTheta(w) >= cosFalloffStart)
 		return 1.f;
 
 	// Compute falloff inside spotlight cone
