@@ -386,7 +386,9 @@ private:
 	VolumeUPtr CreateVolume(const u_int defaultVolID, const std::string &volName, const luxrays::Properties &props);
 	MaterialUPtr CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
 
-	luxrays::ExtTriangleMeshUPtr CreateShape(const std::string &shapeName, const luxrays::Properties &props);
+	luxrays::ExtTriangleMeshUPtr CreateShape(const std::string &shapeName, const luxrays::Properties &props,
+		const std::vector<luxrays::ExtTriangleMeshUPtr> *blockMeshes = nullptr,
+		const std::unordered_map<std::string, size_t> *blockIndex = nullptr);
 	SceneObjectUPtr CreateObject(const u_int defaultObjID, const std::string &objName, const luxrays::Properties &props);
 	LightSourceUPtr CreateLightSource(const std::string &lightName, const luxrays::Properties &props);
 

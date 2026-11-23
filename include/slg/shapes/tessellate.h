@@ -19,88 +19,16 @@
 #ifndef _SLG_TESSELLATE_SHAPE_H
 #define	_SLG_TESSELLATE_SHAPE_H
 
-#include <string>
-#include <tuple>
-#include <vector>
-
-#include <opensubdiv/far/topologyRefiner.h>
-
-// OpenSubdiv declares Far inside OpenSubdiv::OPENSUBDIV_VERSION
-namespace Far = OpenSubdiv::Far;
-
 #include "slg/usings.h"
 #include "slg/shapes/shape.h"
 #include "luxrays/core/exttrianglemesh.h"  // complete type: this header returns ExtTriangleMeshUPtr
 #include "luxrays/utils/utils.h"  // u_int (not provided by MSVC system headers)
-#include "luxrays/utils/buffer.h"
 
 namespace slg {
 
-// Storage of local coordinates (coordinates in a given face) during
-// tessellation, in the form (face, x, y).
-struct LocalCoords {
-	int face = -1;
-	float x = 0.f;
-	float y = 0.f;
-
-	LocalCoords() {}
-
-	LocalCoords(int p_face, float p_x, float p_y):
-		face(p_face),
-		x(p_x),
-		y(p_y)
-	{ }
-
-	LocalCoords(int p_face, int p_i, int p_j, int N):
-		face(p_face),
-		x(float(p_i) / float(N)),
-		y(float(p_j) / float(N))
-	{ }
-
-	// Avoid unexpected use of LocalCoords(int, float, float)
-	// with implicit conversion
-	LocalCoords(int, int, int) = delete;
-
-	// Interpolating constructor
-	LocalCoords(LocalCoords p0, LocalCoords p1, u_int weight, u_int total) {
-		assert(p0.face == p1.face);
-		assert(weight <= total);
-
-		face = p0.face;
-
-		float weight_f = float(weight);
-		float total_f = float(total);
-		x = (weight_f * p1.x + (total_f - weight_f) * p0.x) / total_f;
-		y = (weight_f * p1.y + (total_f - weight_f) * p0.y) / total_f;
-	}
-};
-
-typedef std::vector<LocalCoords> CoordVector;
-
-// Triforce tessellation of a topology: splits each edge in N segments and
-// generates N^2 triangles per input triangle. Multithreaded reimplementation
-// of the OSD tessellation (the OSD one is monothreaded).
-//
-// This is the API used by the subdivision shape: it is called directly on
-// the subdivision refiner.
-//
-// Returns (tessCoords, tessTris, numPoints, numTriangles).
-// When cornerCoords is given, it is filled with the local coordinates of each
-// tessellated triangle corner WITHIN ITS OWN base face (3 * numTriangles
-// entries): the per-point tessCoords of points shared between faces carry the
-// face of one arbitrary incident face, which is not suitable for face-varying
-// data evaluation.
-std::tuple<CoordVector, luxrays::TriangleBuffer, int, int>
-TessellateTopology(
-	const Far::TopologyRefiner &refiner,
-	const size_t N,
-	std::vector<LocalCoords> *cornerCoords = nullptr
-);
-
-// Number of positions / triangles after an N-tessellation of the given
-// (base level) topology
-int GetTessellationPosCount(const Far::TopologyLevel &topology, int N);
-int GetTessellationTriangleCount(const Far::TopologyLevel &topology, int N);
+// The tessellate shape modifier: standalone flat tessellation of a mesh,
+// independent from the subdivision shape. The core tessellation algorithm
+// it builds upon lives in tessellate_core.h.
 
 // A standalone shape applying a flat (barycentric) tessellation of the
 // source mesh: each triangle is split in rate^2 triangles, the new points

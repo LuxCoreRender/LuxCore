@@ -39,7 +39,7 @@
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/subdiv.h"
-#include "slg/shapes/tessellate.h"
+#include "slg/shapes/subdiv_tessellate.h"
 #include "slg/shapes/subdiv_envelope.h"
 #include "slg/cameras/camera.h"
 #include "slg/scene/scene.h"
@@ -393,7 +393,7 @@ struct Surface {
 		const float sharpnessThresholdRadians,
 		const float creaseWeight,
 		const SubdivCreaseMode creaseMode
-	) {
+	) : srcMesh(srcMesh) {
 		SDL_LOG("Subdivision (enhanced) - Computing patches");
 
 		// Initialize patch table options
@@ -410,10 +410,11 @@ struct Surface {
 		std::map<std::pair<int, int>, EdgeInfo> edgeMap;
 		buildCreaseEdgeMap(srcMesh, creaseMode, sharpnessThresholdRadians, creaseWeight, edgeMap);
 
-		// Construct refiner
+		// Construct refiner (LuxCore u_int indices -> OpenSubdiv int, checked)
+		const std::vector<int> osdFaceIndices = ToOpenSubdivFaceIndices(srcMesh);
 		refiner = std::move(
 			createTopologyAdaptiveRefiner(
-				reinterpret_cast<const int *>(srcMesh.GetTrianglesAsInts().data()),
+				osdFaceIndices.data(),
 				srcMesh.GetTotalVertexCount(),
 				srcMesh.GetTotalTriangleCount(),
 				edgeMap,
@@ -486,9 +487,10 @@ struct Surface {
 	///
 	/// Tessellate input mesh: delegates to the standalone tessellation
 	/// (TessellateShape API), called directly on this refiner
-	std::tuple<CoordVector, TriangleBuffer, int, int>
+	TessellationData
 	Tessellate (const size_t N, std::vector<LocalCoords> *cornerCoords = nullptr) {
-		return TessellateTopology(*refiner, N, cornerCoords);
+		// The level-0 topology of the refiner is the source mesh topology
+		return TessellateSubdivTopology(srcMesh, N, cornerCoords);
 	}
 
 
@@ -535,13 +537,13 @@ struct Surface {
 	}
 
 	// Get number of positions after N-tessellation
-	int getTesselPosCount(int N) const {
-		return GetTessellationPosCount(refiner->GetLevel(0), N);
+	u_int getTesselPosCount(int N) const {
+		return GetSubdivTessellationPosCount(srcMesh, N);
 	}
 
 	// Get number of triangles after N-tessellation
-	int getTesselTriangleCount(int N) const {
-		return GetTessellationTriangleCount(refiner->GetLevel(0), N);
+	u_int getTesselTriangleCount(int N) const {
+		return GetSubdivTessellationTriangleCount(srcMesh, N);
 	}
 
 	///
@@ -582,7 +584,7 @@ struct Surface {
 				auto& coords = tessCoords[vertex];
 
 				// Translate in ptex face
-				int ptexFace = ptexIndices->GetFaceId(coords.face);
+				int ptexFace = ptexIndices->GetFaceId(ToOpenSubdivInt(coords.face));
 
 				//  Locate the patch corresponding to the face ptex idx and (s,t)
 				//  and evaluate:
@@ -683,7 +685,7 @@ struct Surface {
 			for (size_t i = r.begin(); i < r.end(); ++i) {
 				const auto &coords = cornerCoords[i];
 
-				int ptexFace = ptexIndices->GetFaceId(coords.face);
+				int ptexFace = ptexIndices->GetFaceId(ToOpenSubdivInt(coords.face));
 
 				Far::PatchTable::PatchHandle const * handle =
 					patchMap->FindPatch(ptexFace, coords.x, coords.y);
@@ -759,7 +761,7 @@ struct Surface {
 				auto& coords = tessCoords[vertex];
 
 				// Translate in ptex face
-				int ptexFace = ptexIndices->GetFaceId(coords.face);
+				int ptexFace = ptexIndices->GetFaceId(ToOpenSubdivInt(coords.face));
 
 				//  Locate the patch corresponding to the face ptex idx and (s,t)
 				//  and evaluate:
@@ -795,6 +797,7 @@ struct Surface {
 
 	// Property members
 	// "We're all consenting adults here", so those members will be left public
+	ExtTriangleMeshConstRef srcMesh;
 	TopologyRefinerPtr refiner;
 	PtexIndicesPtr ptexIndices;
 	Far::PatchTableFactory::Options patchTableOptions;
@@ -1020,7 +1023,7 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	// incident face, unsuitable for face-varying evaluation).
 	CoordVector tessCoords;
 	TriangleBuffer tessTriangles;
-	int numPoints, numTriangles;
+	u_int numPoints, numTriangles;
 	std::vector<LocalCoords> cornerCoords;
 
 	tie(tessCoords, tessTriangles, numPoints, numTriangles) =

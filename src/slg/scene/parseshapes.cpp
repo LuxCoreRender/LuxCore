@@ -21,6 +21,7 @@
 
 #include <boost/format.hpp>
 
+#include <functional>
 #include <unordered_set>
 
 #include "luxrays/core/exttrianglemesh.h"
@@ -62,81 +63,75 @@ void Scene::ParseShapes(const Properties &props) {
 
 	// Validate the names serially first, so the reported error is the same
 	// as in the serial version
-	for(const string &key: shapeKeys) {
-		const string shapeName = Property::ExtractField(key, 2);
-		if (shapeName == "")
-			throw runtime_error("Syntax error in shape definition: " + shapeName);
+	const size_t shapeTotal = shapeKeys.size();
+	vector<string> shapeNames(shapeTotal);
+	std::unordered_map<string, size_t> shapeIndex;
+	for (size_t i = 0; i < shapeTotal; ++i) {
+		shapeNames[i] = Property::ExtractField(shapeKeys[i], 2);
+		if (shapeNames[i] == "")
+			throw runtime_error("Syntax error in shape definition: " + shapeNames[i]);
+		shapeIndex[shapeNames[i]] = i;
 	}
 
-	// A shape may reference as source another shape of this same block; in
-	// the serial version that works because sources are defined in key
-	// order. If any such intra-block dependency exists, keep the fully
-	// serial path to preserve those semantics exactly.
-	std::unordered_set<string> loopShapeNames;
-	for(const string &key: shapeKeys)
-		loopShapeNames.insert(Property::ExtractField(key, 2));
-	bool hasIntraLoopDependency = false;
-	for(const string &key: shapeKeys) {
-		const string propName = "scene.shapes." + Property::ExtractField(key, 2);
+	// A shape may reference as source another shape of this same block.
+	// Record those intra-block dependencies as index lists (the graph is
+	// acyclic: a shape can never be its own ancestor).
+	vector<vector<size_t>> deps(shapeTotal);
+	for (size_t i = 0; i < shapeTotal; ++i) {
+		const string propName = "scene.shapes." + shapeNames[i];
 		const string shapeType = props.Get(Property(propName + ".type")("mesh")).Get<string>();
 		if (shapeType == "group") {
 			for(const string &subKey: props.GetAllUniqueSubNames(propName, true)) {
 				const string name = props.Get(Property(propName + "." +
 					Property::ExtractField(subKey, 3) + ".shape")("shape")).Get<string>();
-				if (loopShapeNames.count(name) && !extMeshCache.IsExtMeshDefined(name))
-					hasIntraLoopDependency = true;
+				const auto it = shapeIndex.find(name);
+				if (it != shapeIndex.end() && it->second != i)
+					deps[i].push_back(it->second);
 			}
 		} else {
 			const string source = props.Get(Property(propName + ".source")("")).Get<string>();
-			if (!source.empty() && loopShapeNames.count(source) &&
-					!extMeshCache.IsExtMeshDefined(source))
-				hasIntraLoopDependency = true;
+			const auto it = shapeIndex.find(source);
+			if (it != shapeIndex.end() && it->second != i)
+				deps[i].push_back(it->second);
 		}
 	}
+
+	// Create the shapes in parallel with TBB: this is the expensive part
+	// (PLY loading, pointiness, subdivision, simplify...). Intra-block
+	// sources are created recursively first, memoized per shape. Everything
+	// CreateShape touches at this point is read-only (camera, ext mesh
+	// cache, properties) or already internally synchronized (GetTexture
+	// via texDefMtx, the subdiv envelope cache). The DefineMesh calls stay
+	// serial, in the original key order, so mesh insertion order -- and
+	// therefore mesh indices -- are unchanged.
+	vector<ExtTriangleMeshUPtr> meshes(shapeTotal);
+	vector<std::mutex> meshMutexes(shapeTotal);
+	std::function<void(size_t)> createShape = [&](size_t i) {
+		std::lock_guard<std::mutex> lock(meshMutexes[i]);
+		if (meshes[i])
+			return;
+		for (size_t d: deps[i])
+			createShape(d);
+		meshes[i] = CreateShape(shapeNames[i], props, &meshes, &shapeIndex);
+	};
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, shapeTotal),
+		[&](const tbb::blocked_range<size_t> &r) {
+			for (size_t i = r.begin(); i < r.end(); ++i)
+				createShape(i);
+		});
 
 	const double startTime = WallClockTime();
 	double lastPrint = startTime;
 	u_int shapeCount = 0;
-	if (!hasIntraLoopDependency) {
-		// Create the shapes in parallel: this is the expensive part (PLY
-		// loading, pointiness, subdivision, strands...). Everything
-		// CreateShape touches at this point is read-only (camera, ext mesh
-		// cache, properties) or already internally synchronized (GetTexture
-		// via texDefMtx, the subdiv envelope cache). The DefineMesh calls
-		// stay serial, in the original key order, so mesh insertion order
-		// -- and therefore mesh indices -- are unchanged.
-		const size_t shapeTotal = shapeKeys.size();
-		std::vector<ExtTriangleMeshUPtr> meshes(shapeTotal);
-		tbb::parallel_for(tbb::blocked_range<size_t>(0, shapeTotal),
-			[&](const tbb::blocked_range<size_t> &r) {
-				for (size_t i = r.begin(); i < r.end(); ++i)
-					meshes[i] = CreateShape(Property::ExtractField(shapeKeys[i], 2), props);
-			});
-		for (size_t i = 0; i < shapeTotal; ++i) {
-			DefineMesh(std::move(meshes[i]));
-			++shapeCount;
+	for (size_t i = 0; i < shapeTotal; ++i) {
+		DefineMesh(std::move(meshes[i]));
+		++shapeCount;
 
-			const double now = WallClockTime();
-			if (now - lastPrint > 2.0) {
-				SDL_LOG("Shape count: " << shapeCount << " ("
-					<< (boost::format("%.3f") % (now - startTime)) << " secs)");
-				lastPrint = now;
-			}
-		}
-	} else {
-		for(const string &key: shapeKeys) {
-			const string shapeName = Property::ExtractField(key, 2);
-
-			auto mesh = CreateShape(shapeName, props);
-			DefineMesh(std::move(mesh));
-			++shapeCount;
-
-			const double now = WallClockTime();
-			if (now - lastPrint > 2.0) {
-				SDL_LOG("Shape count: " << shapeCount << " ("
-					<< (boost::format("%.3f") % (now - startTime)) << " secs)");
-				lastPrint = now;
-			}
+		const double now = WallClockTime();
+		if (now - lastPrint > 2.0) {
+			SDL_LOG("Shape count: " << shapeCount << " ("
+				<< (boost::format("%.3f") % (now - startTime)) << " secs)");
+			lastPrint = now;
 		}
 	}
 	SDL_LOG("Shape count: " << shapeCount << " ("
@@ -211,8 +206,33 @@ ExtTriangleMeshUPtr Scene::CreateInlinedMesh(const string &shapeName, const stri
 	);
 }
 
-ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties &props) {
+ExtTriangleMeshUPtr Scene::CreateShape(
+	const string &shapeName,
+	const Properties &props,
+	const std::vector<ExtTriangleMeshUPtr> *blockMeshes,
+	const std::unordered_map<std::string, size_t> *blockIndex
+) {
 	const string propName = "scene.shapes." + shapeName;
+
+	// Source meshes of the same ParseShapes block being created in parallel
+	// are resolved from blockMeshes (only already-created ones); the rest
+	// come from the ext mesh cache
+	auto isSourceDefined = [&](const string &name) {
+		if (blockIndex) {
+			const auto it = blockIndex->find(name);
+			if (it != blockIndex->end())
+				return (*blockMeshes)[it->second] != nullptr;
+		}
+		return extMeshCache.IsExtMeshDefined(name);
+	};
+	auto getSourceMesh = [&](const string &name) -> ExtTriangleMesh& {
+		if (blockIndex) {
+			const auto it = blockIndex->find(name);
+			if (it != blockIndex->end() && (*blockMeshes)[it->second])
+				return *(*blockMeshes)[it->second];
+		}
+		return static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(name));
+	};
 
 	// Get the shape type
 	const string shapeType = props.Get(Property(propName + ".type")("mesh")).Get<string>();
@@ -266,7 +286,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 			Property(propName + ".source")("")
 		).Get<string>();
 
-		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+		if (!isSourceDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a pointiness shape: " + shapeName);
 
 		const u_int aovIndex = props.Get(
@@ -280,7 +300,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 			);
 
 		shape = std::make_unique<PointinessShape>(
-			static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName)),
+			getSourceMesh(sourceMeshName),
 			aovIndex
 		);
 
@@ -373,14 +393,14 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 				const auto name = props.Get(
 					Property(prefix + ".shape")("shape")
 				).Get<string>();
-				if (!extMeshCache.IsExtMeshDefined(name))
+				if (!isSourceDefined(name))
 					throw runtime_error(
 						"Unknown shape name in a group shape " + shapeName + ": " + name
 					);
 
 				//auto& mesh = static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(name));
 				meshes.emplace_back(
-					dynamic_cast<const ExtTriangleMesh&>(extMeshCache.GetExtMesh(name))
+					dynamic_cast<const ExtTriangleMesh&>(getSourceMesh(name))
 				);
 
 				if (props.IsDefined(prefix + ".transformation")) {
@@ -404,7 +424,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 			Property(propName + ".source")("")
 		).Get<string>();
 
-		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+		if (!isSourceDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a subdiv shape: " + shapeName);
 
 		const u_int maxLevel = props.Get(Property(propName + ".maxlevel")(2)).Get<u_int>();
@@ -433,7 +453,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 		shape = std::make_unique<SubdivShape>(
 			//camera,
 			CameraPtr(&GetCamera()),
-			static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName)),
+			getSourceMesh(sourceMeshName),
 			maxLevel,
 			maxEdgeScreenSize,
 			sharpnessThresholdRadians,
@@ -448,13 +468,13 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 			Property(propName + ".source")("")
 		).Get<string>();
 
-		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+		if (!isSourceDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a subdiv_old shape: " + shapeName);
 
 		const u_int maxLevel = props.Get(Property(propName + ".maxlevel")(2)).Get<u_int>();
 
 		shape = std::make_unique<SubdivOldShape>(
-			static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName)),
+			getSourceMesh(sourceMeshName),
 			maxLevel
 		);
 
@@ -464,20 +484,20 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 			Property(propName + ".source")("")
 		).Get<string>();
 
-		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+		if (!isSourceDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a tessellate shape: " + shapeName);
 
 		const u_int rate = props.Get(Property(propName + ".rate")(4)).Get<u_int>();
 
 		shape = std::make_unique<TessellateShape>(
-			static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName)),
+			getSourceMesh(sourceMeshName),
 			rate
 		);
 
 	} else if (shapeType == "displacement") {
 
 		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
-		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+		if (!isSourceDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a displacement shape: " + shapeName);
 
 		auto& tex = GetTexture(props.Get(Property(propName + ".map")(0.f)));
@@ -512,7 +532,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 		params.normalSmooth = props.Get(Property(propName + ".normalsmooth")(true)).Get<bool>();
 
 		shape = std::make_unique<DisplacementShape>(
-			static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName)),
+			getSourceMesh(sourceMeshName),
 			tex,
 			params
 		);
@@ -522,13 +542,13 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 		const string sourceMeshName = props.Get(
 			Property(propName + ".source")("")
 		).Get<string>();
-		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+		if (!isSourceDefined(sourceMeshName))
 			throw runtime_error(
 				"Unknown shape name in a harlequin shape: " + shapeName
 			);
 
 		shape = std::make_unique<HarlequinShape>(
-			static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName))
+			getSourceMesh(sourceMeshName)
 		);
 
 	} else if (shapeType == "simplify_old") {
@@ -537,7 +557,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 		const string sourceMeshName = props.Get(
 			Property(propName + ".source")("")
 		).Get<string>();
-		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+		if (!isSourceDefined(sourceMeshName))
 			throw runtime_error(
 				"Unknown shape name in a simplify_old shape: " + shapeName
 			);
@@ -556,7 +576,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 
 		shape = std::make_unique<SimplifyShape>(
 			CameraPtr(&GetCamera()),
-			static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName)),
+			getSourceMesh(sourceMeshName),
 			target,
 			edgeScreenSize,
 			preserveBorder
@@ -566,7 +586,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 		const string sourceMeshName = props.Get(
 			Property(propName + ".source")("")
 		).Get<string>();
-		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+		if (!isSourceDefined(sourceMeshName))
 			throw runtime_error(
 				"Unknown shape name in a simplify shape: " + shapeName
 			);
@@ -585,7 +605,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 
 		shape = std::make_unique<SimplifyShape2>(
 			CameraPtr(&GetCamera()),
-			static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName)),
+			getSourceMesh(sourceMeshName),
 			target,
 			edgeScreenSize,
 			preserveBorder
@@ -596,25 +616,25 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 		const string sourceMeshName = props.Get(
 			Property(propName + ".source")("")
 		).Get<string>();
-		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+		if (!isSourceDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a islandaov shape: " + shapeName);
 
 		const u_int dataIndex = Clamp(props.Get(Property(propName + ".dataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 		
-		shape = std::make_unique<IslandAOVShape>(static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName)), dataIndex);
+		shape = std::make_unique<IslandAOVShape>(getSourceMesh(sourceMeshName), dataIndex);
 	} else if (shapeType == "randomtriangleaov") {
 		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
-		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+		if (!isSourceDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a randomtriangleaov shape: " + shapeName);
 
 		const u_int srcDataIndex = Clamp(props.Get(Property(propName + ".srcdataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 		const u_int dstDataIndex = Clamp(props.Get(Property(propName + ".dstdataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 
-		shape = std::make_unique<RandomTriangleAOVShape>(static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName)),
+		shape = std::make_unique<RandomTriangleAOVShape>(getSourceMesh(sourceMeshName),
 				srcDataIndex, dstDataIndex);
 	} else if (shapeType == "edgedetectoraov") {
 		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
-		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+		if (!isSourceDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a edgedetectoraov shape: " + shapeName);
 
 		const u_int aovIndex0 = props.Get(Property(propName + ".aovindex0")(0)).Get<u_int>();
@@ -629,27 +649,27 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 		if (aovIndex2 >= EXTMESH_MAX_DATA_COUNT)
 			throw runtime_error("Edgedetectoraov aov index 2 must be less than: " + ToString(EXTMESH_MAX_DATA_COUNT));
 
-		shape = std::make_unique<EdgeDetectorAOVShape>(static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName)),
+		shape = std::make_unique<EdgeDetectorAOVShape>(getSourceMesh(sourceMeshName),
 				aovIndex0, aovIndex1, aovIndex2);
 	} else if (shapeType == "bevel") {
 		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
-		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+		if (!isSourceDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a bevel shape: " + shapeName);
 
 		const float geometryBevel = props.Get(Property(propName + ".bevel.radius")(0.f)).Get<double>();
 
-		shape = std::make_unique<BevelShape>(static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName)), geometryBevel);
+		shape = std::make_unique<BevelShape>(getSourceMesh(sourceMeshName), geometryBevel);
 	} else if (shapeType == "cameraprojuv") {
 		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
-		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+		if (!isSourceDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a cameraprojuv shape: " + shapeName);
 
 		const u_int uvIndex = Clamp(props.Get(Property(propName + ".uvindex")(0)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 
-		shape = std::make_unique<CameraProjUVShape>(static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName)), uvIndex);
+		shape = std::make_unique<CameraProjUVShape>(getSourceMesh(sourceMeshName), uvIndex);
 	} else if (shapeType == "mergeondistance") {
 		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
-		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+		if (!isSourceDefined(sourceMeshName))
 			throw runtime_error(
 				"Unknown source shape name '" + sourceMeshName + "'"
 				+ "in mergeondistance shape '" + shapeName + "'"
@@ -664,7 +684,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 		bool importNormals = props.Get(Property(propName + ".importnormals")(false)).Get<bool>();
 
 		shape = std::make_unique<MergeOnDistanceShape>(
-			static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName)),
+			getSourceMesh(sourceMeshName),
 			tolerance,
 			importNormals
 		);
