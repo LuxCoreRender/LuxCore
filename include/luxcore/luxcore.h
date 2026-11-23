@@ -1018,7 +1018,8 @@ public:
 		float *p, unsigned int *vi, float *n,
 		std::array<float *, LC_MESH_MAX_DATA_COUNT> *uvs,
 		std::array<float *, LC_MESH_MAX_DATA_COUNT> *cols,
-		std::array<float *, LC_MESH_MAX_DATA_COUNT> *alphas) = 0;
+		std::array<float *, LC_MESH_MAX_DATA_COUNT> *alphas,
+		const std::optional<std::string> &submeshName = std::nullopt) = 0;
 	/*!
 	 * \brief Set a mesh geometry vertex AOV (i.e. generic data associated to
 	 * vertices and used by textures and more).

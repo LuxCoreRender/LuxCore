@@ -25,7 +25,7 @@
 
 namespace slg {
 
-class EdgeDetectorAOVShape : public Shape {
+class EdgeDetectorAOVShape : public ShapeModifier {
 public:
 	EdgeDetectorAOVShape(luxrays::ExtTriangleMeshRef srcMesh,
 		const u_int destAOVIndex0, const u_int destAOVIndex1, const u_int destAOVIndex2);

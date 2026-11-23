@@ -16,11 +16,15 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <unordered_map>
+
 #include <boost/format.hpp>
 #include <oneapi/tbb.h>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/displacement.h"
+#include "slg/scene/shape.h"
+#include "luxrays/utils/strutils.h"
 #include "luxrays/core/trianglemesh.h"
 #include "slg/scene/scene.h"
 
@@ -133,20 +137,16 @@ void ComputeVertexDifferentials(const ExtTriangleMesh &mesh,
 } // namespace
 
 
-DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const Texture &dispMap,
-		const Params &params) {
-	SDL_LOG("Displacement shape " << srcMesh.GetName() << " with texture " << dispMap.GetName());
+namespace {
 
-	// I need vertex normals
-	if (!srcMesh.HasNormals())
-		srcMesh.ComputeNormals();
-
-	// I need vertex UVs for vector displacement
-	if ((params.mapType == VECTOR_DISPLACEMENT) && !srcMesh.HasUVs(params.uvIndex))
-		throw runtime_error("Displacement shape for vector displacement can be used only with mesh having UVs defined");
-
-	const double startTime = WallClockTime();
-
+// Compute the displaced positions of a mesh (height/vector displacement).
+// Runs once per shape: the result is shared by all the submeshes of the
+// result shape (a Buffer copy shares storage).
+static VertexBuffer ComputeDisplacedVertices(
+		luxrays::ExtTriangleMeshRef srcMesh,
+		const Texture &dispMap,
+		const DisplacementShape::Params &params
+) {
 	const u_int vertCount = srcMesh.GetTotalVertexCount();
 	const auto vertices = srcMesh.GetVertices();
 	VertexBuffer newVertices(vertCount);
@@ -220,7 +220,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 		hitPoint.throughShadowTransparency = false;
 
 		Vector disp;
-		if (params.mapType == HIGHT_DISPLACEMENT)
+		if (params.mapType == DisplacementShape::HIGHT_DISPLACEMENT)
 			disp = (dispMap.GetFloatValue(hitPoint) * params.scale + params.offset) *
 					Vector(hitPoint.shadeN);
 		else {
@@ -246,6 +246,28 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 		newVertices[i] = vertices[i] + disp;
 	});
 
+	return newVertices;
+}
+
+}  // namespace
+
+
+DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const Texture &dispMap,
+		const Params &params) {
+	SDL_LOG("Displacement shape " << srcMesh.GetName() << " with texture " << dispMap.GetName());
+
+	// I need vertex normals
+	if (!srcMesh.HasNormals())
+		srcMesh.ComputeNormals();
+
+	// I need vertex UVs for vector displacement
+	if ((params.mapType == VECTOR_DISPLACEMENT) && !srcMesh.HasUVs(params.uvIndex))
+		throw runtime_error("Displacement shape for vector displacement can be used only with mesh having UVs defined");
+
+	const double startTime = WallClockTime();
+
+	VertexBuffer newVertices = ComputeDisplacedVertices(srcMesh, dispMap, params);
+
 	// Make a copy of the original mesh and overwrite vertex information
 	//
 	// The source normals are copied only if they are not about to be entirely
@@ -266,6 +288,80 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 
 	const double endTime = WallClockTime();
 	SDL_LOG("Displacement time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");
+}
+
+ShapeUPtr DisplacementShape::ApplyToShape(
+		ShapeConstRef srcShape,
+		const Texture &dispMap,
+		const Params &params,
+		const std::string &resultName
+) {
+	SDL_LOG("Displacement shape " << resultName << " with texture " << dispMap.GetName());
+
+	if (srcShape.GetSubmeshCount() == 0)
+		throw runtime_error("Displacement shape on an empty shape: " + resultName);
+
+	// Submeshes sharing one point buffer are displaced ONCE on that common
+	// buffer and share the displaced buffer (a Buffer copy shares storage),
+	// so shared edges stay welded (watertight). Submeshes with their own
+	// buffer (e.g. after a topology-changing modifier) are displaced per
+	// buffer group. Normals/UVs are read from each group's first submesh.
+	const auto &submeshes = srcShape.GetSubmeshes();
+	// Submeshes that reference the shape's canonical buffer through a vertex
+	// map (compact storage) are rebuilt as transient global-indexed views
+	// sharing that buffer, so the per-buffer grouping below still sees one
+	// group per shape
+	std::vector<ExtTriangleMeshUPtr> views;
+	std::vector<ExtTriangleMesh *> work(submeshes.size());
+	for (size_t i = 0; i < submeshes.size(); ++i) {
+		auto &sm = submeshes[i].get();
+		auto view = sm.HasVertexMap() ? MakeGlobalView(sm, srcShape.GetVertices()) : nullptr;
+		if (view) {
+			views.push_back(std::move(view));
+			work[i] = views.back().get();
+		} else {
+			work[i] = &sm;
+		}
+	}
+	std::unordered_map<const void *, std::vector<size_t>> groups;
+	for (size_t i = 0; i < work.size(); ++i)
+		groups[work[i]->GetVertexBuffer().Data()].push_back(i);
+
+	// displaced buffer per vertex-buffer group
+	std::unordered_map<const void *, VertexBuffer> displacedPerGroup;
+	for (auto &[bufPtr, indices] : groups) {
+		ExtTriangleMesh &srcMesh = *work[indices[0]];
+		if (!srcMesh.HasNormals())
+			srcMesh.ComputeNormals();
+		if ((params.mapType == VECTOR_DISPLACEMENT) && !srcMesh.HasUVs(params.uvIndex))
+			throw runtime_error("Displacement shape for vector displacement can be used only with mesh having UVs defined");
+		displacedPerGroup.emplace(bufPtr, ComputeDisplacedVertices(srcMesh, dispMap, params));
+	}
+
+	auto result = std::make_unique<Shape>(resultName,
+		displacedPerGroup[work[0]->GetVertexBuffer().Data()]);
+	const bool single = work.size() == 1;
+	u_int k = 0;
+	for (size_t wi = 0; wi < work.size(); ++wi) {
+		ExtTriangleMesh &m = *work[wi];
+		const VertexBuffer &newVertices = displacedPerGroup[m.GetVertexBuffer().Data()];
+		auto mesh = m.Copy(
+			VertexBuffer(newVertices),  // copy: shares the displaced buffer storage
+			std::nullopt,
+			params.normalSmooth ? std::optional<NormalBuffer>(NormalBuffer()) : std::nullopt,
+			std::nullopt,
+			std::nullopt,
+			std::nullopt
+		);
+		if (params.normalSmooth)
+			mesh->ComputeNormals();
+		mesh->SetName(single ? resultName : resultName + "i" + ToString(k));
+		mesh->SetShapeName(resultName);
+		result->AddSubmesh(std::move(mesh));
+		++k;
+	}
+
+	return result;
 }
 
 DisplacementShape::~DisplacementShape() {

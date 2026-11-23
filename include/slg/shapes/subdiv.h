@@ -36,7 +36,7 @@ enum class SubdivCreaseMode {
 	            // falls back to NONE when the mesh carries no crease data
 };
 
-class SubdivShape : public Shape {
+class SubdivShape : public ShapeModifier {
 public:
 	SubdivShape(
 		CameraConstPtr camera,
@@ -53,6 +53,22 @@ public:
 	virtual ShapeType GetType() const override { return SUBDIV; }
 
 	static float MaxEdgeScreenSize(CameraConstRef camera, luxrays::ExtTriangleMeshRef srcMesh);
+	// Shape-level application (uniform path, i.e. no maxedgescreensize):
+	// subdivide the merged envelope of the source shape's submeshes ONCE
+	// (cached on the source Shape, keyed by point buffer + subdiv params),
+	// then resplit per source submesh (by base-face range; or per material
+	// slot when matSlot >= 0). Result submeshes are named resultName
+	// ("i"+index appended when the source shape has several submeshes).
+	static ShapeUPtr ApplyToShape(
+		ShapeConstRef srcShape,
+		const u_int maxLevel,
+		const float sharpnessThresholdRadians,
+		const float creaseWeight,
+		const SubdivCreaseMode creaseMode,
+		const int matSlot,
+		const std::string &resultName
+	);
+
 	static luxrays::ExtTriangleMeshUPtr ApplySubdiv(
 		luxrays::ExtTriangleMeshRef srcMesh,
 		const u_int maxLevel,

@@ -27,12 +27,12 @@ using namespace slg;
 // Defined here (and not inline in the header) so that the construction
 // and destruction of the 'mesh' member (std::unique_ptr<ExtTriangleMesh>)
 // happens with the complete type, visible via exttrianglemesh.h
-Shape::Shape() : refined(false) { }
-Shape::~Shape() { }
+ShapeModifier::ShapeModifier() : refined(false) { }
+ShapeModifier::~ShapeModifier() { }
 
-ExtTriangleMeshUPtr Shape::Refine(SceneConstRef scene) {
+ExtTriangleMeshUPtr ShapeModifier::Refine(SceneConstRef scene) {
 	if (refined)
-		throw runtime_error("Called Shape::Refine() on an already refined shape");
+		throw runtime_error("Called ShapeModifier::Refine() on an already refined shape");
 
 	auto mesh = RefineImpl(scene);
 	refined = true;

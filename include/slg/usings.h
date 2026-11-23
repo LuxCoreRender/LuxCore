@@ -63,6 +63,7 @@ DECLARE_SUBTYPES(SamplerSharedData);
 DECLARE_SUBTYPES(Scene);
 DECLARE_SUBTYPES(SceneObjectDefinitions);
 DECLARE_SUBTYPES(Shape);
+DECLARE_SUBTYPES(ShapeModifier);
 DECLARE_SUBTYPES(SobolSamplerSharedData);
 DECLARE_SUBTYPES(SphericalFunction);
 DECLARE_SUBTYPES(Texture);

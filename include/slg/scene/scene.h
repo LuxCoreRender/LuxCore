@@ -40,6 +40,7 @@
 #include "slg/textures/texturedefs.h"
 #include "slg/materials/materialdefs.h"
 #include "slg/scene/sceneobjectdefs.h"
+#include "slg/scene/shapedefs.h"
 #include "slg/scene/colorspaceconverters.h"
 
 namespace luxrays {
@@ -182,7 +183,8 @@ public:
 		luxrays::NormalBuffer&& n,
 		std::optional<luxrays::ExtMeshProp<luxrays::UV>> uvs,
 		std::optional<luxrays::ExtMeshProp<luxrays::Spectrum>> cols,
-		std::optional<luxrays::ExtMeshProp<float>> alphas
+		std::optional<luxrays::ExtMeshProp<float>> alphas,
+		const std::optional<std::string> &submeshName = std::nullopt
 	);
 
 	ReturnType<ExtInstanceTriangleMesh> DefineMesh(
@@ -273,17 +275,25 @@ public:
 	auto& GetExtMeshes() { return extMeshCache; }
 	const auto& GetExtMeshes() const { return extMeshCache; }
 
-	// Cache of subdivided envelopes: ONE subdivision run per (source mesh,
-	// subdiv params), shared by all the per-material-slot (matslot) shapes of
-	// the same source mesh, which then resplit the result per slot. Pure
-	// runtime cache (not serialized), invalidated when meshes are (re)defined.
-	struct SubdivEnvelopeCacheEntry {
-		luxrays::ExtTriangleMeshSPtr mesh;  // full subdivided envelope
-		std::vector<u_int> triBaseFace;
-		SubdivCornerData corner;  // per-corner varying data of the subdivided mesh
-	};
-	auto &GetSubdivEnvelopeCache() const { return subdivEnvelopeCache; }
-	std::mutex &GetSubdivEnvelopeMutex() const { return subdivEnvelopeMtx; }
+	// Shape handles: one Shape per object, grouping its submeshes and owning
+	// the canonical shared point buffer. Shapes are created automatically by
+	// DefineMesh (from the mesh shape name, defaulting to the mesh name), or
+	// directly with DefineShape(). Shape modifiers take a Shape as input.
+	auto& GetShapes() { return shapeDefs; }
+	const auto& GetShapes() const { return shapeDefs; }
+	std::tuple<Shape&, ShapeUPtr> DefineShape(ShapeUPtr&& shape) {
+		return shapeDefs.DefineShape(std::move(shape));
+	}
+	// Move a mesh to another Shape handle (created on demand)
+	void SetMeshShapeName(const std::string &meshName, const std::string &shapeName);
+	// Set the canonical vertex buffer of a shape (Buffer copy shares the
+	// storage). Used when submeshes reference the shape buffer through a
+	// vertex map instead of sharing the buffer of a mesh directly.
+	void SetShapeVertexBuffer(const std::string &shapeName, const luxrays::VertexBuffer &vertices);
+
+	// Clear the subdivided-envelope caches of all the Shape handles (the
+	// caches live on the Shape since it groups the submeshes sharing one
+	// point buffer); called when meshes are (re)defined
 	void ClearSubdivEnvelopeCache();
 
 	auto& GetEditActions() { return editActions; }
@@ -316,6 +326,7 @@ protected:
 
 	// Here are the containers for the scene elements:
 	ExtMeshCache extMeshCache; // Mesh objects cache
+	ShapeDefinitions shapeDefs; // Shape handles cache (groups of submeshes)
 	ImageMapCache imgMapCache; // Image maps cache
 
 	TextureDefinitions texDefs; // Texture definitions
@@ -338,11 +349,6 @@ protected:
 	// Guards texDefs during the parallel material creation of ParseMaterials:
 	// Scene::GetTexture implicitly defines constant textures on first use
 	mutable std::recursive_mutex texDefMtx;
-
-	// Subdivided-envelope cache (see GetSubdivEnvelopeCache); mutable because it
-	// is filled lazily from const scene references during shape refinement
-	mutable std::mutex subdivEnvelopeMtx;
-	mutable std::unordered_map<std::string, SubdivEnvelopeCacheEntry> subdivEnvelopeCache;
 
 	// DataSet ownership is not very clear, we set it shared
 	luxrays::DataSetSPtr dataSet;
@@ -386,9 +392,13 @@ private:
 	VolumeUPtr CreateVolume(const u_int defaultVolID, const std::string &volName, const luxrays::Properties &props);
 	MaterialUPtr CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
 
-	luxrays::ExtTriangleMeshUPtr CreateShape(const std::string &shapeName, const luxrays::Properties &props,
-		const std::vector<luxrays::ExtTriangleMeshUPtr> *blockMeshes = nullptr,
+	ShapeUPtr CreateShapeModifier(const std::string &shapeName, const luxrays::Properties &props,
+		const std::vector<ShapeUPtr> *blockShapes = nullptr,
 		const std::unordered_map<std::string, size_t> *blockIndex = nullptr);
+
+	// Register a triangle mesh into its Shape handle (created on demand from
+	// the mesh shape name, defaulting to the mesh name); called by DefineMesh
+	void RegisterMeshShape(luxrays::ExtTriangleMesh &mesh);
 	SceneObjectUPtr CreateObject(const u_int defaultObjID, const std::string &objName, const luxrays::Properties &props);
 	LightSourceUPtr CreateLightSource(const std::string &lightName, const luxrays::Properties &props);
 

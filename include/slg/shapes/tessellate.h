@@ -21,6 +21,7 @@
 
 #include "slg/usings.h"
 #include "slg/shapes/shape.h"
+#include "slg/scene/shape.h"  // complete type: ApplyToShape returns ShapeUPtr
 #include "luxrays/core/exttrianglemesh.h"  // complete type: this header returns ExtTriangleMeshUPtr
 #include "luxrays/utils/utils.h"  // u_int (not provided by MSVC system headers)
 
@@ -31,13 +32,17 @@ namespace slg {
 // it builds upon lives in tessellate_core.h.
 
 // A standalone shape applying a flat (barycentric) tessellation of the
-// source mesh: each triangle is split in rate^2 triangles, the new points
-// being linearly interpolated inside the source triangles.
-class TessellateShape : public Shape {
+// source mesh: each edge is split into N = 2^rate segments (same convention
+// as the subdivision levels), i.e. each triangle is split in 4^rate
+// triangles, the new points being linearly interpolated inside the source
+// triangles. All mesh data (UVs, colors, alphas, AOVs, and normals if
+// interpolatedNormals) is tessellated along with the vertices.
+class TessellateShape : public ShapeModifier {
 public:
 	TessellateShape(
 		luxrays::ExtTriangleMeshRef srcMesh,
-		const u_int rate
+		const u_int rate,
+		const bool interpolatedNormals = true
 	);
 	virtual ~TessellateShape();
 
@@ -45,7 +50,22 @@ public:
 
 	static luxrays::ExtTriangleMeshUPtr ApplyTessellate(
 		luxrays::ExtTriangleMeshRef srcMesh,
-		const u_int rate
+		const u_int rate,
+		const bool interpolatedNormals = true
+	);
+
+	// Shape-level application: tessellate all the submeshes of the source
+	// shape TOGETHER when they share one point buffer (merged envelope
+	// tessellation, then resplit per submesh), so the result submeshes share
+	// a single tessellated buffer and shared edges stay welded (watertight).
+	// Submeshes with their own buffer are tessellated per buffer group.
+	// Result submeshes are named resultName ("i"+index appended when the
+	// source shape has several submeshes).
+	static ShapeUPtr ApplyToShape(
+		ShapeConstRef srcShape,
+		const u_int rate,
+		const bool interpolatedNormals,
+		const std::string &resultName
 	);
 
 protected:

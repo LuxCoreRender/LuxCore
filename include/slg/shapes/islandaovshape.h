@@ -25,7 +25,7 @@
 
 namespace slg {
 
-class IslandAOVShape : public Shape {
+class IslandAOVShape : public ShapeModifier {
 public:
 	IslandAOVShape(luxrays::ExtTriangleMeshRef srcMesh, const u_int dataIndex);
 	virtual ~IslandAOVShape();

@@ -55,6 +55,14 @@ luxrays::ExtTriangleMeshUPtr BuildSubdivEnvelope(
 	SubdivCornerData *cornerData = nullptr
 );
 
+// Same envelope, built from an explicit list of meshes sharing one vertex
+// buffer (in the given order), e.g. the submeshes of a Shape. Used when the
+// sibling meshes are already known (no scene lookup needed).
+luxrays::ExtTriangleMeshUPtr BuildEnvelopeFromMeshes(
+	const std::vector<const luxrays::ExtTriangleMesh *> &siblings,
+	SubdivCornerData *cornerData = nullptr
+);
+
 // Given the base face index of each triangle of a subdivided mesh
 // (triBaseFace[tri]), write the material slot of the corresponding envelope
 // face into the subdivided mesh's triangle AOV layer MATERIAL_TRI_AOV_INDEX.
@@ -72,6 +80,16 @@ void PropagateMaterialSlots(
 luxrays::ExtTriangleMeshUPtr FilterByMaterialSlot(
 	const luxrays::ExtTriangleMesh &mesh,
 	const int matSlot,
+	const SubdivCornerData *corner = nullptr
+);
+
+// Same resplit, but keeping the triangles whose base (envelope) face is in
+// [face0, face1): one output submesh per source submesh of a Shape.
+luxrays::ExtTriangleMeshUPtr FilterByFaceRange(
+	const luxrays::ExtTriangleMesh &mesh,
+	const std::vector<u_int> &triBaseFace,
+	const size_t face0,
+	const size_t face1,
 	const SubdivCornerData *corner = nullptr
 );
 

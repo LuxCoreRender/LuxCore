@@ -88,16 +88,28 @@ using TessellationData = std::tuple<CoordVector, luxrays::TriangleBuffer, u_int,
 //
 // Two overloads, one per API flavor:
 //
-//  - TessellateTopology(mesh, N): the ApplyTessellate (tessellate shape)
-//    API — returns the tessellated mesh with barycentrically interpolated
-//    (flat) positions and no normals.
+//  - TessellateTopology(mesh, N, interpolatedNormals): the ApplyTessellate
+//    (tessellate shape) API — returns the tessellated mesh with
+//    barycentrically interpolated (flat) positions and all the per-vertex
+//    and per-triangle mesh data of the source: UVs, colors, alphas and
+//    vertex AOVs are interpolated like the positions, triangle AOVs are
+//    broadcast from their source face (each tessellated triangle lies
+//    inside one source face), triangle normals are recomputed by
+//    ExtTriangleMesh::Preprocess() (tessellated triangles are coplanar
+//    with their source face). Vertex normals are interpolated and
+//    normalized only if interpolatedNormals is true; otherwise the output
+//    mesh has no vertex normals and shades flat via the triangle normals.
 //  - TessellateTopology(mesh, N, cornerCoords): the subdivision API —
 //    returns the raw tessellation (coords + triangles); positions are NOT
 //    evaluated, the subdivision shape evaluates limit-surface positions
-//    itself from the returned tessCoords.
+//    itself from the returned tessCoords. No mesh data is evaluated on
+//    this path (subdivision computes its own normals).
 //
 // @param srcMesh The mesh to tessellate
 // @param N Tessellation rate: each edge is subdivided into N sub-edges
+// @param interpolatedNormals (flat overload) interpolate+normalize the
+//        source vertex normals onto the tessellated points (default true);
+//        false keeps flat shading
 // @param cornerCoords (subdivision overload) filled with the local
 //        coordinates of each tessellated triangle corner WITHIN ITS OWN base
 //        face (3 * numTriangles entries): the per-point coords of points
@@ -105,7 +117,8 @@ using TessellationData = std::tuple<CoordVector, luxrays::TriangleBuffer, u_int,
 //        face, which is not suitable for face-varying data evaluation.
 luxrays::ExtTriangleMeshUPtr TessellateTopology(
 	const luxrays::ExtTriangleMesh &srcMesh,
-	const size_t N
+	const size_t N,
+	const bool interpolatedNormals = true
 );
 TessellationData TessellateTopology(
 	const luxrays::ExtTriangleMesh &srcMesh,

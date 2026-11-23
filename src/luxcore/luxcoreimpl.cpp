@@ -997,7 +997,8 @@ void SceneImpl::DefineMeshExt(const std::string &meshName,
 		float *p, Triangle::subtype_t *vi, float *n,
 		array<float *, LC_MESH_MAX_DATA_COUNT> *uvs,
 		array<float *, LC_MESH_MAX_DATA_COUNT> *cols,
-		array<float *, LC_MESH_MAX_DATA_COUNT> *alphas) {
+		array<float *, LC_MESH_MAX_DATA_COUNT> *alphas,
+		const std::optional<std::string> &submeshName) {
 	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}, {}", ToArgString(meshName),
 			plyNbVerts, plyNbTris,
 			(void *)p, (void *)vi, (void *)n,
@@ -1052,7 +1053,7 @@ void SceneImpl::DefineMeshExt(const std::string &meshName,
 	GetSlgScene().DefineMeshExt(
 			meshName, std::move(vbuf),
 			std::move(tbuf), std::move(nbuf),
-			slgUVs, slgCols, slgAlphas);
+			slgUVs, slgCols, slgAlphas, submeshName);
 
 	API_END();
 }
@@ -1083,6 +1084,15 @@ void SceneImpl::SetMeshTriangleAOV(const string &meshName,
 
 	std::lock_guard<std::recursive_mutex> meshLock(GetSlgScene().MeshDefMutex());
 	GetSlgScene().SetMeshTriangleAOV(meshName, index, data);
+
+	API_END();
+}
+
+void SceneImpl::SetMeshShapeName(const string &meshName, const string &shapeName) {
+	API_BEGIN("{}, {}", ToArgString(meshName), ToArgString(shapeName));
+
+	std::lock_guard<std::recursive_mutex> meshLock(GetSlgScene().MeshDefMutex());
+	GetSlgScene().SetMeshShapeName(meshName, shapeName);
 
 	API_END();
 }

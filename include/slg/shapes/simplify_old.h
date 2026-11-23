@@ -31,7 +31,7 @@ namespace slg {
 // "simplify_old" shape type (with a deprecation warning at parse
 // time) and kept only for reference. New scenes must use the
 // "simplify" shape type instead (SimplifyShape2, simplify.cpp)
-class SimplifyShape : public Shape {
+class SimplifyShape : public ShapeModifier {
 public:
 	SimplifyShape(CameraConstPtr camera, luxrays::ExtTriangleMeshRef srcMesh,
 			const float target, const float edgeScreenSize, const bool preserveBorder);

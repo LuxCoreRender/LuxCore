@@ -238,6 +238,10 @@ Scene::ReturnType<ExtMesh> Scene::DefineMesh(ExtMeshUPtr&& mesh) {
 	// This is the only place where it is safe to call extMeshCache.DefineExtMesh()
 	auto [newMeshRef, oldMeshPtr] = extMeshCache.DefineExtMesh(std::move(mesh));
 
+	// Register the triangle mesh into its Shape handle (created on demand)
+	if (auto *triMesh = dynamic_cast<ExtTriangleMesh *>(&newMeshRef))
+		RegisterMeshShape(*triMesh);
+
 	// A mesh was REPLACED (redefinition, e.g. viewport update): any cached
 	// subdivided envelope is stale. New meshes (initial parse, refined shape
 	// registrations) must NOT clear the cache, or the shared subdiv run would
@@ -251,6 +255,53 @@ Scene::ReturnType<ExtMesh> Scene::DefineMesh(ExtMeshUPtr&& mesh) {
 		std::ref(newMeshRef),
 		oldMeshPtr ? std::move(oldMeshPtr) : nullptr
 	);
+}
+
+void Scene::RegisterMeshShape(ExtTriangleMesh &mesh) {
+	std::string shapeName = mesh.GetShapeName();
+	if (shapeName.empty()) {
+		// Default: one shape per mesh, named after the mesh (backward
+		// compatible with sources referencing a mesh name)
+		shapeName = mesh.GetName();
+		mesh.SetShapeName(shapeName);
+	}
+
+	if (!shapeDefs.IsShapeDefined(shapeName)) {
+		// The Shape owns the canonical vertex buffer; the mesh buffer is
+		// copied, sharing storage (Buffer copy semantics)
+		shapeDefs.DefineShape(
+			std::make_unique<Shape>(shapeName, mesh.GetVertexBuffer()));
+	}
+
+	Shape &shape = shapeDefs.GetShape(shapeName);
+	// Avoid double registration when a mesh is redefined
+	for (auto &sm : shape.GetSubmeshes())
+		if (&sm.get() == &mesh)
+			return;
+	shape.AddSubmesh(mesh);
+}
+
+void Scene::SetShapeVertexBuffer(const std::string &shapeName, const luxrays::VertexBuffer &vertices) {
+	std::lock_guard<std::recursive_mutex> lock(meshDefMtx);
+	if (shapeDefs.IsShapeDefined(shapeName))
+		shapeDefs.GetShape(shapeName).SetVertices(vertices);
+	else
+		shapeDefs.DefineShape(std::make_unique<Shape>(shapeName, vertices));
+}
+
+void Scene::SetMeshShapeName(const std::string &meshName, const std::string &shapeName) {
+	std::lock_guard<std::recursive_mutex> lock(meshDefMtx);
+
+	auto &mesh = dynamic_cast<ExtTriangleMesh &>(extMeshCache.GetExtMesh(meshName));
+	const std::string oldShapeName =
+		mesh.GetShapeName().empty() ? mesh.GetName() : mesh.GetShapeName();
+	if (oldShapeName == shapeName)
+		return;
+
+	mesh.SetShapeName(shapeName);
+	if (shapeDefs.IsShapeDefined(oldShapeName))
+		shapeDefs.GetShape(oldShapeName).RemoveSubmesh(mesh);
+	RegisterMeshShape(mesh);
 }
 
 Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(ExtTriangleMeshUPtr&& mesh) {
@@ -332,7 +383,8 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMeshExt(
 	NormalBuffer&& n,
 	std::optional<ExtMeshProp<UV>> uvs,
 	std::optional<ExtMeshProp<Spectrum>> cols,
-	std::optional<ExtMeshProp<float>> alphas
+	std::optional<ExtMeshProp<float>> alphas,
+	const std::optional<std::string> &submeshName
 ) {
 	std::lock_guard<std::recursive_mutex> lock(meshDefMtx);
 
@@ -341,6 +393,10 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMeshExt(
 			uvs, cols, alphas
 	);
 	mesh->SetName(shapeName);
+	// Shape (submesh group) name: if not given, DefineMesh defaults it to
+	// the mesh name
+	if (submeshName)
+		mesh->SetShapeName(*submeshName);
 
 	return DefineMesh(std::move(mesh));
 }
@@ -636,8 +692,8 @@ void Scene::RemoveUnusedMeshes() {
 }
 
 void Scene::ClearSubdivEnvelopeCache() {
-	std::lock_guard<std::mutex> lock(subdivEnvelopeMtx);
-	subdivEnvelopeCache.clear();
+	for (const auto &name : shapeDefs.GetShapeNames())
+		shapeDefs.GetShape(name).ClearSubdivEnvelopeCache();
 }
 
 void Scene::DeleteObject(const string &objName) {

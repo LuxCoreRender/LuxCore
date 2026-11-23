@@ -280,6 +280,7 @@ set(SLG_CORE_SRCS
   ${PROJECT_SOURCE_DIR}/src/slg/scene/sceneobject.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/scene/sceneobjectdefs.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/scene/scene.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/scene/shapeview.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/scene/scenepreprocess.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/scene/sceneserialize.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/scene/sceneupdate.cpp

@@ -25,7 +25,7 @@
 
 namespace slg {
 
-class BevelShape : public Shape {
+class BevelShape : public ShapeModifier {
 public:
 	BevelShape(luxrays::ExtTriangleMeshRef mesh, const float bevelRadius);
 	virtual ~BevelShape();

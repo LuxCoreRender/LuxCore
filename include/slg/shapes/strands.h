@@ -29,7 +29,7 @@
 
 namespace slg {
 
-class StrendsShape : public Shape {
+class StrendsShape : public ShapeModifier {
 public:
 	typedef enum {
 		TESSEL_RIBBON, TESSEL_RIBBON_ADAPTIVE,

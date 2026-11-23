@@ -26,7 +26,7 @@
 
 namespace slg {
 
-class HarlequinShape : public Shape {
+class HarlequinShape : public ShapeModifier {
 public:
 	HarlequinShape(luxrays::ExtTriangleMeshRef srcMesh);
 	virtual ~HarlequinShape();
