@@ -429,6 +429,20 @@ void ExtTriangleMesh::PreprocessBevel() {
 		}
 
 		//----------------------------------------------------------------------
+		// A mesh without convex edges (a flat panel, a concave fold, a piece
+		// split off a solid) has nothing to bevel: building the accelerator
+		// over zero primitives crashes inside Embree, so keep no bevel data
+		// and let IntersectBevel() report no hit.
+		//----------------------------------------------------------------------
+
+		if (bevelCyls.empty()) {
+			bevelCylinders.reset();
+			bevelBoundingCylinders.reset();
+			bevelBVHArrayNodes.reset();
+			return;
+		}
+
+		//----------------------------------------------------------------------
 		// Copy local data to ExtTriangleMesh
 		//----------------------------------------------------------------------
 
@@ -478,6 +492,7 @@ void ExtTriangleMesh::PreprocessBevel() {
 	} else {
 		bevelCylinders.reset();
 		bevelBoundingCylinders.reset();
+		bevelBVHArrayNodes.reset();
 	}
 	
 	//const double endTotal = WallClockTime();
@@ -493,6 +508,10 @@ bool ExtTriangleMesh::IntersectBevel(const Ray &ray, const RayHit &rayHit,
 	u_int bevelCylinderIndex = NULL_INDEX;
 	float minT = numeric_limits<float>::infinity();
 	continueToTrace = false;
+
+	// No convex edge was found by PreprocessBevel(): nothing to intersect
+	if (!bevelBVHArrayNodes)
+		return false;
 
 	//--------------------------------------------------------------------------
 	// Some debug code to render only the BevelCylinder or the BevelBoundingCylinder
