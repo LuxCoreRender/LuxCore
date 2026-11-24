@@ -16,13 +16,12 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/scene/shape.h"
-
+#include "luxrays/core/shape.h"
 #include "luxrays/core/exttrianglemesh.h"
 
 using namespace luxrays;
 
-namespace slg {
+namespace luxrays {
 
 // Expand one per-vertex attribute layer from local (countVertices) rows to
 // canonical (P) rows through the local->global vertex map
@@ -46,6 +45,10 @@ static void ExpandLayer(
 	}
 }
 
+// Rebuild a submesh into a global-indexed mesh sharing the Shape's canonical
+// vertex buffer: local triangles + vertex map, attribute layers expanded to the
+// canonical point count. Transient working view for shape modifiers. Returns
+// nullptr when the mesh owns its points (no vertex map).
 ExtTriangleMeshUPtr MakeGlobalView(
 	const ExtTriangleMesh &mesh,
 	const VertexBuffer &canonical
@@ -121,4 +124,4 @@ ExtTriangleMeshUPtr MakeGlobalView(
 	return view;
 }
 
-}  // namespace slg
+}  // namespace luxrays

@@ -51,7 +51,7 @@ public:
 	// shape common point buffer and the result submeshes share the displaced
 	// buffer (a Buffer copy shares storage), so shared edges stay welded
 	// (watertight). Normals/UVs are read from the first submesh.
-	static ShapeUPtr ApplyToShape(ShapeConstRef srcShape, const Texture &dispMap,
+	static luxrays::ShapeUPtr ApplyToShape(luxrays::ShapeConstRef srcShape, const Texture &dispMap,
 			const Params &params, const std::string &resultName);
 
 	virtual ShapeType GetType() const override { return DISPLACEMENT; }

@@ -106,6 +106,7 @@ set(LUXRAYS_SRCS
   ${PROJECT_SOURCE_DIR}/src/luxrays/core/namedobject.cpp
   ${PROJECT_SOURCE_DIR}/src/luxrays/core/namedobjectvector.cpp
   ${PROJECT_SOURCE_DIR}/src/luxrays/core/trianglemesh.cpp
+  ${PROJECT_SOURCE_DIR}/src/luxrays/core/shapeview.cpp
   ${PROJECT_SOURCE_DIR}/src/luxrays/core/geometry/basictypeserialization.cpp
   ${PROJECT_SOURCE_DIR}/src/luxrays/core/geometry/bbox.cpp
   ${PROJECT_SOURCE_DIR}/src/luxrays/core/geometry/matrix4x4.cpp

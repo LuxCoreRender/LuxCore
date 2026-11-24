@@ -23,7 +23,7 @@
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/displacement.h"
-#include "slg/scene/shape.h"
+#include "slg/usings.h"
 #include "luxrays/utils/strutils.h"
 #include "luxrays/core/trianglemesh.h"
 #include "slg/scene/scene.h"

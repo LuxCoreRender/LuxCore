@@ -49,6 +49,7 @@
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/imagemaptex.h"
 #include "slg/usings.h"
+#include "slg/shapes/subdiv.h"
 #include "slg/utils/pathinfo.h"
 #include "slg/cameras/camera.h"
 
@@ -692,8 +693,10 @@ void Scene::RemoveUnusedMeshes() {
 }
 
 void Scene::ClearSubdivEnvelopeCache() {
-	for (const auto &name : shapeDefs.GetShapeNames())
-		shapeDefs.GetShape(name).ClearSubdivEnvelopeCache();
+	// The subdivided-envelope cache is now a static cache owned by SubdivShape
+	// (shared across the per-material-slot shapes of a source mesh). Clearing
+	// it here (only on mesh (re)definition) drops the shared subdiv run.
+	SubdivShape::GetEnvelopeCache()->Clear();
 }
 
 void Scene::DeleteObject(const string &objName) {

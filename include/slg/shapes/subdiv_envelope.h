@@ -28,6 +28,38 @@
 
 namespace slg {
 
+// Runtime cache of subdivided envelopes: ONE subdivision run per subdiv
+// parameter set, shared by all the per-material-slot (matslot) shapes
+// subdividing the same source Shape, which then resplit the result per slot.
+// It replaces the old per-Shape cache (Shape::SubdivEnvelopeCache). The cache
+// is owned by a static member of SubdivShape (see subdiv.h) so the subdiv run
+// survives across the several SubdivShape instances of one source mesh.
+class SubdivEnvelopeCache {
+public:
+	// One cached subdivided envelope over the envelope of a source Shape: the
+	// full subdivided mesh, the base-face index of each triangle (to resplit
+	// per source submesh), and the per-corner varying data of the subdivided
+	// mesh (so seams between submeshes are preserved through subdivision).
+	struct Entry {
+		luxrays::ExtTriangleMeshSPtr mesh;  // full subdivided envelope
+		std::vector<u_int> triBaseFace;
+		SubdivCornerData corner;  // per-corner varying data of the subdivided mesh
+	};
+
+	std::mutex &GetMutex() { return mtx; }
+	std::unordered_map<std::string, Entry> &GetCache() { return cache; }
+	// Clear all entries (called when a mesh is (re)defined, see
+	// Scene::ClearSubdivEnvelopeCache).
+	void Clear() {
+		std::lock_guard<std::mutex> lock(mtx);
+		cache.clear();
+	}
+
+private:
+	mutable std::mutex mtx;
+	std::unordered_map<std::string, Entry> cache;
+};
+
 // Reserved triangle AOV layer carrying the material slot index of each face
 // (written by BlendLuxCore at mesh export, one float per triangle).
 constexpr u_int MATERIAL_TRI_AOV_INDEX = 2;

@@ -23,6 +23,7 @@
 
 #include <memory>
 #include "luxrays/usings.h"
+#include "luxrays/core/shape.h"
 
 // Tip:You'll find DECLARE_SUBTYPES definition in luxrays/usings.h
 
@@ -62,7 +63,6 @@ DECLARE_SUBTYPES(SampleableSphericalFunction);
 DECLARE_SUBTYPES(SamplerSharedData);
 DECLARE_SUBTYPES(Scene);
 DECLARE_SUBTYPES(SceneObjectDefinitions);
-DECLARE_SUBTYPES(Shape);
 DECLARE_SUBTYPES(ShapeModifier);
 DECLARE_SUBTYPES(SobolSamplerSharedData);
 DECLARE_SUBTYPES(SphericalFunction);

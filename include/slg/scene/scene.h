@@ -281,7 +281,7 @@ public:
 	// directly with DefineShape(). Shape modifiers take a Shape as input.
 	auto& GetShapes() { return shapeDefs; }
 	const auto& GetShapes() const { return shapeDefs; }
-	std::tuple<Shape&, ShapeUPtr> DefineShape(ShapeUPtr&& shape) {
+	std::tuple<luxrays::Shape&, luxrays::ShapeUPtr> DefineShape(luxrays::ShapeUPtr&& shape) {
 		return shapeDefs.DefineShape(std::move(shape));
 	}
 	// Move a mesh to another Shape handle (created on demand)
@@ -392,8 +392,8 @@ private:
 	VolumeUPtr CreateVolume(const u_int defaultVolID, const std::string &volName, const luxrays::Properties &props);
 	MaterialUPtr CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
 
-	ShapeUPtr CreateShapeModifier(const std::string &shapeName, const luxrays::Properties &props,
-		const std::vector<ShapeUPtr> *blockShapes = nullptr,
+	luxrays::ShapeUPtr CreateShapeModifier(const std::string &shapeName, const luxrays::Properties &props,
+		const std::vector<luxrays::ShapeUPtr> *blockShapes = nullptr,
 		const std::unordered_map<std::string, size_t> *blockIndex = nullptr);
 
 	// Register a triangle mesh into its Shape handle (created on demand from

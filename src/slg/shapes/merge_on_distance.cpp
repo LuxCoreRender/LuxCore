@@ -36,7 +36,7 @@
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/utils/strutils.h"
-#include "slg/scene/shape.h"
+#include "slg/usings.h"
 #include "slg/shapes/merge_on_distance.h"
 #include "slg/utils/group_by_equivalence.h"
 #include "slg/scene/scene.h"
@@ -852,8 +852,8 @@ MergeOnDistanceShape::RefineImpl(SceneConstRef scene) {
 // computed ONCE on the shape common point buffer and the welded buffer is
 // shared by all result submeshes (a Buffer copy shares storage), so shared
 // edges stay welded (and a downstream displacement sees one shared buffer).
-ShapeUPtr MergeOnDistanceShape::ApplyToShape(
-		ShapeConstRef srcShape,
+luxrays::ShapeUPtr MergeOnDistanceShape::ApplyToShape(
+		luxrays::ShapeConstRef srcShape,
 		u_int tolerance,
 		bool importNormals,
 		const std::string &resultName
@@ -894,7 +894,7 @@ ShapeUPtr MergeOnDistanceShape::ApplyToShape(
 		weldedPerGroup.emplace(bufPtr,
 			ComputeWeldedData(work[indices[0]]->GetVertexBuffer(), tolerance));
 
-	auto result = std::make_unique<Shape>(resultName,
+	auto result = std::make_unique<luxrays::Shape>(resultName,
 		weldedPerGroup[work[0]->GetVertexBuffer().Data()].points);
 	const bool single = work.size() == 1;
 	u_int k = 0;

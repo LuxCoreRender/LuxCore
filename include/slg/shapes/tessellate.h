@@ -21,7 +21,7 @@
 
 #include "slg/usings.h"
 #include "slg/shapes/shape.h"
-#include "slg/scene/shape.h"  // complete type: ApplyToShape returns ShapeUPtr
+// complete type: ApplyToShape returns luxrays::ShapeUPtr (Shape comes from slg/usings.h -> luxrays/core/shape.h)
 #include "luxrays/core/exttrianglemesh.h"  // complete type: this header returns ExtTriangleMeshUPtr
 #include "luxrays/utils/utils.h"  // u_int (not provided by MSVC system headers)
 
@@ -61,8 +61,8 @@ public:
 	// Submeshes with their own buffer are tessellated per buffer group.
 	// Result submeshes are named resultName ("i"+index appended when the
 	// source shape has several submeshes).
-	static ShapeUPtr ApplyToShape(
-		ShapeConstRef srcShape,
+	static luxrays::ShapeUPtr ApplyToShape(
+		luxrays::ShapeConstRef srcShape,
 		const u_int rate,
 		const bool interpolatedNormals,
 		const std::string &resultName

@@ -23,6 +23,7 @@
 
 #include "luxrays/core/trianglemesh.h"
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/shape.h"
 
 using namespace std;
 using namespace luxrays;
@@ -107,7 +108,13 @@ void TriangleMesh::ApplyTransform(const Transform &trans) {
 TriangleMesh::TriangleMesh(const VertexBuffer &sharedVertices, TriangleBuffer&& meshTris) :
 	// VertexBuffer(sharedVertices) copies the buffer, i.e. shares its storage
 	TriangleMesh(VertexBuffer(sharedVertices), std::move(meshTris)) {
-}
+	}
+
+TriangleMesh::TriangleMesh(const Shape &shape, TriangleBuffer&& meshTris) :
+	// shape.GetVertices() returns the Shape's canonical buffer by const ref;
+	// the sharing ctor copies it, i.e. shares its storage with the Shape
+	TriangleMesh(shape.GetVertices(), std::move(meshTris)) {
+	}
 
 TriangleMeshUPtr TriangleMesh::Merge(
 	const deque<const Mesh *> &meshes,

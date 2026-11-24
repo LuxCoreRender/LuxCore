@@ -75,7 +75,7 @@ public:
 		bevelRadius(bRadius), shapeName(shapeName) { }
 	virtual ~ExtMesh() = default;
 
-	// Name of the slg::Shape this mesh belongs to (empty = not grouped;
+	// Name of the luxrays::Shape this mesh belongs to (empty = not grouped;
 	// Scene::DefineMesh then uses the mesh name as shape name)
 	const std::string &GetShapeName() const { return shapeName; }
 	void SetShapeName(const std::string &n) { shapeName = n; }

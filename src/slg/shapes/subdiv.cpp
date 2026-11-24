@@ -1265,6 +1265,25 @@ float SubdivShape::MaxEdgeScreenSize(CameraConstRef camera, ExtTriangleMeshRef s
 SubdivShape::~SubdivShape() {
 }
 
+// Shared subdivided-envelope cache (see SubdivEnvelopeCache). Lazily created
+// on first use; a process-global static so the subdiv run of a source Shape's
+// envelope survives across the several per-material-slot (matslot) SubdivShape
+// instances of that Shape.
+std::shared_ptr<SubdivEnvelopeCache> SubdivShape::GetEnvelopeCache() {
+	static std::shared_ptr<SubdivEnvelopeCache> cache;
+	if (!cache)
+		cache = std::make_shared<SubdivEnvelopeCache>();
+	return cache;
+}
+
+std::mutex &SubdivShape::EnvelopeCacheMutex() {
+	return GetEnvelopeCache()->GetMutex();
+}
+
+std::unordered_map<std::string, SubdivEnvelopeCache::Entry> &SubdivShape::EnvelopeCache() {
+	return GetEnvelopeCache()->GetCache();
+}
+
 
 
 ShapeUPtr SubdivShape::ApplyToShape(
@@ -1311,11 +1330,16 @@ ShapeUPtr SubdivShape::ApplyToShape(
 	// shapes of the same source shape (e.g. one per material) share it.
 	// The lock is held for the whole build+resplit: cache entries must stay
 	// valid while referenced.
-	std::lock_guard<std::mutex> cacheLock(srcShape.GetSubdivEnvelopeMutex());
-	auto &cache = srcShape.GetSubdivEnvelopeCache();
+	// The subdivision run of each buffer group's envelope is cached ON THE
+	// STATIC CACHE (keyed by buffer + subdiv params), so several subdiv
+	// shapes of the same source shape (e.g. one per material) share it.
+	// The lock is held for the whole build+resplit: cache entries must stay
+	// valid while referenced.
+	std::lock_guard<std::mutex> cacheLock(SubdivShape::EnvelopeCacheMutex());
+	auto &cache = SubdivShape::EnvelopeCache();
 
 	struct GroupResult {
-		const Shape::SubdivEnvelopeCacheEntry *entry = nullptr;
+		const SubdivEnvelopeCache::Entry *entry = nullptr;
 		std::vector<std::pair<size_t, size_t>> ranges;  // source face range per submesh
 	};
 	std::unordered_map<const void *, GroupResult> perGroup;
@@ -1364,7 +1388,7 @@ ShapeUPtr SubdivShape::ApplyToShape(
 				for (size_t t = 0; t < triBaseFace.size(); ++t)
 					triBaseFace[t] = (u_int)t;
 			}
-			it = cache.emplace(key, Shape::SubdivEnvelopeCacheEntry{
+			it = cache.emplace(key, SubdivEnvelopeCache::Entry{
 				std::move(subdivided), std::move(triBaseFace), std::move(cornerOut)
 			}).first;
 		}

@@ -40,6 +40,11 @@ namespace ocl {
 #include "luxrays/core/trianglemesh_types.cl"
 }
 
+// Forward declaration: the Shape->TriangleMesh ctor takes a Shape by
+// reference, so only the incomplete type is needed here (the complete type is
+// pulled in by the trianglemesh.cpp implementation via luxrays/core/shape.h).
+class Shape;
+
 typedef u_int TriangleMeshID;
 typedef u_int TriangleID;
 
@@ -95,6 +100,11 @@ public:
 	// shared with the source buffer (the point data is not duplicated), e.g.
 	// between the submeshes of a same source mesh
 	TriangleMesh(const VertexBuffer &sharedVertices, TriangleBuffer&& meshTris);
+	// Build a TriangleMesh from a luxrays::Shape: the Shape supplies its canonical
+	// vertex buffer (by const ref, so the Shape is not copied), and the caller
+	// supplies the triangles separately. The vertex storage is shared with the
+	// Shape's canonical buffer (see the sharing ctor).
+	TriangleMesh(const Shape &shape, TriangleBuffer&& meshTris);
 	virtual ~TriangleMesh() { };
 
 	virtual MeshType GetType() const { return TYPE_TRIANGLE; }

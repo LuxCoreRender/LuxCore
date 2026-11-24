@@ -19,12 +19,15 @@
 #ifndef _SLG_SUBDIVSHAPE_H
 #define	_SLG_SUBDIVSHAPE_H
 
+#include <mutex>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "slg/usings.h"
 #include "slg/shapes/shape.h"
 #include "slg/shapes/subdiv_corner_data.h"
+#include "slg/shapes/subdiv_envelope.h"
 
 namespace slg {
 
@@ -59,8 +62,8 @@ public:
 	// then resplit per source submesh (by base-face range; or per material
 	// slot when matSlot >= 0). Result submeshes are named resultName
 	// ("i"+index appended when the source shape has several submeshes).
-	static ShapeUPtr ApplyToShape(
-		ShapeConstRef srcShape,
+	static luxrays::ShapeUPtr ApplyToShape(
+		luxrays::ShapeConstRef srcShape,
 		const u_int maxLevel,
 		const float sharpnessThresholdRadians,
 		const float creaseWeight,
@@ -79,6 +82,14 @@ public:
 		const SubdivCornerData *cornerData = nullptr,
 		SubdivCornerData *outCorner = nullptr
 	);
+
+	// Access to the shared subdivided-envelope cache (see SubdivEnvelopeCache).
+	// The cache is owned by a process-global static so the subdiv run of a
+	// source Shape's envelope survives across the several per-material-slot
+	// (matslot) SubdivShape instances of that Shape.
+	static std::shared_ptr<SubdivEnvelopeCache> GetEnvelopeCache();
+	static std::mutex &EnvelopeCacheMutex();
+	static std::unordered_map<std::string, SubdivEnvelopeCache::Entry> &EnvelopeCache();
 
 protected:
 	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) override;

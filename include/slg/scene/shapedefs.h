@@ -24,7 +24,6 @@
 #include <vector>
 
 #include "luxrays/core/namedobjectvector.h"
-#include "slg/scene/shape.h"
 #include "slg/usings.h"
 
 namespace slg {
@@ -43,21 +42,21 @@ public:
 	bool IsShapeDefined(const std::string &name) const {
 		return shapes.IsObjDefined(name);
 	}
-	std::tuple<Shape&, ShapeUPtr> DefineShape(ShapeUPtr&& s) {
-		return shapes.DefineObj<Shape>(std::move(s));
+	std::tuple<luxrays::Shape&, luxrays::ShapeUPtr> DefineShape(luxrays::ShapeUPtr&& s) {
+		return shapes.DefineObj<luxrays::Shape>(std::move(s));
 	}
 
-	ShapeConstRef GetShape(const std::string &name) const {
-		return dynamic_cast<ShapeConstRef>(shapes.GetObj(name));
+        luxrays::ShapeConstRef GetShape(const std::string &name) const {
+		return dynamic_cast<luxrays::ShapeConstRef>(shapes.GetObj(name));
 	}
-	ShapeRef GetShape(const std::string &name) {
-		return dynamic_cast<ShapeRef>(shapes.GetObj(name));
+	luxrays::ShapeRef GetShape(const std::string &name) {
+		return dynamic_cast<luxrays::ShapeRef>(shapes.GetObj(name));
 	}
-	ShapeConstRef GetShape(const u_int index) const {
-		return dynamic_cast<ShapeConstRef>(shapes.GetObj(index));
+	luxrays::ShapeConstRef GetShape(const u_int index) const {
+		return dynamic_cast<luxrays::ShapeConstRef>(shapes.GetObj(index));
 	}
-	ShapeRef GetShape(const u_int index) {
-		return dynamic_cast<ShapeRef>(shapes.GetObj(index));
+	luxrays::ShapeRef GetShape(const u_int index) {
+		return dynamic_cast<luxrays::ShapeRef>(shapes.GetObj(index));
 	}
 	u_int GetShapeIndex(const std::string &name) const {
 		return shapes.GetIndex(name);
@@ -70,8 +69,8 @@ public:
 		return shapes.GetNames();
 	}
 
-	ShapeUPtr DeleteShape(const std::string &name) {
-		return shapes.DeleteObj<Shape>(name);
+	luxrays::ShapeUPtr DeleteShape(const std::string &name) {
+		return shapes.DeleteObj<luxrays::Shape>(name);
 	}
 
 private:

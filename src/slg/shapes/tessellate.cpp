@@ -26,7 +26,7 @@
 #include "slg/shapes/subdiv_envelope.h"
 #include "slg/shapes/tessellate_core.h"
 #include "slg/scene/scene.h"
-#include "slg/scene/shape.h"
+#include "slg/usings.h"
 
 using namespace luxrays;
 

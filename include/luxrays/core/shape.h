@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_SCENE_SHAPE_H
-#define	_SLG_SCENE_SHAPE_H
+#ifndef _LUXRAYS_CORE_SHAPE_H
+#define	_LUXRAYS_CORE_SHAPE_H
 
 #include <algorithm>
 #include <functional>
@@ -28,14 +28,10 @@
 
 #include "luxrays/core/namedobject.h"
 #include "luxrays/utils/buffer.h"
-#include "slg/usings.h"
-#include "slg/shapes/subdiv_corner_data.h"
+#include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/usings.h"
 
 namespace luxrays {
-class ExtTriangleMesh;
-}
-
-namespace slg {
 
 //------------------------------------------------------------------------------
 // Shape
@@ -46,10 +42,20 @@ namespace slg {
 // submeshes (ExtTriangleMesh). Shape modifiers take a Shape as input, not a
 // submesh, so that vertex-level modifiers (displacement, merge on distance)
 // run once on the common point buffer and all submeshes stay welded.
-class Shape : public luxrays::NamedObject {
+//
+// NOTE: Shape used to live in the slg layer (slg/scene/shape.h) and
+// owned a runtime subdivided-envelope cache. That cache has been moved to a
+// static cache owned by the slg SubdivShape (see slg/shapes/subdiv.h); it is
+// no longer a member of Shape, so Shape here depends only on luxrays types.
+class Shape : public NamedObject {
 public:
 	Shape(const std::string &name, const luxrays::VertexBuffer &vertices) :
 		NamedObject(name), vertices(vertices) { }
+	// A Shape owns a canonical vertex buffer and shared submesh references,
+	// so it must not be copied (a copy would alias the same submeshes and
+	// share unique_ptr ownership). Copying is intentionally disabled.
+	Shape(const Shape &) = delete;
+	Shape &operator=(const Shape &) = delete;
 	virtual ~Shape() = default;
 
 	// Canonical shared point buffer of the shape. A Buffer copy shares the
@@ -80,25 +86,6 @@ public:
 	GetSubmeshes() const { return submeshes; }
 	u_int GetSubmeshCount() const { return (u_int)submeshes.size(); }
 
-	// Cache of subdivided envelopes: ONE subdivision run per subdiv
-	// parameter set, shared by all the per-material-slot (matslot) shapes
-	// subdividing this Shape, which then resplit the result per slot.
-	// The Shape replaces the old scene-level cache keyed by the point-buffer
-	// pointer: the buffer identity is the Shape itself. Pure runtime cache
-	// (not serialized), cleared when meshes are (re)defined
-	// (Scene::ClearSubdivEnvelopeCache).
-	struct SubdivEnvelopeCacheEntry {
-		luxrays::ExtTriangleMeshSPtr mesh;  // full subdivided envelope
-		std::vector<u_int> triBaseFace;
-		SubdivCornerData corner;  // per-corner varying data of the subdivided mesh
-	};
-	std::mutex &GetSubdivEnvelopeMutex() const { return subdivEnvelopeMtx; }
-	auto &GetSubdivEnvelopeCache() const { return subdivEnvelopeCache; }
-	void ClearSubdivEnvelopeCache() {
-		std::lock_guard<std::mutex> lock(subdivEnvelopeMtx);
-		subdivEnvelopeCache.clear();
-	}
-
 	// Hands over the owned submesh meshes (factory results) to the caller,
 	// typically to define them into the scene mesh cache. The submesh
 	// references stay valid: moving a unique_ptr does not move the object.
@@ -110,21 +97,16 @@ private:
 	luxrays::VertexBuffer vertices;
 	std::vector<std::reference_wrapper<luxrays::ExtTriangleMesh>> submeshes;
 	std::vector<luxrays::ExtTriangleMeshUPtr> ownedMeshes;
-
-	// Subdivided-envelope cache (see above); mutable because it is filled
-	// lazily from const shape references during shape refinement
-	mutable std::mutex subdivEnvelopeMtx;
-	mutable std::unordered_map<std::string, SubdivEnvelopeCacheEntry> subdivEnvelopeCache;
 };
 
-// Rebuild a submesh that references the shape's canonical vertex buffer
-// (local triangles + vertex map, attribute arrays sized countVertices) as a
-// global-indexed mesh sharing that canonical buffer, with attribute layers
-// expanded to the canonical point count. Transient working view for shape
-// modifiers. Returns nullptr when the mesh owns its points (no vertex map).
+// Rebuild a submesh into a global-indexed mesh that shares the Shape's
+// canonical vertex buffer: local triangles + vertex map, attribute arrays sized
+// countVertices, attribute layers expanded to the canonical point count.
+// Transient working view for shape modifiers. Returns nullptr when the mesh owns
+// its points (no vertex map).
 luxrays::ExtTriangleMeshUPtr MakeGlobalView(
 	const luxrays::ExtTriangleMesh &mesh, const luxrays::VertexBuffer &canonical);
 
 }
 
-#endif	/* _SLG_SCENE_SHAPE_H */
+#endif	/* _LUXRAYS_CORE_SHAPE_H */

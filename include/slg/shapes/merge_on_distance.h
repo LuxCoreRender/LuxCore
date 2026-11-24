@@ -42,8 +42,8 @@ public:
 	// Shape-level application: the merge is computed ONCE on the shape
 	// common point buffer and the welded buffer is shared by all result
 	// submeshes (a Buffer copy shares storage), so shared edges stay welded
-	static ShapeUPtr ApplyToShape(
-		ShapeConstRef srcShape,
+	static luxrays::ShapeUPtr ApplyToShape(
+		luxrays::ShapeConstRef srcShape,
 		u_int tolerance,
 		bool importNormals,
 		const std::string &resultName
