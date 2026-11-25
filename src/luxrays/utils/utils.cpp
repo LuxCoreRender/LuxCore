@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2025 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
