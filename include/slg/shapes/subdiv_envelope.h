@@ -41,6 +41,7 @@ public:
 	// per source submesh), and the per-corner varying data of the subdivided
 	// mesh (so seams between submeshes are preserved through subdivision).
 	struct Entry {
+		luxrays::ShapeUPtr shape;           // Shape the envelope mesh is built on
 		luxrays::ExtTriangleMeshSPtr mesh;  // full subdivided envelope
 		std::vector<u_int> triBaseFace;
 		SubdivCornerData corner;  // per-corner varying data of the subdivided mesh

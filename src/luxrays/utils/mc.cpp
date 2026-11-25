@@ -148,7 +148,8 @@ void UniformSampleTriangle(const float u1, const float u2, float *u, float *v) {
 	*v = u2 * su1;
 }
 
-void LowDiscrepancySampleTriangle(const float u1, float *u, float *v) {
+std::tuple<float, float> LowDiscrepancySampleTriangle(const float u1)
+{
 	// New implementation from: https://pharr.org/matt/blog/2019/02/27/triangle-sampling-1.html
 	// and: https://pharr.org/matt/blog/2019/03/13/triangle-sampling-1.5.html
 	u_int uf = u1 * (1ull << 32);  // Fixed point
@@ -166,8 +167,9 @@ void LowDiscrepancySampleTriangle(const float u1, float *u, float *v) {
 		uf <<= 2;
 	}
 
-	*u = cx + w / 3.f;
-	*v = cy + w / 3.f;
+	float u = cx + w / 3.f;
+	float v = cy + w / 3.f;
+	return std::make_tuple(u, v);
 }
 
 float UniformConePdf(const float cosThetaMax) {

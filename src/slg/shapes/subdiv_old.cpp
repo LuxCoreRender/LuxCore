@@ -35,6 +35,7 @@
 #define OSD_EVALUATOR Osd::TbbEvaluator
 
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/shape.h"
 #include "slg/shapes/subdiv_old.h"
 #include "slg/scene/scene.h"
 
@@ -138,7 +139,7 @@ static ExtTriangleMeshUPtr ApplyAdaptiveSubdiv(
 
 
 
-ExtTriangleMeshUPtr ApplySubdiv(ExtTriangleMeshRef srcMesh, const u_int maxLevel) {
+ShapeUPtr ApplySubdiv(ExtTriangleMeshRef srcMesh, const u_int maxLevel) {
 	//--------------------------------------------------------------------------
 	// Refine topology
 	//--------------------------------------------------------------------------
@@ -160,7 +161,7 @@ ExtTriangleMeshUPtr ApplySubdiv(ExtTriangleMeshRef srcMesh, const u_int maxLevel
 	if (refiner->GetMaxLevel() < maxLevel) {
 		SDL_LOG("WARNING - SUBDIVISION FAILURE");
 		SDL_LOG("'maxlevel' may be too high, please check. Continuing with input mesh...");
-		return srcMesh.Copy();
+		return srcMesh.Copy();  // ShapeUPtr
 	}
 
 	// Get topology constants
@@ -375,8 +376,9 @@ nRefinedVerts
 	}
 
 	// Allocate the new mesh
+	auto shape = std::make_unique<Shape>(srcMesh.GetName(), std::move(newVerts));
 	ExtTriangleMeshUPtr newMesh = std::make_unique<ExtTriangleMesh>(
-		std::move(newVerts), std::move(newTris), std::move(newNorms),
+		*shape, std::move(newTris), std::move(newNorms),
 		newUVs, newCols, newAlphas
 	);
 
@@ -384,7 +386,8 @@ nRefinedVerts
 		newMesh->SetVertexAOV(i, newVertAOVs.GetLayer(i), newVertAOVs.GetLayerSize());
 	}
 
-	return newMesh;
+	shape->AddSubmesh(std::move(newMesh));
+	return shape;
 }
 
 static Far::TopologyRefiner* createFarTopologyRefiner(ExtTriangleMeshConstRef srcMesh)
@@ -493,11 +496,13 @@ SubdivOldShape::SubdivOldShape(
 
 	if (maxLevel > 0) {
 		SDL_LOG("Subdividing shape " << srcMesh.GetName() << " at level: " << maxLevel << " (uniform)");
-		mesh = ApplySubdiv(srcMesh, maxLevel);
+		shape = ApplySubdiv(srcMesh, maxLevel);
+		mesh = std::move(shape->ReleaseOwnedMeshes().front());
 		SDL_LOG("Subdivided shape from " << srcMesh.GetTotalTriangleCount() << " to " << mesh->GetTotalTriangleCount() << " faces");
 	} else {
 		SDL_LOG("Subdivision: level=0 - Skipping");
-		mesh = srcMesh.Copy();
+		shape = srcMesh.Copy();
+		mesh = std::move(shape->ReleaseOwnedMeshes().front());
 	}
 
 	SDL_LOG("Subdividing time: " << WallClockTime() - startTime << " secs");
@@ -506,7 +511,7 @@ SubdivOldShape::SubdivOldShape(
 SubdivOldShape::~SubdivOldShape() {
 }
 
-ExtTriangleMeshUPtr SubdivOldShape::ApplySubdiv(
+ShapeUPtr SubdivOldShape::ApplySubdiv(
 	ExtTriangleMeshRef srcMesh,
 	const u_int maxLevel
 ) {

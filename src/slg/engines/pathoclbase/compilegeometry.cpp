@@ -125,7 +125,10 @@ void CompiledScene::CompileGeometry() {
     };
 
 	slg::ocl::ExtMesh currentMeshDesc;
-	ExtTriangleMesh initBaseMesh;
+	// Placeholder mesh (serialization ctor) only used as initial value of
+	// baseMesh, which is always reassigned in the loop below
+	static Shape dummyShape;
+	ExtTriangleMesh initBaseMesh(dummyShape);
 	std::reference_wrapper<const ExtTriangleMesh> baseMesh = initBaseMesh;
 	for (u_int i = 0; i < objCount; ++i) {
 		ExtMeshConstRef mesh = scene.GetObjects().GetSceneObject(i).GetExtMesh();
@@ -217,7 +220,7 @@ void CompiledScene::CompileGeometry() {
 
 				Transform t;
 				// Time doesn't matter for ExtTriangleMesh
-				baseMesh.get().GetLocal2World(0.f, t);
+t = 				baseMesh.get().GetLocal2World(0.f);
 				memcpy(&currentMeshDesc.triangle.appliedTrans.m, &t.m, sizeof(float[4][4]));
 				memcpy(&currentMeshDesc.triangle.appliedTrans.mInv, &t.mInv, sizeof(float[4][4]));
 				currentMeshDesc.triangle.appliedTransSwapsHandedness = t.SwapsHandedness();

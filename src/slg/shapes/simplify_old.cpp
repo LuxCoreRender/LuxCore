@@ -27,6 +27,7 @@
 #include "luxrays/core/trianglemesh.h"
 #include "luxrays/usings.h"
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/shape.h"
 #include "slg/shapes/simplify_old.h"
 #include "luxrays/utils/buffer.h"
 #include "slg/scene/scene.h"
@@ -198,7 +199,7 @@ public:
 	~Simplify() {
 	}
 
-	ExtTriangleMeshUPtr GetExtMesh() const {
+	ShapeUPtr GetExtMesh() const {
 		const u_int vertCount = vertices.size();
 		const u_int triCount = triangles.size();
 
@@ -246,14 +247,17 @@ public:
 			newTris[i].v[2] = triangles[i].v[2];
 		}
 
-		return std::make_unique<ExtTriangleMesh>(
-			std::move(newVertices),
+		auto shape = std::make_unique<Shape>("simplify", std::move(newVertices));
+		auto mesh = std::make_unique<ExtTriangleMesh>(
+			*shape,
 			std::move(newTris),
 			std::move(newNorms),
 			newUVs,
 			newCols,
 			newAlphas
 		);
+		shape->AddSubmesh(std::move(mesh));
+		return shape;
 	}
 
 	void Decimate(const float targetTriangleCount, CameraConstRef scnCamera,
@@ -907,7 +911,8 @@ SimplifyShape::SimplifyShape(CameraConstPtr camera, ExtTriangleMeshRef srcMesh,
 
 	Simplify simplify(srcMesh);
 	simplify.Decimate(targetCount, *camera, edgeScreenSize, preserveBorder);
-	mesh = simplify.GetExtMesh();
+	shape = simplify.GetExtMesh();
+	mesh = std::move(shape->ReleaseOwnedMeshes().front());
 
 	/*srcMesh->Save("debug-end.ply");
 	ExtTriangleMeshUPtr debugMeshEnd = ScreenProjection(*camera, *mesh);

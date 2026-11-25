@@ -73,7 +73,7 @@ void SceneObjectDefinitions::DefineIntersectableLights
 	// cache on first call, which would race if done from the parallel loop
 	{
 		Transform localToWorld;
-		mesh.GetLocal2World(0.f, localToWorld);
+localToWorld = 		mesh.GetLocal2World(0.f);
 		(void)mesh.GetMeshArea(localToWorld);
 	}
 

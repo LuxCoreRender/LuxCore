@@ -71,8 +71,8 @@ class RayHit;
 
 class ExtMesh : virtual public Mesh, public NamedObject {
 public:
-	ExtMesh(float bRadius = 0.f, const std::string &shapeName = "") :
-		bevelRadius(bRadius), shapeName(shapeName) { }
+	ExtMesh(const Shape &shape, float bRadius = 0.f, const std::string &shapeName = "") :
+		Mesh(shape), bevelRadius(bRadius), shapeName(shapeName) { }
 	virtual ~ExtMesh() = default;
 
 	// Name of the luxrays::Shape this mesh belongs to (empty = not grouped;
@@ -147,8 +147,11 @@ private:
 
 class ExtTriangleMesh : public TriangleMesh, public ExtMesh {
 public:
+	// The mesh is built on a Shape: the Shape owns the canonical vertex
+	// buffer (shared by all the submeshes of the shape), the caller
+	// supplies the triangles (and the other per-mesh data) separately.
 	ExtTriangleMesh(
-		VertexBuffer&& meshVertices,
+		const Shape &shape,
 		TriangleBuffer&& meshTris,
 		NormalBuffer&& meshNormals,
 		ExtMeshProp<UV>::Layer meshUVs = nullptr,
@@ -158,7 +161,7 @@ public:
 		const std::string &shapeName = ""
 	);
 	ExtTriangleMesh(
-		VertexBuffer&& meshVertices,
+		const Shape &shape,
 		TriangleBuffer&& meshTris,
 		NormalBuffer&& meshNormals,
 		std::optional<std::span<UV>> meshUVs,
@@ -167,28 +170,7 @@ public:
 		const float bRadius = 0.f
 	);
 	ExtTriangleMesh(
-		VertexBuffer&& meshVertices,
-		TriangleBuffer&& meshTris,
-		NormalBuffer&& meshNormals,
-		std::optional<ExtMeshProp<UV>> meshUVs,
-		std::optional<ExtMeshProp<Spectrum>> meshCols,
-		std::optional<ExtMeshProp<float>> meshAlphas,
-		const float bRadius = 0.f
-	);
-	// Sharing constructors: the vertex buffer is copied, i.e. its storage is
-	// shared with the source buffer (the point data is not duplicated), e.g.
-	// between the submeshes of a same source mesh
-	ExtTriangleMesh(
-		const VertexBuffer &sharedVertices,
-		TriangleBuffer&& meshTris,
-		NormalBuffer&& meshNormals,
-		std::optional<std::span<UV>> meshUVs,
-		std::optional<std::span<Spectrum>> meshCols,
-		std::optional<std::span<float>> meshAlphas,
-		const float bRadius = 0.f
-	);
-	ExtTriangleMesh(
-		const VertexBuffer &sharedVertices,
+		const Shape &shape,
 		TriangleBuffer&& meshTris,
 		NormalBuffer&& meshNormals,
 		std::optional<ExtMeshProp<UV>> meshUVs,
@@ -333,14 +315,17 @@ public:
 
 	virtual bool GetTriBaryCoords(const luxrays::Transform &local2World, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const {
 		const Triangle &tri = tris[triIndex];
-		return tri.GetBaryCoords(vertices, hitPoint, b1, b2);
+		return tri.GetBaryCoords(GetVertices(), hitPoint, b1, b2);
 	}
 	void SetLocal2World(const luxrays::Transform &t) {
 		appliedTrans = t;
 		appliedTransSwapsHandedness = appliedTrans.SwapsHandedness();
 	}
 
-	virtual void ApplyTransform(const Transform &trans);
+	// Called by Shape::ApplyTransform() after the Shape transformed the
+	// shared vertex buffer: rotate the vertex normals (copy-on-write when
+	// shared) and refresh the derived data
+	virtual void OnShapeTransformed(const Transform &trans) override;
 
 	virtual Normal InterpolateTriNormal(const luxrays::Transform &local2World, const u_int triIndex,
 			const float b1, const float b2) const {
@@ -395,7 +380,9 @@ public:
 
 	void CopyAOV(ExtTriangleMeshRef destMesh) const;
 
-	ExtTriangleMeshUPtr CopyExt(
+	// The copy is built on a new Shape owning the (copied or shared) vertex
+	// buffer; the returned Shape owns the copied mesh
+	ShapeUPtr CopyExt(
 		std::optional<VertexBuffer> meshVertices,
 		std::optional<TriangleBuffer> meshTris,
 		std::optional<NormalBuffer> meshNormals,
@@ -405,7 +392,7 @@ public:
 		const float bRadius = 0.f
 	) const;
 
-	ExtTriangleMeshUPtr Copy(
+	ShapeUPtr Copy(
 		std::optional<VertexBuffer> meshVertices,
 		std::optional<TriangleBuffer> meshTris,
 		std::optional<NormalBuffer> meshNormals,
@@ -415,25 +402,18 @@ public:
 		const float bRadius = 0.f
 	) const;
 
-	ExtTriangleMeshUPtr Copy(const float bRadius = 0.f) const {
-		return CopyExt(
-			std::nullopt,
-			std::nullopt,
-			std::nullopt,
-			std::nullopt,
-			std::nullopt,
-			std::nullopt,
-			bRadius
-		);
-	}
+	ShapeUPtr Copy(const float bRadius = 0.f) const;
 
 	virtual bool IntersectBevel(const luxrays::Ray &ray, const luxrays::RayHit &rayHit,
 			bool &continueToTrace, float &rayHitT,
 			luxrays::Point &p, luxrays::Normal &n) const;
 
-	static ExtTriangleMeshUPtr Load(const std::string &fileName);
+	// Load/Merge/Copy return a Shape owning the produced mesh (the mesh
+	// references the Shape through Mesh::GetShape(), so the Shape must
+	// outlive the mesh)
+	static ShapeUPtr Load(const std::string &fileName);
 
-	static ExtTriangleMeshUPtr Merge(
+	static ShapeUPtr Merge(
 		std::vector<std::reference_wrapper<const ExtTriangleMesh>> meshes,
 		std::optional<std::vector<luxrays::Transform>> trans
 	);
@@ -478,12 +458,11 @@ public:
 		float radius;
 	};
 
-	static ExtTriangleMeshUPtr LoadPly(const std::string &fileName);
-	static ExtTriangleMeshUPtr LoadSerialized(const std::string &fileName);
+	static ShapeUPtr LoadPly(const std::string &fileName);
+	static ShapeUPtr LoadSerialized(const std::string &fileName);
 
-	// Used by serialization
-	ExtTriangleMesh() {
-	}
+	// Used by serialization (see boost::serialization load_construct_data)
+	explicit ExtTriangleMesh(const Shape &s) : Mesh(s), TriangleMesh(s), ExtMesh(s) { }
 
 	void Init(
 		NormalBuffer&& meshNormals,
@@ -504,7 +483,7 @@ public:
 
 		const bool hasNormals = HasNormals();
 		ar & hasNormals;
-		auto vertCount = vertices.Count();
+		auto vertCount = GetTotalVertexCount();
 		auto triCount = tris.Count();
 		if (HasNormals())
 			for (u_int i = 0; i < vertCount; ++i)
@@ -525,7 +504,7 @@ public:
 
 		bool hasNormals;
 		ar & hasNormals;
-		auto vertCount = vertices.Count();
+		auto vertCount = GetVertices().size();
 		auto triCount = tris.Count();
 		if (hasNormals) {
 			normals.Allocate(vertCount);
@@ -574,8 +553,8 @@ public:
 
 class ExtInstanceTriangleMesh : public InstanceTriangleMesh, public ExtMesh {
 public:
-	ExtInstanceTriangleMesh(ExtTriangleMesh& m, const Transform &t) : 
-		InstanceTriangleMesh(m, t) { }
+	ExtInstanceTriangleMesh(ExtTriangleMesh& m, const Transform &t) :
+		Mesh(m.GetShape()), InstanceTriangleMesh(m, t), ExtMesh(m.GetShape()) { }
 	~ExtInstanceTriangleMesh() { };
 	virtual void Delete() {	}
 
@@ -672,9 +651,13 @@ public:
 	friend class boost::serialization::access;
 
 private:
-	// Used by serialization
-	ExtInstanceTriangleMesh() {
-	}
+	// Used by serialization (see boost::serialization load_construct_data)
+	friend class boost::serialization::access;
+
+public:
+	explicit ExtInstanceTriangleMesh(const Shape &s) : Mesh(s), InstanceTriangleMesh(s), ExtMesh(s) { }
+
+private:
 
 	template<class Archive> void save(Archive &ar, const unsigned int version) const {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(InstanceTriangleMesh);
@@ -691,7 +674,7 @@ private:
 class ExtMotionTriangleMesh : public MotionTriangleMesh, public ExtMesh {
 public:
 	ExtMotionTriangleMesh(ExtTriangleMesh& m, const MotionSystem &ms) :
-		MotionTriangleMesh(m, ms) { }
+		Mesh(m.GetShape()), MotionTriangleMesh(m, ms), ExtMesh(m.GetShape()) { }
 	~ExtMotionTriangleMesh() { }
 	virtual void Delete() {	}
 
@@ -786,9 +769,13 @@ public:
 	friend class boost::serialization::access;
 
 private:
-	// Used by serialization
-	ExtMotionTriangleMesh() {
-	}
+	// Used by serialization (see boost::serialization load_construct_data)
+	friend class boost::serialization::access;
+
+public:
+	explicit ExtMotionTriangleMesh(const Shape &s) : Mesh(s), MotionTriangleMesh(s), ExtMesh(s) { }
+
+private:
 
 	template<class Archive> void save(Archive &ar, const unsigned int version) const {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(MotionTriangleMesh);
@@ -813,6 +800,46 @@ BOOST_CLASS_VERSION(luxrays::ExtMotionTriangleMesh, 4)
 BOOST_CLASS_EXPORT_KEY(luxrays::ExtTriangleMesh)
 BOOST_CLASS_EXPORT_KEY(luxrays::ExtInstanceTriangleMesh)
 BOOST_CLASS_EXPORT_KEY(luxrays::ExtMotionTriangleMesh)
+
+// Reference member serialization (see trianglemesh.h)
+namespace boost {
+namespace serialization {
+
+template<class Archive>
+inline void save_construct_data(Archive &ar, const luxrays::ExtTriangleMesh *t, const unsigned int version) {
+	ar << const_cast<luxrays::Shape *>(&t->GetShape());
+}
+template<class Archive>
+inline void load_construct_data(Archive &ar, luxrays::ExtTriangleMesh *t, const unsigned int version) {
+	luxrays::Shape *s = nullptr;
+	ar >> s;
+	::new(t) luxrays::ExtTriangleMesh(*s);
+}
+
+template<class Archive>
+inline void save_construct_data(Archive &ar, const luxrays::ExtInstanceTriangleMesh *t, const unsigned int version) {
+	ar << const_cast<luxrays::Shape *>(&t->GetShape());
+}
+template<class Archive>
+inline void load_construct_data(Archive &ar, luxrays::ExtInstanceTriangleMesh *t, const unsigned int version) {
+	luxrays::Shape *s = nullptr;
+	ar >> s;
+	::new(t) luxrays::ExtInstanceTriangleMesh(*s);
+}
+
+template<class Archive>
+inline void save_construct_data(Archive &ar, const luxrays::ExtMotionTriangleMesh *t, const unsigned int version) {
+	ar << const_cast<luxrays::Shape *>(&t->GetShape());
+}
+template<class Archive>
+inline void load_construct_data(Archive &ar, luxrays::ExtMotionTriangleMesh *t, const unsigned int version) {
+	luxrays::Shape *s = nullptr;
+	ar >> s;
+	::new(t) luxrays::ExtMotionTriangleMesh(*s);
+}
+
+} // namespace serialization
+} // namespace boost
 
 #endif	/* _LUXRAYS_EXTTRIANGLEMESH_H */
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

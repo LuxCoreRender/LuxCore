@@ -106,7 +106,7 @@ void Camera::UpdateAuto(SceneConstRef scene) {
 
 			// Interpolate face normal
 			Transform local2world;
-			mesh.GetLocal2World(ray.time, local2world);
+local2world = 			mesh.GetLocal2World(ray.time);
 			const Normal geometryN = mesh.GetGeometryNormal(local2world, rayHit.triangleIndex);
 			const bool intoObject = (Dot(ray.d, geometryN) < 0.f);
 

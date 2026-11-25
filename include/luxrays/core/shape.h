@@ -29,6 +29,7 @@
 #include "luxrays/core/namedobject.h"
 #include "luxrays/utils/buffer.h"
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/geometry/transform.h"
 #include "luxrays/usings.h"
 
 namespace luxrays {
@@ -51,6 +52,8 @@ class Shape : public NamedObject {
 public:
 	Shape(const std::string &name, const luxrays::VertexBuffer &vertices) :
 		NamedObject(name), vertices(vertices) { }
+	// Used by serialization
+	Shape() { }
 	// A Shape owns a canonical vertex buffer and shared submesh references,
 	// so it must not be copied (a copy would alias the same submeshes and
 	// share unique_ptr ownership). Copying is intentionally disabled.
@@ -67,6 +70,9 @@ public:
 
 	// Register a submesh already defined in the scene mesh cache
 	void AddSubmesh(luxrays::ExtTriangleMesh &mesh) {
+		for (auto &sm : submeshes)
+			if (&sm.get() == &mesh)
+				return;
 		submeshes.emplace_back(mesh);
 	}
 	void RemoveSubmesh(luxrays::ExtTriangleMesh &mesh) {
@@ -79,8 +85,16 @@ public:
 	// keeps ownership until ReleaseOwnedMeshes() hands the meshes over to
 	// Scene::DefineMesh()
 	void AddSubmesh(luxrays::ExtTriangleMeshUPtr &&mesh) {
-		submeshes.emplace_back(*mesh);
+		AddSubmesh(*mesh);
 		ownedMeshes.push_back(std::move(mesh));
+	}
+	// Adopt a whole sub-shape: its owned meshes become submeshes of this
+	// shape, and the sub-shape itself is kept alive (its meshes reference
+	// it through Mesh::GetShape())
+	void AddSubmesh(luxrays::ShapeUPtr &&sub) {
+		for (auto &mesh : sub->ReleaseOwnedMeshes())
+			AddSubmesh(std::move(mesh));
+		ownedSubShapes.push_back(std::move(sub));
 	}
 	const std::vector<std::reference_wrapper<luxrays::ExtTriangleMesh>> &
 	GetSubmeshes() const { return submeshes; }
@@ -93,19 +107,43 @@ public:
 		return std::move(ownedMeshes);
 	}
 
+	// Transform the canonical vertex buffer (copy-on-write when the buffer
+	// storage is shared) and propagate the transform to all the submeshes
+	// (vertex normals, triangle normals, area, caches)
+	void ApplyTransform(const luxrays::Transform &trans);
+
+	friend class boost::serialization::access;
+
 private:
 	luxrays::VertexBuffer vertices;
 	std::vector<std::reference_wrapper<luxrays::ExtTriangleMesh>> submeshes;
 	std::vector<luxrays::ExtTriangleMeshUPtr> ownedMeshes;
+	// Sub-shapes adopted through AddSubmesh(ShapeUPtr&&), kept alive because
+	// their meshes hold a const reference to them
+	std::vector<luxrays::ShapeUPtr> ownedSubShapes;
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(NamedObject);
+
+		auto vertCount = vertices.Count();
+		ar & vertCount;
+		if (Archive::is_loading::value)
+			vertices.Allocate(vertCount);
+		for (size_t i = 0; i < vertCount; ++i)
+			ar & vertices[i];
+		// submeshes/ownedMeshes/ownedSubShapes are runtime-only: meshes are
+		// serialized through the scene mesh cache, and the submesh links are
+		// rebuilt on load
+	}
 };
 
-// Rebuild a submesh into a global-indexed mesh that shares the Shape's
-// canonical vertex buffer: local triangles + vertex map, attribute arrays sized
+// Rebuild a submesh into a global-indexed mesh on the Shape (sharing its
+// canonical vertex buffer): local triangles + vertex map, attribute arrays sized
 // countVertices, attribute layers expanded to the canonical point count.
 // Transient working view for shape modifiers. Returns nullptr when the mesh owns
 // its points (no vertex map).
 luxrays::ExtTriangleMeshUPtr MakeGlobalView(
-	const luxrays::ExtTriangleMesh &mesh, const luxrays::VertexBuffer &canonical);
+	const luxrays::ExtTriangleMesh &mesh, const luxrays::Shape &shape);
 
 }
 

@@ -25,7 +25,8 @@ using namespace luxrays;
 using namespace slg;
 
 BevelShape::BevelShape(ExtTriangleMeshRef m, const float bevelRadius) {
-	mesh = m.Copy(bevelRadius);
+	shape = m.Copy(bevelRadius);
+ mesh = std::move(shape->ReleaseOwnedMeshes().front());
 }
 
 BevelShape::~BevelShape() {

@@ -26,6 +26,7 @@
 
 #include "luxcore/luxcorelogger.h"
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/shape.h"
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/trianglemesh.h"
 #include "luxrays/utils/fileext.h"
@@ -1494,6 +1495,22 @@ void SceneImpl::DefineImageMapFloat(const std::string &imgMapName,
 }
 
 // Note: this method is not part of LuxCore API and it is used only internally
+void SceneImpl::DefineMesh(std::unique_ptr<ExtTriangleMesh>&& mesh, std::unique_ptr<Shape>&& shape) {
+	API_BEGIN("{}", (void *)mesh.get());
+
+	// Thread-safe mesh definition: the lock is recursive, so it can be held
+	// across the properties cache invalidation and the slg::Scene call (which
+	// locks again internally).
+	std::lock_guard<std::recursive_mutex> meshLock(GetSlgScene().MeshDefMutex());
+
+	// Invalidate the scene properties cache
+	scenePropertiesCache->Clear();
+
+	GetSlgScene().DefineMesh(luxrays::ExtMeshUPtr(std::move(mesh)), std::move(shape));
+
+	API_END();
+}
+
 void SceneImpl::DefineMesh(std::unique_ptr<ExtTriangleMesh>&& mesh) {
 	API_BEGIN("{}", (void *)mesh.get());
 

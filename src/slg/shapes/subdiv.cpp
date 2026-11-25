@@ -38,6 +38,7 @@
 #include <oneapi/tbb.h>
 
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/shape.h"
 #include "slg/shapes/subdiv.h"
 #include "slg/shapes/subdiv_tessellate.h"
 #include "slg/shapes/subdiv_envelope.h"
@@ -987,8 +988,9 @@ struct MultiLayerDataEvaluator{
 };
 
 
-// Entry point for enhanced subdivision
-ExtTriangleMeshUPtr ApplySubdiv(
+// Entry point for enhanced subdivision (returns the Shape owning the
+// subdivided mesh)
+ShapeUPtr ApplySubdiv(
 	ExtTriangleMeshRef srcMesh,
 	const u_int maxLevel,
 	const float sharpnessThresholdRadians,
@@ -1130,8 +1132,9 @@ ExtTriangleMeshUPtr ApplySubdiv(
 		<< numTriangles << " triangles"
 	);
 
+	auto shape = std::make_unique<Shape>(srcMesh.GetName(), std::move(tessPoints));
 	auto newMesh =  std::make_unique<ExtTriangleMesh>(
-		std::move(tessPoints),
+		*shape,
 		std::move(tessTriangles),
 		std::move(tessNormals),
 		tessUVs.releaseLayers(),
@@ -1149,7 +1152,8 @@ ExtTriangleMeshUPtr ApplySubdiv(
 			newMesh->SetVertexAOV(i, layer, size_t(numPoints));
 	}
 
-	return newMesh;
+	shape->AddSubmesh(std::move(newMesh));
+	return shape;
 
 }
 
@@ -1190,7 +1194,7 @@ SubdivShape::SubdivShape(
 	}
 }
 
-ExtTriangleMeshUPtr SubdivShape::ApplySubdiv(
+ShapeUPtr SubdivShape::ApplySubdiv(
 	ExtTriangleMeshRef srcMesh,
 	const u_int maxLevel,
 	const float sharpnessThresholdRadians,
@@ -1311,7 +1315,7 @@ ShapeUPtr SubdivShape::ApplyToShape(
 	std::vector<ExtTriangleMesh *> work(submeshes.size());
 	for (size_t i = 0; i < submeshes.size(); ++i) {
 		auto &sm = submeshes[i].get();
-		auto view = sm.HasVertexMap() ? MakeGlobalView(sm, srcShape.GetVertices()) : nullptr;
+		auto view = sm.HasVertexMap() ? MakeGlobalView(sm, srcShape) : nullptr;
 		if (view) {
 			views.push_back(std::move(view));
 			work[i] = views.back().get();
@@ -1375,21 +1379,25 @@ ShapeUPtr SubdivShape::ApplyToShape(
 				<< " at level: " << maxLevel);
 			std::vector<u_int> triBaseFace;
 			SubdivCornerData cornerOut;
+			ShapeUPtr subdividedShape;
 			ExtTriangleMeshUPtr subdivided;
 			if (maxLevel > 0) {
-				subdivided = ApplySubdiv(
+				subdividedShape = ApplySubdiv(
 					*envelope, maxLevel, sharpnessThresholdRadians, creaseWeight,
 					creaseMode, &triBaseFace, &cornerIn, &cornerOut
 				);
+				subdivided = std::move(subdividedShape->ReleaseOwnedMeshes().front());
 				PropagateMaterialSlots(*envelope, triBaseFace, *subdivided);
 			} else {
-				subdivided = envelope->Copy();
+				subdividedShape = envelope->Copy();
+				subdivided = std::move(subdividedShape->ReleaseOwnedMeshes().front());
 				triBaseFace.resize(subdivided->GetTotalTriangleCount());
 				for (size_t t = 0; t < triBaseFace.size(); ++t)
 					triBaseFace[t] = (u_int)t;
 			}
 			it = cache.emplace(key, SubdivEnvelopeCache::Entry{
-				std::move(subdivided), std::move(triBaseFace), std::move(cornerOut)
+				std::move(subdividedShape), ExtTriangleMeshSPtr(std::move(subdivided)),
+				std::move(triBaseFace), std::move(cornerOut)
 			}).first;
 		}
 		g.entry = &it->second;
@@ -1457,7 +1465,8 @@ ExtTriangleMeshUPtr SubdivShape::RefineImpl(SceneConstRef scene) {
 			SDL_LOG("Subdividing shape " << src->GetName()
 					<< " - Adaptive subdivision");
 
-			ExtTriangleMeshUPtr work = src->Copy();
+			ShapeUPtr workShape = src->Copy();
+			ExtTriangleMeshUPtr work = std::move(workShape->ReleaseOwnedMeshes().front());
 
 			for (u_int i = 0; i < maxLevel; ++i) {
 				SDL_LOG("Subdividing - Adaptive - Computing max edge size");
@@ -1500,13 +1509,14 @@ ExtTriangleMeshUPtr SubdivShape::RefineImpl(SceneConstRef scene) {
 				}
 				SDL_LOG("Subdividing adapted level = " << optimizedLevel);
 
-				auto newMesh = ApplySubdiv(
+				auto newShape = ApplySubdiv(
 					*work,
 					optimizedLevel,
 					sharpnessThresholdRadians,
 					creaseWeight,
 					creaseMode
 				);
+				auto newMesh = std::move(newShape->ReleaseOwnedMeshes().front());
 				SDL_LOG(
 					"Done step #" << i
 					<< " from " << work->GetTotalTriangleCount()
@@ -1515,20 +1525,24 @@ ExtTriangleMeshUPtr SubdivShape::RefineImpl(SceneConstRef scene) {
 				);
 
 				std::swap(work, newMesh);
+				workShape = std::move(newShape);
 			}
+			shape = std::move(workShape);
 			mesh = std::move(work);
 		} else {
 			SDL_LOG("Subdividing shape " << src->GetName() << " at level: " << maxLevel);
 
-			mesh = ApplySubdiv(
+			shape = ApplySubdiv(
 				*src, maxLevel, sharpnessThresholdRadians, creaseWeight, creaseMode,
 				triBaseFacePtr
 			);
+			mesh = std::move(shape->ReleaseOwnedMeshes().front());
 		}
 	} else {
 		// Nothing to do, just make a copy
 		SDL_LOG("Subdivision: level=0 - Skipping");
-		mesh = src->Copy();
+		shape = src->Copy();
+		mesh = std::move(shape->ReleaseOwnedMeshes().front());
 	}
 
 	// Split the subdivided envelope back per material slot

@@ -25,6 +25,7 @@
 
 namespace luxrays {
 	class ExtTriangleMesh;
+	class Shape;
 }
 
 namespace slg {
@@ -65,11 +66,14 @@ public:
 	// during shape parsing (see Scene::ParseShapes)
 	// Note: it can be called only once and the object is not usable anymore
 	// (it is moved to caller)
-	luxrays::ExtTriangleMeshUPtr Refine(SceneConstRef scene);
+	// Returns the Shape owning the produced mesh: the mesh references the
+	// Shape through Mesh::GetShape(), so the Shape must outlive the mesh
+	luxrays::ShapeUPtr Refine(SceneConstRef scene);
 
 protected:
 	// RefineImpl implements refining for derived classes. It is called by
-	// ShapeModifier::Refine under the hood.
+	// ShapeModifier::Refine under the hood. It must create 'shape' (the
+	// Shape the produced mesh is built on) before constructing 'mesh'.
 	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) = 0;
 
 	bool refined;
@@ -77,6 +81,9 @@ protected:
 	// Derived classes store the shape which they construct into a
 	// std::unique_ptr usually named 'mesh', that they define on their own.
 	luxrays::ExtTriangleMeshUPtr mesh;
+	// The Shape the produced mesh is built on (owns the canonical vertex
+	// buffer of the mesh)
+	luxrays::ShapeUPtr shape;
 };
 
 }

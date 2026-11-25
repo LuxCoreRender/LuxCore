@@ -20,6 +20,7 @@
 #include <tbb/parallel_for.h>
 
 #include "slg/scene/scene.h"
+#include "luxrays/core/shape.h"
 #include "slg/utils/filenameresolver.h"
 
 using namespace std;
@@ -183,14 +184,17 @@ SceneObjectUPtr Scene::CreateObject(const u_int defaultObjID, const string &objN
 
 		if (!extMeshCache.IsExtMeshDefined(shapeName)) {
 			// It is a mesh to define
-			auto mesh = ExtTriangleMesh::Load(SLG_FileNameResolver.ResolveFile(shapeName));
-			mesh->SetName(shapeName);
+			auto shape = ExtTriangleMesh::Load(SLG_FileNameResolver.ResolveFile(shapeName));
+			auto meshes = shape->ReleaseOwnedMeshes();
+			auto &mesh = *meshes[0];
+			mesh.SetName(shapeName);
+			shape->SetName(shapeName);
 
 			const Matrix4x4 mat = props.Get(Property(propName +
 				".appliedtransformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
-			mesh->SetLocal2World(Transform(mat));
+			mesh.SetLocal2World(Transform(mat));
 
-			DefineMesh(std::move(mesh));
+			DefineMesh(std::move(meshes[0]), std::move(shape));
 		}
 	} else if (props.IsDefined(propName + ".vertices")) {
 		// For compatibility with the past SDL syntax
@@ -198,9 +202,12 @@ SceneObjectUPtr Scene::CreateObject(const u_int defaultObjID, const string &objN
 
 		if (!extMeshCache.IsExtMeshDefined(shapeName)) {
 			// It is a mesh to define
-			auto mesh = CreateInlinedMesh(shapeName, propName, props);
-			mesh->SetName(shapeName);
-			DefineMesh(std::move(mesh));
+			auto shape = CreateInlinedMesh(shapeName, propName, props);
+			auto meshes = shape->ReleaseOwnedMeshes();
+			auto &mesh = *meshes[0];
+			mesh.SetName(shapeName);
+			shape->SetName(shapeName);
+			DefineMesh(std::move(meshes[0]), std::move(shape));
 		}
 	} else if (props.IsDefined(propName + ".shape")) {
 		shapeName = props.Get(Property(propName + ".shape")("")).Get<string>();

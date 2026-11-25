@@ -27,6 +27,7 @@
 #include <oneapi/tbb.h>
 
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/shape.h"
 #include "luxrays/utils/strutils.h"
 #include "slg/core/sdl.h"
 
@@ -412,7 +413,7 @@ TessellationData TessellateTopology(
 
 // ApplyTessellate (flat) API flavor: mesh in, tessellated mesh out, with
 // barycentrically interpolated positions and mesh data
-luxrays::ExtTriangleMeshUPtr TessellateTopology(
+luxrays::ShapeUPtr TessellateTopology(
 	const ExtTriangleMesh &srcMesh,
 	const size_t N,
 	const bool interpolatedNormals
@@ -494,8 +495,9 @@ luxrays::ExtTriangleMeshUPtr TessellateTopology(
 		});
 	}
 
+	auto shape = std::make_unique<luxrays::Shape>(srcMesh.GetName(), std::move(points));
 	auto mesh = std::make_unique<ExtTriangleMesh>(
-		std::move(points), std::move(tris), std::move(normals),
+		*shape, std::move(tris), std::move(normals),
 		nullptr, nullptr, nullptr, srcMesh.GetBevelRadius()
 	);
 	for (const auto &p : uvLayers)
@@ -508,7 +510,8 @@ luxrays::ExtTriangleMeshUPtr TessellateTopology(
 		mesh->SetVertexAOV(p.first, p.second, numPoints);
 	for (const auto &p : triAOVLayers)
 		mesh->SetTriAOV(p.first, p.second, numTriangles);
-	return mesh;
+	shape->AddSubmesh(std::move(mesh));
+	return shape;
 }
 
 }  // ~namespace slg

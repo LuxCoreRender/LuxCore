@@ -27,7 +27,8 @@ namespace slg {
 
 class MeshShape : public ShapeModifier {
 public:
-	MeshShape(luxrays::ExtTriangleMeshUPtr&& mesh);
+	// Takes ownership of the Shape owning the mesh
+	MeshShape(luxrays::ShapeUPtr&& shape);
 	MeshShape(const std::string &fileName);
 	virtual ~MeshShape();
 

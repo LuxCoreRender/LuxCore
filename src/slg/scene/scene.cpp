@@ -32,6 +32,7 @@
 #include <boost/format.hpp>
 
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/shape.h"
 #include "luxrays/core/hardwaredevice.h"
 #include "luxrays/core/namedobjectvector.h"
 #include "luxrays/core/randomgen.h"
@@ -204,6 +205,27 @@ bool Scene::IsImageMapDefined(const string &imgMapName) const {
 // DefineMesh methods
 
 
+Scene::ReturnType<ExtMesh> Scene::DefineMesh(ExtMeshUPtr&& mesh, ShapeUPtr&& shape) {
+	std::lock_guard<std::recursive_mutex> lock(meshDefMtx);
+
+	// The passed Shape is the mesh's OWN shape: it owns the vertex buffer the
+	// mesh indexes into, and the mesh references it through Mesh::GetShape(),
+	// so it must outlive the mesh. Register it under the mesh name. Note the
+	// submesh-group Shape (mesh.GetShapeName(), handled by RegisterMeshShape
+	// below) is a different object: its buffer may be replaced later (e.g.
+	// SetShapeVertexBuffer with the canonical buffer), which must not affect
+	// the mesh's own shape.
+	const string ownName = mesh->GetName();
+	shape->SetName(ownName);
+	if (!shapeDefs.IsShapeDefined(ownName))
+		shapeDefs.DefineShape(std::move(shape));
+	else
+		// Keep the mesh's shape alive by adopting it into the existing one
+		shapeDefs.GetShape(ownName).AddSubmesh(std::move(shape));
+
+	return DefineMesh(std::move(mesh));
+}
+
 Scene::ReturnType<ExtMesh> Scene::DefineMesh(ExtMeshUPtr&& mesh) {
 	std::lock_guard<std::recursive_mutex> lock(meshDefMtx);
 
@@ -352,11 +374,16 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(
 ) {
 	const long plyNbVerts = p.Count();
 
-	auto mesh = std::make_unique<ExtTriangleMesh>(std::move(p), std::move(vi), std::move(n),
+	auto shape = std::make_unique<Shape>(shapeName, std::move(p));
+	auto mesh = std::make_unique<ExtTriangleMesh>(*shape, std::move(vi), std::move(n),
 			uvs, cols, alphas);
 	mesh->SetName(shapeName);
 
-	return DefineMesh(std::move(mesh));
+	auto [newMeshRef, oldMeshPtr] = DefineMesh(ExtMeshUPtr(std::move(mesh)), std::move(shape));
+	return std::make_tuple(
+		std::ref(dynamic_cast<ExtTriangleMesh&>(newMeshRef)),
+		dynamic_uptr_cast<ExtTriangleMesh>(std::move(oldMeshPtr))
+	);
 }
 
 Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(
@@ -370,11 +397,16 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(
 ) {
 	std::lock_guard<std::recursive_mutex> lock(meshDefMtx);
 
-	auto mesh = std::make_unique<ExtTriangleMesh>(std::move(p), std::move(vi), std::move(n),
+	auto shape = std::make_unique<Shape>(shapeName, std::move(p));
+	auto mesh = std::make_unique<ExtTriangleMesh>(*shape, std::move(vi), std::move(n),
 			uvs, cols, alphas);
 	mesh->SetName(shapeName);
 
-	return DefineMesh(std::move(mesh));
+	auto [newMeshRef, oldMeshPtr] = DefineMesh(ExtMeshUPtr(std::move(mesh)), std::move(shape));
+	return std::make_tuple(
+		std::ref(dynamic_cast<ExtTriangleMesh&>(newMeshRef)),
+		dynamic_uptr_cast<ExtTriangleMesh>(std::move(oldMeshPtr))
+	);
 }
 
 Scene::ReturnType<ExtTriangleMesh> Scene::DefineMeshExt(
@@ -389,8 +421,9 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMeshExt(
 ) {
 	std::lock_guard<std::recursive_mutex> lock(meshDefMtx);
 
+	auto shape = std::make_unique<Shape>(shapeName, std::move(p));
 	auto mesh = std::make_unique<ExtTriangleMesh>(
-			std::move(p), std::move(vi), std::move(n),
+			*shape, std::move(vi), std::move(n),
 			uvs, cols, alphas
 	);
 	mesh->SetName(shapeName);
@@ -399,7 +432,11 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMeshExt(
 	if (submeshName)
 		mesh->SetShapeName(*submeshName);
 
-	return DefineMesh(std::move(mesh));
+	auto [newMeshRef, oldMeshPtr] = DefineMesh(ExtMeshUPtr(std::move(mesh)), std::move(shape));
+	return std::make_tuple(
+		std::ref(dynamic_cast<ExtTriangleMesh&>(newMeshRef)),
+		dynamic_uptr_cast<ExtTriangleMesh>(std::move(oldMeshPtr))
+	);
 }
 
 Scene::ReturnType<ExtInstanceTriangleMesh> Scene::DefineMesh(
@@ -473,12 +510,18 @@ Scene::DefineStrands(const string &shapeName, const slg::cyHairFile &strandsFile
 			solidSideCount, solidCapBottom, solidCapTop,
 			useCameraPosition);
 
-	auto mesh = shape.Refine(*this);
-	mesh->SetName(shapeName);
+	auto resultShape = shape.Refine(*this);
+	auto meshes = resultShape->ReleaseOwnedMeshes();
+	auto &mesh = *meshes[0];
+	mesh.SetName(shapeName);
 
 	editActions.AddAction(GEOMETRY_EDIT);
 
-	return DefineMesh(std::move(mesh));
+	auto [newMeshRef, oldMeshPtr] = DefineMesh(ExtMeshUPtr(std::move(meshes[0])), std::move(resultShape));
+	return std::make_tuple(
+		std::ref(dynamic_cast<ExtTriangleMesh&>(newMeshRef)),
+		dynamic_uptr_cast<ExtTriangleMesh>(std::move(oldMeshPtr))
+	);
 }
 
 bool Scene::IsTextureDefined(const string &texName) const {

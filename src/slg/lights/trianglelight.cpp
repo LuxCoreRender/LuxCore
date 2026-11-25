@@ -69,7 +69,7 @@ void TriangleLight::Preprocess() {
 	auto& mesh = sceneObject->GetExtMesh();
 
 	Transform localToWorld;
-	mesh.GetLocal2World(0.f, localToWorld);
+localToWorld = 	mesh.GetLocal2World(0.f);
 
 	triangleArea = mesh.GetTriangleArea(localToWorld, triangleIndex);
 	invTriangleArea = 1.f / triangleArea;
@@ -116,12 +116,12 @@ Spectrum TriangleLight::Emit(SceneConstRef scene,
 
 	// Build a temporary HitPoint
 	HitPoint tmpHitPoint;
-	mesh.GetLocal2World(time, tmpHitPoint.localToWorld);
+tmpHitPoint.localToWorld = 	mesh.GetLocal2World(time);
 
 	// Origin
 	Point samplePoint;
 	float b0, b1, b2;
-	mesh.Sample(tmpHitPoint.localToWorld, triangleIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
+	std::tie(samplePoint, b0, b1, b2) = mesh.Sample(tmpHitPoint.localToWorld, triangleIndex, u0, u1);
 
 	// Initialize the temporary HitPoint
 	tmpHitPoint.Init(true, false,
@@ -169,11 +169,11 @@ Spectrum TriangleLight::Illuminate(SceneConstRef scene, const BSDF &bsdf,
 	auto& mesh = sceneObject->GetExtMesh();
 
 	HitPoint tmpHitPoint;
-	mesh.GetLocal2World(time, tmpHitPoint.localToWorld);
+tmpHitPoint.localToWorld = 	mesh.GetLocal2World(time);
 
 	Point samplePoint;
 	float b0, b1, b2;
-	mesh.Sample(tmpHitPoint.localToWorld, triangleIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
+	std::tie(samplePoint, b0, b1, b2) = mesh.Sample(tmpHitPoint.localToWorld, triangleIndex, u0, u1);
 
 	Vector sampleDir = samplePoint - bsdf.hitPoint.p;
 	const float distanceSquared = sampleDir.LengthSquared();
@@ -273,7 +273,7 @@ bool TriangleLight::IsAlwaysInShadow(SceneConstRef scene,
 		return false;
 
 	Transform localToWorld;
-	mesh.GetLocal2World(0.f, localToWorld);
+localToWorld = 	mesh.GetLocal2World(0.f);
 
 	// I use the shading normal of the first vertex for this test (see above)
 	const Normal triNormal = mesh.HasNormals() ?

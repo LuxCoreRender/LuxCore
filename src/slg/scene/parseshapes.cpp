@@ -25,6 +25,7 @@
 #include <unordered_set>
 
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/shape.h"
 #include "luxrays/usings.h"
 #include "luxrays/utils/cyhair/cyHairFile.h"
 #include "slg/scene/scene.h"
@@ -145,7 +146,7 @@ void Scene::ParseShapes(const Properties &props) {
 	editActions.AddActions(GEOMETRY_EDIT);
 }
 
-ExtTriangleMeshUPtr Scene::CreateInlinedMesh(const string &shapeName, const string &propName, const Properties &props) {
+ShapeUPtr Scene::CreateInlinedMesh(const string &shapeName, const string &propName, const Properties &props) {
 	// The mesh definition is in-lined
 	u_int pointsSize;
 	VertexBuffer points;
@@ -206,9 +207,12 @@ ExtTriangleMeshUPtr Scene::CreateInlinedMesh(const string &shapeName, const stri
 		}
 	}
 
-	return std::make_unique<ExtTriangleMesh>(
-		std::move(points), std::move(tris), std::move(normals), uvs
+	auto shape = std::make_unique<Shape>(shapeName, std::move(points));
+	auto mesh = std::make_unique<ExtTriangleMesh>(
+		*shape, std::move(tris), std::move(normals), uvs
 	);
+	shape->AddSubmesh(std::move(mesh));
+	return shape;
 }
 
 ShapeUPtr Scene::CreateShapeModifier(
@@ -784,11 +788,12 @@ ShapeUPtr Scene::CreateShapeModifier(
 	if (shapeType == "mesh" || shapeType == "inlinedmesh" ||
 			shapeType == "strands" || shapeType == "group") {
 		ShapeModifierUPtr shape = createModifier(nullptr);
-		ExtTriangleMeshUPtr mesh = shape->Refine(*this);
-		mesh->SetName(shapeName);
-		mesh->SetShapeName(shapeName);
-		auto result = std::make_unique<Shape>(shapeName, mesh->GetVertexBuffer());
-		result->AddSubmesh(std::move(mesh));
+		// Refine returns the Shape owning the produced mesh
+		ShapeUPtr result = shape->Refine(*this);
+		result->SetName(shapeName);
+		auto &mesh = result->GetSubmeshes()[0].get();
+		mesh.SetName(shapeName);
+		mesh.SetShapeName(shapeName);
 		return result;
 	}
 
@@ -797,16 +802,23 @@ ShapeUPtr Scene::CreateShapeModifier(
 		throw runtime_error("Unknown shape name in a " + shapeType + " shape: " + shapeName);
 	Shape &srcShape = getSourceShape(sourceName);
 	const bool single = srcShape.GetSubmeshCount() == 1;
-	std::unique_ptr<Shape> result;
+	ShapeUPtr result;
 	u_int k = 0;
 	for (auto &sm : srcShape.GetSubmeshes()) {
 		ShapeModifierUPtr shape = createModifier(&sm.get());
-		ExtTriangleMeshUPtr mesh = shape->Refine(*this);
-		mesh->SetName(single ? shapeName : shapeName + "i" + ToString(k));
-		mesh->SetShapeName(shapeName);
-		if (!result)
-			result = std::make_unique<Shape>(shapeName, mesh->GetVertexBuffer());
-		result->AddSubmesh(std::move(mesh));
+		ShapeUPtr sub = shape->Refine(*this);
+		auto &mesh = sub->GetSubmeshes()[0].get();
+		mesh.SetName(single ? shapeName : shapeName + "i" + ToString(k));
+		mesh.SetShapeName(shapeName);
+		if (!result) {
+			result = std::move(sub);
+			result->SetName(shapeName);
+		} else {
+			// Adopt the whole sub-shape: its mesh becomes a submesh of the
+			// result shape and the sub-shape is kept alive (the mesh
+			// references it through Mesh::GetShape())
+			result->AddSubmesh(std::move(sub));
+		}
 		++k;
 	}
 

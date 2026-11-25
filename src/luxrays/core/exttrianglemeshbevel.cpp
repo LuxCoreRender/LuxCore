@@ -289,7 +289,7 @@ void ExtTriangleMesh::PreprocessBevel() {
 		//----------------------------------------------------------------------
 
 		vector<Edge> edges;
-		auto vertCount = vertices.Count();
+		auto vertCount = GetTotalVertexCount();
 		auto triCount = tris.Count();
 		for (u_int i = 0; i < triCount; ++i) {
 			edges.push_back(Edge(i, 0, uniqueVertices[tris[i].v[0]], uniqueVertices[tris[i].v[1]]));
@@ -336,7 +336,7 @@ void ExtTriangleMesh::PreprocessBevel() {
 
 					if (AbsDot(tri0Normal, tri1Normal) < 1.f -  DEFAULT_EPSILON_STATIC) {
 						// It is a candidate. Check if it is a convex edge.
-						auto points = vertices.GetObjects();
+						auto points = GetVertices();
 
 						// Pick the vertex, not part of the edge, of the first triangle
 						const Point &tri0Vertex = points[tris[e0.tri].v[(e0.edge + 2) % 3]];
@@ -362,8 +362,8 @@ void ExtTriangleMesh::PreprocessBevel() {
 							const float distance = bevelRadius / sinf(alpha);
 
 							const Vector vertexOffset(distance * h);
-							e0.bevelCylinderV0 = vertices[e0.v0] + vertexOffset;
-							e0.bevelCylinderV1 = vertices[e0.v1] + vertexOffset;
+							e0.bevelCylinderV0 = GetVertices()[e0.v0] + vertexOffset;
+							e0.bevelCylinderV1 = GetVertices()[e0.v1] + vertexOffset;
 
 							// Add edge to corner edges list
 							corners[e0.v0].edgeIndices.push_back(edge0Index);
@@ -413,17 +413,17 @@ void ExtTriangleMesh::PreprocessBevel() {
 				// this is required to avoid precision problems and surface cracks.
 				const Point bcv0 = LineIntersection(
 						e.bevelCylinderV1, e.bevelCylinderV0,
-						vertices[e.v0], corners[e.v0].p);
+						GetVertices()[e.v0], corners[e.v0].p);
 				const Point bcv1 = LineIntersection(
 						e.bevelCylinderV1, e.bevelCylinderV0,
-						vertices[e.v1], corners[e.v1].p);
+						GetVertices()[e.v1], corners[e.v1].p);
 				bevelCyls.push_back(BevelCylinder(bcv0, bcv1));
 
 				// Add a new BoundinglCylinder
 				const Vector bevelVecOffset = Normalize(e.bevelCylinderV1 - e.bevelCylinderV0);
-				const Point bbcv0 = .5f * (vertices[e.v0] + e.bevelCylinderV0) - DEFAULT_EPSILON_STATIC * bevelVecOffset;
-				const Point bbcv1 = .5f * (vertices[e.v1] + e.bevelCylinderV1) + DEFAULT_EPSILON_STATIC * bevelVecOffset;
-				const float bbcr = (vertices[e.v0] - bbcv0).Length();
+				const Point bbcv0 = .5f * (GetVertices()[e.v0] + e.bevelCylinderV0) - DEFAULT_EPSILON_STATIC * bevelVecOffset;
+				const Point bbcv1 = .5f * (GetVertices()[e.v1] + e.bevelCylinderV1) + DEFAULT_EPSILON_STATIC * bevelVecOffset;
+				const float bbcr = (GetVertices()[e.v0] - bbcv0).Length();
 				boundingCyls.push_back(BevelBoundingCylinder(bbcv0, bbcv1, bbcr));
 			}
 		}

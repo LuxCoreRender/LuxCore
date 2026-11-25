@@ -33,7 +33,7 @@ public:
 	virtual ~MergeOnDistanceShape();
 	virtual ShapeType GetType() const override { return MERGEONDISTANCE; }
 
-	static luxrays::ExtTriangleMeshUPtr ApplyMergeOnDistance(
+	static luxrays::ShapeUPtr ApplyMergeOnDistance(
 		luxrays::ExtTriangleMeshRef srcMesh,
 		u_int tolerance,
 		bool importNormals

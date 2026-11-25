@@ -40,7 +40,7 @@ public:
 
 	virtual ShapeType GetType() const override { return SUBDIV_OLD; }
 
-	static luxrays::ExtTriangleMeshUPtr ApplySubdiv(
+	static luxrays::ShapeUPtr ApplySubdiv(
 		luxrays::ExtTriangleMeshRef srcMesh,
 		const u_int maxLevel
 	);

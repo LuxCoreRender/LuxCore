@@ -72,7 +72,7 @@ public:
 		const std::string &resultName
 	);
 
-	static luxrays::ExtTriangleMeshUPtr ApplySubdiv(
+	static luxrays::ShapeUPtr ApplySubdiv(
 		luxrays::ExtTriangleMeshRef srcMesh,
 		const u_int maxLevel,
 		const float sharpnessThresholdRadians,

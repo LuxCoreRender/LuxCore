@@ -35,6 +35,7 @@
 #include "oneapi/tbb/cache_aligned_allocator.h"
 
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/shape.h"
 #include "luxrays/utils/strutils.h"
 #include "slg/usings.h"
 #include "slg/shapes/merge_on_distance.h"
@@ -561,7 +562,7 @@ WeldedData ComputeWeldedData(const luxrays::VertexBuffer &vertices, u_int tolera
 // Replace each vertex variable with the interpolated value of its cluster.
 // The welded point buffer is shared with the entry (a Buffer copy shares
 // storage); the other vertex data are merged per source mesh.
-luxrays::ExtTriangleMeshUPtr RecreateMesh(
+luxrays::ShapeUPtr RecreateMesh(
 	const luxrays::ExtTriangleMesh& srcMesh,
 	const WeldedData& welded,
 	bool importNormals
@@ -770,8 +771,9 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 	//}
 
 	// Create new mesh
+	auto shape = std::make_unique<luxrays::Shape>(srcMesh.GetName(), std::move(newPoints));
 	auto newMesh = std::make_unique<luxrays::ExtTriangleMesh>(
-		std::move(newPoints),
+		*shape,
 		std::move(newTriangles),
 		std::move(newNormals),
 		newUVs,
@@ -787,7 +789,8 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 		}
 	}
 
-	return newMesh;
+	shape->AddSubmesh(std::move(newMesh));
+	return shape;
 }
 
 
@@ -807,7 +810,8 @@ MergeOnDistanceShape::MergeOnDistanceShape(
 
 	const double startTime = WallClockTime();
 
-	mesh = std::move(ApplyMergeOnDistance(srcMesh, tolerance, importNormals));
+	shape = ApplyMergeOnDistance(srcMesh, tolerance, importNormals);
+	mesh = std::move(shape->ReleaseOwnedMeshes().front());
 
 	const double endTime = WallClockTime();
 	SDL_LOG(
@@ -818,7 +822,7 @@ MergeOnDistanceShape::MergeOnDistanceShape(
 MergeOnDistanceShape::~MergeOnDistanceShape() {
 }
 
-luxrays::ExtTriangleMeshUPtr
+luxrays::ShapeUPtr
 MergeOnDistanceShape::ApplyMergeOnDistance(
 	luxrays::ExtTriangleMeshRef srcMesh,
 	u_int tolerance,
@@ -829,18 +833,19 @@ MergeOnDistanceShape::ApplyMergeOnDistance(
 	// Get merged points
 	auto welded = ComputeWeldedData(srcMesh.GetVertexBuffer(), tolerance);
 
-	auto dstMesh = RecreateMesh(srcMesh, welded, importNormals);
+	auto dstShape = RecreateMesh(srcMesh, welded, importNormals);
+	auto &dstMesh = dstShape->GetSubmeshes()[0].get();
 
 
 	SDL_LOG(
 		"Merge On Distance - Reduced from "
 		<< srcMesh.GetTotalVertexCount()
 		<< " to "
-		<< dstMesh->GetTotalVertexCount()
+		<< dstMesh.GetTotalVertexCount()
 		<< " vertices"
 	);
 
-	return dstMesh;
+	return dstShape;
 }
 
 luxrays::ExtTriangleMeshUPtr
@@ -877,7 +882,7 @@ luxrays::ShapeUPtr MergeOnDistanceShape::ApplyToShape(
 	std::vector<ExtTriangleMesh *> work(submeshes.size());
 	for (size_t i = 0; i < submeshes.size(); ++i) {
 		auto &sm = submeshes[i].get();
-		auto view = sm.HasVertexMap() ? MakeGlobalView(sm, srcShape.GetVertices()) : nullptr;
+		auto view = sm.HasVertexMap() ? MakeGlobalView(sm, srcShape) : nullptr;
 		if (view) {
 			views.push_back(std::move(view));
 			work[i] = views.back().get();
@@ -899,10 +904,12 @@ luxrays::ShapeUPtr MergeOnDistanceShape::ApplyToShape(
 	const bool single = work.size() == 1;
 	u_int k = 0;
 	for (size_t wi = 0; wi < work.size(); ++wi) {
-		auto mesh = RecreateMesh(*work[wi], weldedPerGroup[work[wi]->GetVertexBuffer().Data()], importNormals);
-		mesh->SetName(single ? resultName : resultName + "i" + luxrays::ToString(k));
-		mesh->SetShapeName(resultName);
-		result->AddSubmesh(std::move(mesh));
+		auto subShape = RecreateMesh(*work[wi], weldedPerGroup[work[wi]->GetVertexBuffer().Data()], importNormals);
+		auto &mesh = subShape->GetSubmeshes()[0].get();
+		mesh.SetName(single ? resultName : resultName + "i" + luxrays::ToString(k));
+		mesh.SetShapeName(resultName);
+		// Adopt the whole sub-shape (keeps the mesh's Shape alive)
+		result->AddSubmesh(std::move(subShape));
 		++k;
 	}
 

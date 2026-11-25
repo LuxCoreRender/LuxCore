@@ -16,6 +16,7 @@
  * limitations under the License.                      *
  ***************************************************************************/
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/shape.h"
 #include "luxrays/core/trianglemesh.h"
 #include "luxrays/utils/properties.h"
 #include <iterator>
@@ -1357,19 +1358,22 @@ static void Scene_DefineMesh1(
   auto as = translateLayer<float, 1>(alphas, "alphas");
 
 
+  auto shape = std::make_unique<luxrays::Shape>(meshName, std::move(points));
   auto mesh = std::make_unique<luxrays::ExtTriangleMesh>(
-  	std::move(points), std::move(tris), std::move(normals), uvs, colors, as
+  	*shape, std::move(tris), std::move(normals), uvs, colors, as
   );
+  // Register as a submesh (ref) so the shape transform propagates to it
+  shape->AddSubmesh(*mesh);
 
   // Apply the transformation if required
   if (!transformation.is_none()) {
-  float mat[16];
-  GetMatrix4x4(transformation, mat);
-  mesh->ApplyTransform(luxrays::Transform(luxrays::Matrix4x4(mat).Transpose()));
+  	float mat[16];
+  	GetMatrix4x4(transformation, mat);
+  	shape->ApplyTransform(luxrays::Transform(luxrays::Matrix4x4(mat).Transpose()));
   }
 
   mesh->SetName(meshName);
-  scene->DefineMesh(std::move(mesh));
+  scene->DefineMesh(std::move(mesh), std::move(shape));
 }
 
 static void Scene_DefineMesh2(
@@ -1465,19 +1469,22 @@ static void Scene_DefineMeshExt1(
   auto colors = translateProp<luxrays::Spectrum, 3>(cols, "colors");
   auto as = translateProp<float, 1>(alphas, "alphas");
 
+	auto shape = std::make_unique<luxrays::Shape>(meshName, std::move(points));
 	auto mesh = std::make_unique<luxrays::ExtTriangleMesh>(
-		std::move(points), std::move(tris), std::move(normals), uvs, colors, as
+		*shape, std::move(tris), std::move(normals), uvs, colors, as
 	);
+	// Register as a submesh (ref) so the shape transform propagates to it
+	shape->AddSubmesh(*mesh);
 
 	// Apply the transformation if required
 	if (!transformation.is_none()) {
 		float mat[16];
 		GetMatrix4x4(transformation, mat);
-		mesh->ApplyTransform(luxrays::Transform(luxrays::Matrix4x4(mat).Transpose()));
+		shape->ApplyTransform(luxrays::Transform(luxrays::Matrix4x4(mat).Transpose()));
 	}
 
   mesh->SetName(meshName);
-  scene->DefineMesh(std::move(mesh));
+  scene->DefineMesh(std::move(mesh), std::move(shape));
 }
 
 static void Scene_DefineMeshExt2(
@@ -1854,7 +1861,7 @@ static ParsedExtMesh parseExtMeshArgs(
 // name. When the points source is one of them, it is used directly and no
 // lock is needed (the batch keeps the source alive until insertion). Only
 // sources outside the batch fall back to the locked scene-cache lookup.
-static luxrays::ExtTriangleMeshUPtr buildExtMesh(
+static luxrays::ShapeUPtr buildExtMesh(
 	const SceneImplPtr &scene, ParsedExtMesh &a,
 	const std::unordered_map<std::string, luxrays::ExtTriangleMesh *> *batchLocal = nullptr,
 	const luxrays::VertexBuffer *canonical = nullptr
@@ -1906,7 +1913,7 @@ static luxrays::ExtTriangleMeshUPtr buildExtMesh(
 					"' used as points source is not a triangle mesh");
 		}
 		sharedPoints = &srcTriMesh->GetVertexBuffer();
-		srcTriMesh->GetLocal2World(0.f, srcTrans);
+srcTrans = 		srcTriMesh->GetLocal2World(0.f);
 	}
 
 	if (sharedPoints == &points && !gathered)
@@ -1964,15 +1971,20 @@ static luxrays::ExtTriangleMeshUPtr buildExtMesh(
 	assert(not a.cols or a.cols->GetLayerSize() == sharedPoints->Count());
 	assert(not a.alphas or a.alphas->GetLayerSize() == sharedPoints->Count());
 
-	// Create Mesh (sharing ctor: the vertex buffer storage is shared, not copied)
+	// Create the mesh on a Shape owning the (shared or owned) vertex buffer:
+	// a Buffer copy shares the storage, so the shape buffer is shared, not
+	// copied, when the points come from another mesh
+	auto shape = std::make_unique<luxrays::Shape>(a.meshName, *sharedPoints);
 	auto newMesh = std::make_unique<luxrays::ExtTriangleMesh>(
-		*sharedPoints,
+		*shape,
 		std::move(triangles),
 		std::move(normals),
 		a.uvs,
 		a.cols,
 		a.alphas
 	);
+	// Register as a submesh (ref) so a shape transform propagates to it
+	shape->AddSubmesh(*newMesh);
 	newMesh->SetName(a.meshName);
 	if (a.submeshName)
 		newMesh->SetShapeName(*a.submeshName);
@@ -2000,7 +2012,8 @@ static luxrays::ExtTriangleMeshUPtr buildExtMesh(
 		std::vector<float> aov(triangles.Count(), a.tri_aov_value);
 		newMesh->SetTriAOV((u_int)a.tri_aov_index, std::span<float>(aov.data(), aov.size()));
 	}
-	return newMesh;
+	shape->AddSubmesh(std::move(newMesh));
+	return shape;
 }
 
 // Build the canonical (shape) point buffer of a submesh batch from the
@@ -2063,9 +2076,10 @@ static void Scene_DefineMeshExt3(
 			canonicalPtr = &canonical;
 		}
 	}
-	auto newMesh = buildExtMesh(scene, a, nullptr, canonicalPtr);
-	// Insert mesh into the scene
-	scene->DefineMesh(std::move(newMesh));
+	auto newShape = buildExtMesh(scene, a, nullptr, canonicalPtr);
+	// Insert mesh into the scene (with the Shape it is built on)
+	auto meshes = newShape->ReleaseOwnedMeshes();
+	scene->DefineMesh(std::move(meshes[0]), std::move(newShape));
 	if (canonicalPtr && a.submeshName)
 		scene->GetSlgScene().SetShapeVertexBuffer(*a.submeshName, canonical);
 	Py_END_ALLOW_THREADS
@@ -2104,7 +2118,7 @@ static void Scene_DefineMeshesExt(const SceneImplPtr &scene, const py::list &pay
 	// scene access is the shared-points lookup, resolved batch-locally when
 	// the source is an earlier payload of the same batch (BlendLuxCore only
 	// shares points between submeshes of one object, i.e. within one batch).
-	std::vector<luxrays::ExtTriangleMeshUPtr> built;
+	std::vector<luxrays::ShapeUPtr> built;
 	built.reserve(parsed.size());
 	std::unordered_map<std::string, luxrays::ExtTriangleMesh *> builtByName;
 	builtByName.reserve(parsed.size() * 2);
@@ -2138,9 +2152,9 @@ static void Scene_DefineMeshesExt(const SceneImplPtr &scene, const py::list &pay
 		}
 	}
 	for (auto &a : parsed) {
-		auto newMesh = buildExtMesh(scene, a, &builtByName, canonicalPtr);
-		builtByName.emplace(a.meshName, newMesh.get());
-		built.push_back(std::move(newMesh));
+		auto newShape = buildExtMesh(scene, a, &builtByName, canonicalPtr);
+		builtByName.emplace(a.meshName, &newShape->GetSubmeshes()[0].get());
+		built.push_back(std::move(newShape));
 	}
 	// One lock for the insertions only: per mesh it is just a cache map
 	// insert + vector push + edit flag (O(1)), so the lock hold time is
@@ -2150,8 +2164,10 @@ static void Scene_DefineMeshesExt(const SceneImplPtr &scene, const py::list &pay
 	// re-locking is a no-op on this thread.
 	{
 		std::lock_guard<std::recursive_mutex> batchLock(scene->GetSlgScene().MeshDefMutex());
-		for (auto &m : built)
-			scene->DefineMesh(std::move(m));
+		for (auto &s : built) {
+			auto meshes = s->ReleaseOwnedMeshes();
+			scene->DefineMesh(std::move(meshes[0]), std::move(s));
+		}
 		if (canonicalPtr && !canonicalShapeName.empty())
 			scene->GetSlgScene().SetShapeVertexBuffer(canonicalShapeName, canonical);
 	}

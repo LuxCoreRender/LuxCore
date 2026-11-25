@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/shape.h"
 #include "slg/shapes/strands.h"
 #include "luxrays/utils/buffer.h"
 #include "slg/scene/scene.h"
@@ -439,8 +440,9 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 			break;
 		}
 
+		shape = std::make_unique<Shape>("strands", std::move(newMeshVerts));
 		mesh = std::make_unique<ExtTriangleMesh>(
-			std::move(newMeshVerts),
+			*shape,
 			std::move(newMeshTris),
 			std::move(newMeshNorms),
 			newMeshUVs,

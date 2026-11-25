@@ -142,6 +142,11 @@ public:
 	// Use one of the following methods, do not directly call extMeshCache.DefineExtMesh()
 	ReturnType<ExtMesh> DefineMesh(ExtMeshUPtr&& mesh);
 
+	// Define a mesh together with the Shape it is built on (the mesh holds a
+	// const reference to the Shape): the Shape is adopted into the scene
+	// shape definitions, so it outlives the mesh
+	ReturnType<ExtMesh> DefineMesh(ExtMeshUPtr&& mesh, luxrays::ShapeUPtr&& shape);
+
 	ReturnType<ExtTriangleMesh> DefineMesh(ExtTriangleMeshUPtr&& mesh);
 
 	ReturnType<ExtInstanceTriangleMesh> DefineMesh(ExtInstanceTriangleMeshUPtr&& mesh);
@@ -405,7 +410,8 @@ private:
 	// Create directly in cache, so result is just a reference
 	ImageMapPtr CreateEmissionMap(const std::string &propName, const luxrays::Properties &props);
 
-	luxrays::ExtTriangleMeshUPtr CreateInlinedMesh(const std::string &shapeName,
+	// Returns the Shape owning the created inlined mesh
+	luxrays::ShapeUPtr CreateInlinedMesh(const std::string &shapeName,
 			const std::string &propName, const luxrays::Properties &props);
 
 	template<class Archive> void save(Archive &ar, const u_int version) const;

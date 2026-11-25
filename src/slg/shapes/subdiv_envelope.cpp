@@ -256,7 +256,7 @@ ExtTriangleMeshUPtr BuildEnvelopeFromMeshes(
 
 	// Sharing ctor: the envelope uses the same vertex storage as the submeshes
 	auto envelope = std::make_unique<ExtTriangleMesh>(
-		srcMesh.GetVertexBuffer(),
+		srcMesh.GetShape(),  // shares the source shape's canonical buffer
 		std::move(tris),
 		std::move(normals),
 		uvs, cols, alphas
@@ -406,7 +406,7 @@ static ExtTriangleMeshUPtr FilterByKeptTriangles(
 	}
 
 	auto filtered = std::make_unique<ExtTriangleMesh>(
-		mesh.GetVertexBuffer(),  // share the point storage
+		mesh.GetShape(),  // share the point storage
 		std::move(tris),
 		std::move(normals),
 		uvs,

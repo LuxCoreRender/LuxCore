@@ -29,10 +29,36 @@ using namespace std;
 using namespace luxrays;
 
 //------------------------------------------------------------------------------
-// TriangleMesh
+// Mesh
 //------------------------------------------------------------------------------
 
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::Mesh)
+
+Mesh::Mesh(const Shape &s) : shape(s) {
+}
+
+Point Mesh::GetVertex(
+	const luxrays::Transform &local2World,
+	const u_int vertIndex
+) const {
+	return shape.GetVertices()[vertIndex];
+}
+
+std::span<Point> Mesh::GetVertices() const {
+	return shape.GetVertices().GetObjects();
+}
+
+std::span<float> Mesh::GetVerticesAsFloats() const {
+	return shape.GetVertices().GetSubObjects();
+}
+
+size_t Mesh::GetTotalVertexCount() const {
+	return shape.GetVertices().Count();
+}
+
+const VertexBuffer &Mesh::GetVertexBuffer() const {
+	return shape.GetVertices();
+}
 
 //------------------------------------------------------------------------------
 // TriangleMesh
@@ -40,24 +66,22 @@ BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::Mesh)
 
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::TriangleMesh)
 
-TriangleMesh::TriangleMesh(VertexBuffer&& meshVertices, TriangleBuffer&& meshTris) {
-	const auto meshVertCount = meshVertices.Count();
-	const auto meshTriCount = meshTris.Count();
-	assert (meshVertCount > 0);
+TriangleMesh::TriangleMesh(const Shape &shape, TriangleBuffer&& meshTris) :
+	Mesh(shape),
+	tris(std::move(meshTris))
+{
+	const auto meshTriCount = tris.Count();
 	assert (meshTriCount > 0);
 
 	appliedTransSwapsHandedness = false;
 
-	// Check if the buffer has been really allocated with AllocVerticesBuffer() or not.
-	if (not std::ranges::equal(meshVertices.GetPad(), VERTEXPAD)) {
+	// Check if the buffer has really been allocated with AllocVerticesBuffer() or not.
+	if (not std::ranges::equal(shape.GetVertices().GetPad(), VERTEXPAD)) {
 		std::string msg =
 			"luxrays::TriangleMesh() used with a vertex buffer not allocated with "
 			"luxrays::TriangleMesh::AllocVerticesBuffer().";
 		throw runtime_error(msg);
 	}
-
-	vertices = std::move(meshVertices);
-	tris = std::move(meshTris);
 
 	Preprocess();
 }
@@ -68,7 +92,7 @@ void TriangleMesh::Preprocess() {
 
 	#pragma omp parallel for reduction(+:local_area)
 	for (int i = 0; i < static_cast<int>(tris.Count()); ++i)
-		local_area += tris[i].Area(vertices);
+		local_area += tris[i].Area(GetVertices());
 
 	area = local_area;
 	cachedBBoxValid = false;
@@ -77,110 +101,44 @@ void TriangleMesh::Preprocess() {
 BBox TriangleMesh::GetBBox() const {
 	if (!cachedBBoxValid) {
 		BBox bbox;
-		for (u_int i = 0; i < vertices.Count(); ++i)
-			bbox = Union(bbox, vertices[i]);
+		const auto verts = GetVertices();
+		for (u_int i = 0; i < verts.size(); ++i)
+			bbox = Union(bbox, verts[i]);
 		cachedBBox = bbox;
-		
+
 		cachedBBoxValid = true;
 	}
 
 	return cachedBBox;
 }
 
-void TriangleMesh::ApplyTransform(const Transform &trans) {
-	if (vertices.IsShared()) {
-		// The vertex storage is shared with other meshes: copy-on-write
-		// instead of modifying the shared content
-		VertexBuffer copy;
-		copy.Set(vertices);
-		vertices = std::move(copy);
-	}
-
+void TriangleMesh::OnShapeTransformed(const Transform &trans) {
 	appliedTrans = appliedTrans * trans;
 	appliedTransSwapsHandedness = appliedTrans.SwapsHandedness();
 
-	for (u_int i = 0; i < vertices.Count(); ++i)
-		vertices[i] *= trans;
-
+	// The vertices have already been transformed by the Shape: refresh the
+	// derived data (area, bbox cache; ExtTriangleMesh also refreshes the
+	// triangle normals)
 	Preprocess();
 }
 
-TriangleMesh::TriangleMesh(const VertexBuffer &sharedVertices, TriangleBuffer&& meshTris) :
-	// VertexBuffer(sharedVertices) copies the buffer, i.e. shares its storage
-	TriangleMesh(VertexBuffer(sharedVertices), std::move(meshTris)) {
-	}
-
-TriangleMesh::TriangleMesh(const Shape &shape, TriangleBuffer&& meshTris) :
-	// shape.GetVertices() returns the Shape's canonical buffer by const ref;
-	// the sharing ctor copies it, i.e. shares its storage with the Shape
-	TriangleMesh(shape.GetVertices(), std::move(meshTris)) {
-	}
-
-TriangleMeshUPtr TriangleMesh::Merge(
-	const deque<const Mesh *> &meshes,
-	std::unique_ptr<TriangleMeshID[]> *preprocessedMeshIDs,
-	std::unique_ptr<TriangleID[]> *preprocessedMeshTriangleIDs
-) {
-	u_int totalVertexCount = 0;
-	u_int totalTriangleCount = 0;
-
-	for (deque<const Mesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
-		totalVertexCount += (*m)->GetTotalVertexCount();
-		totalTriangleCount += (*m)->GetTotalTriangleCount();
-	}
-
-	assert (totalVertexCount > 0);
-	assert (totalTriangleCount > 0);
-	assert (meshes.size() > 0);
-
-	VertexBuffer v(totalVertexCount);
-	TriangleBuffer i(totalTriangleCount);
-
-	if (preprocessedMeshIDs)
-		*preprocessedMeshIDs = std::make_unique<TriangleMeshID[]>(totalTriangleCount);
-	if (preprocessedMeshTriangleIDs)
-		*preprocessedMeshTriangleIDs = std::make_unique<TriangleID[]>(totalTriangleCount);
-
-	u_int vIndex = 0;
-	u_int iIndex = 0;
-	TriangleMeshID currentID = 0;
-	for (auto m = meshes.cbegin(); m != meshes.cend(); ++m) {
-		// Copy the mesh vertices
-		//memcpy(&v[vIndex], (*m)->GetVertices(), sizeof(Point) * (*m)->GetTotalVertexCount());
-		auto dest = v.Subset(vIndex);
-		auto orig = (*m)->GetVertices();
-		std::copy(orig.begin(), orig.end(), dest.begin());
-
-		auto tris = (*m)->GetTriangles();
-
-		// Translate mesh indices
-		for (u_int j = 0; j < (*m)->GetTotalTriangleCount(); j++) {
-			i[iIndex].v[0] = tris[j].v[0] + vIndex;
-			i[iIndex].v[1] = tris[j].v[1] + vIndex;
-			i[iIndex].v[2] = tris[j].v[2] + vIndex;
-
-			if (preprocessedMeshIDs)
-				(*preprocessedMeshIDs)[iIndex] = currentID;
-			if (preprocessedMeshTriangleIDs)
-				(*preprocessedMeshTriangleIDs)[iIndex] = j;
-
-			++iIndex;
-		}
-
-		vIndex += (*m)->GetTotalVertexCount();
-		if (preprocessedMeshIDs) {
-			// To avoid compiler warning
-			currentID = currentID + 1;
-		}
-	}
-
-	return std::make_unique<TriangleMesh>(std::move(v), std::move(i));
+std::span<const Triangle> TriangleMesh::GetTriangles() const {
+	return tris.GetObjects();
+}
+std::span<const Triangle::subtype_t> TriangleMesh::GetTrianglesAsInts() const {
+	return tris.GetSubObjects();
+}
+size_t TriangleMesh::GetTotalTriangleCount() const {
+	return tris.Count();
+}
+float TriangleMesh::GetMeshArea(const luxrays::Transform &local2World) const {
+	return area;
 }
 
 u_int TriangleMesh::GetUniqueVerticesMapping(
-		vector<u_int> &uniqueVertices,
-		bool (*CompareVertices)(const TriangleMesh& mesh,
-				const u_int vertIndex1, const u_int vertIndex2)) const {
+	std::vector<u_int> &uniqueVertices,
+	bool (*CompareVertices)(const TriangleMesh& mesh, const u_int vertIndex1, const u_int vertIndex2)) const {
+
 	const u_int originalVertCount = GetTotalVertexCount();
 
 	// Find duplicate vertices
@@ -244,7 +202,7 @@ u_int TriangleMesh::GetUniqueVerticesMapping(
 		}
 		uniqueVertices[i] = origIndex;
 	}
-	
+
 	return uniqueVertCount;
 }
 
@@ -254,8 +212,9 @@ u_int TriangleMesh::GetUniqueVerticesMapping(
 
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::InstanceTriangleMesh)
 
-InstanceTriangleMesh::InstanceTriangleMesh(TriangleMeshRef m, const Transform &t) {
-
+InstanceTriangleMesh::InstanceTriangleMesh(TriangleMeshRef m, const Transform &t) :
+	Mesh(m.GetShape())
+{
 	trans = t;
 	transSwapsHandedness = t.SwapsHandedness();
 	mesh = &m;
@@ -281,8 +240,9 @@ BBox InstanceTriangleMesh::GetBBox() const {
 
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::MotionTriangleMesh)
 
-MotionTriangleMesh::MotionTriangleMesh(TriangleMeshRef m, const MotionSystem &ms) {
-	
+MotionTriangleMesh::MotionTriangleMesh(TriangleMeshRef m, const MotionSystem &ms) :
+	Mesh(m.GetShape())
+{
 	motionSystem = ms;
 	mesh = &m;
 

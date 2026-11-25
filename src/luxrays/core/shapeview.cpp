@@ -45,20 +45,20 @@ static void ExpandLayer(
 	}
 }
 
-// Rebuild a submesh into a global-indexed mesh sharing the Shape's canonical
-// vertex buffer: local triangles + vertex map, attribute layers expanded to the
-// canonical point count. Transient working view for shape modifiers. Returns
-// nullptr when the mesh owns its points (no vertex map).
+// Rebuild a submesh into a global-indexed mesh on the Shape (sharing its
+// canonical vertex buffer): local triangles + vertex map, attribute layers
+// expanded to the canonical point count. Transient working view for shape
+// modifiers. Returns nullptr when the mesh owns its points (no vertex map).
 ExtTriangleMeshUPtr MakeGlobalView(
 	const ExtTriangleMesh &mesh,
-	const VertexBuffer &canonical
+	const Shape &shape
 ) {
 	if (!mesh.HasVertexMap())
 		return nullptr;
 
 	const std::vector<u_int> &map = mesh.GetVertexMap();
 	const size_t n = map.size();
-	const size_t P = canonical.Count();
+	const size_t P = shape.GetVertices().Count();
 	assert(mesh.GetTotalVertexCount() == n);
 
 	// Triangles remapped to global (canonical) indices
@@ -89,7 +89,7 @@ ExtTriangleMeshUPtr MakeGlobalView(
 	ExpandLayer<float>(mesh.GetAllAlphas(), alphas, map, P);
 
 	auto view = std::make_unique<ExtTriangleMesh>(
-		canonical,  // sharing ctor: the canonical buffer storage is shared
+		shape,  // the view shares the Shape's canonical vertex buffer
 		std::move(tris),
 		std::move(normals),
 		uvs, cols, alphas
@@ -117,9 +117,7 @@ ExtTriangleMeshUPtr MakeGlobalView(
 		view->SetCreases(std::vector<u_int>(mesh.GetCreasePairs()),
 			std::vector<float>(mesh.GetCreaseWeights()));
 
-	Transform t;
-	mesh.GetLocal2World(0.f, t);
-	view->SetLocal2World(t);
+	view->SetLocal2World(mesh.GetLocal2World(0.f));
 
 	return view;
 }

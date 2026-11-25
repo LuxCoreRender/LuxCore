@@ -27,7 +27,8 @@ using namespace slg;
 
 CameraProjUVShape::CameraProjUVShape(ExtTriangleMeshConstRef m, const u_int index) :
 		uvIndex(index) {
-	mesh = m.Copy();
+	shape = m.Copy();
+ mesh = std::move(shape->ReleaseOwnedMeshes().front());
 }
 
 CameraProjUVShape::~CameraProjUVShape() {

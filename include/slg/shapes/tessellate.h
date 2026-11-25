@@ -48,7 +48,7 @@ public:
 
 	virtual ShapeType GetType() const override { return TESSELLATE; }
 
-	static luxrays::ExtTriangleMeshUPtr ApplyTessellate(
+	static luxrays::ShapeUPtr ApplyTessellate(
 		luxrays::ExtTriangleMeshRef srcMesh,
 		const u_int rate,
 		const bool interpolatedNormals = true
