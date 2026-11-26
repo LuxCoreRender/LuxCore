@@ -274,6 +274,13 @@ static void CompactProp(ExtMeshProp<T> &prop, const std::vector<u_int> &map) {
 	prop = std::move(compacted);
 }
 
+void ExtTriangleMesh::RebuildMappedVertices() {
+	mappedVertices.Allocate(vertexMap.size());
+	const auto shapeVerts = GetShape().GetVertices();
+	for (size_t i = 0; i < vertexMap.size(); ++i)
+		mappedVertices[i] = shapeVerts[vertexMap[i]];
+}
+
 void ExtTriangleMesh::CompactVertexData() {
 	// Collect the vertex indices actually referenced by the triangles
 	const auto shapeVerts = GetShape().GetVertices();
