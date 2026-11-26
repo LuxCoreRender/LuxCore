@@ -15,3 +15,4 @@
 - The build type is controlled by env var `LUX_BUILD_TYPE`. Possible values (not exhaustive): `Release` | `Debug`
 - `make wheel-test` builds a Python wheel for testing. It is especially useful for blender integration testing and debugging (BlendLuxCore)
 - By default, the testing wheel is compiled in Debug mode. If you want it in release (eg. for profiling), export LUX_BUILD_TYPE=Release
+- If you test on scenes, do not forget to provide a halt condition. Genuine pathtracing is a never-ending algorithm. Don't forget `halt.enable = True`
