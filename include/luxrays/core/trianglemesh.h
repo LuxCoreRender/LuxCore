@@ -116,7 +116,7 @@ public:
 	// and the caller supplies the triangles separately. The vertex storage
 	// is the Shape's canonical buffer.
 	TriangleMesh(const Shape &shape, TriangleBuffer&& meshTris);
-	virtual ~TriangleMesh() = default;
+	~TriangleMesh() = default;
 
 	MeshType GetType() const override { return TYPE_TRIANGLE; }
 
@@ -212,14 +212,14 @@ public:
 
 	virtual MeshType GetType() const { return TYPE_TRIANGLE_INSTANCE; }
 
-	virtual BBox GetBBox() const;
-	virtual Transform GetLocal2World(const float time) const override { return trans; }
-	virtual Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const override {
+	BBox GetBBox() const;
+	Transform GetLocal2World(const float time) const override { return trans; }
+	Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const override {
 		return trans * mesh->GetVertex(local2World, vertIndex);
 	}
 
-	virtual std::span<const Triangle> GetTriangles() const override { return mesh->GetTriangles(); }
-	virtual size_t GetTotalTriangleCount() const override { return mesh->GetTotalTriangleCount(); }
+	std::span<const Triangle> GetTriangles() const override { return mesh->GetTriangles(); }
+	size_t GetTotalTriangleCount() const override { return mesh->GetTotalTriangleCount(); }
 
 	virtual float GetMeshArea(const luxrays::Transform &local2World) const {
 		if (cachedArea < 0.f) {
@@ -251,7 +251,7 @@ public:
 		return std::make_tuple(p, b0, b1, b2);
 	}
 
-	virtual void ApplyTransform(const Transform &t) override {
+	void ApplyTransform(const Transform &t) override {
 		trans = trans * t;
 		transSwapsHandedness = t.SwapsHandedness();
 		cachedBBoxValid = false;
@@ -313,16 +313,16 @@ public:
 
 	virtual MeshType GetType() const { return TYPE_TRIANGLE_MOTION; }
 
-	virtual BBox GetBBox() const;
-	virtual Transform GetLocal2World(const float time) const override {
+	BBox GetBBox() const;
+	Transform GetLocal2World(const float time) const override {
 		return Transform(motionSystem.SampleInverse(time));
 	}
-	virtual Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const override {
+	Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const override {
 		return local2World * mesh->GetVertex(local2World, vertIndex);
 	}
 
-	virtual std::span<const Triangle> GetTriangles() const override { return mesh->GetTriangles(); }
-	virtual size_t GetTotalTriangleCount() const override { return mesh->GetTotalTriangleCount(); }
+	std::span<const Triangle> GetTriangles() const override { return mesh->GetTriangles(); }
+	size_t GetTotalTriangleCount() const override { return mesh->GetTotalTriangleCount(); }
 
 	virtual float GetMeshArea(const luxrays::Transform &local2World) const {
 		if (cachedArea < 0.f) {
@@ -359,7 +359,7 @@ public:
 		return std::make_tuple(p, b0, b1, b2);
 	}
 
-	virtual void ApplyTransform(const Transform &t) override;
+	void ApplyTransform(const Transform &t) override;
 
 	TriangleMeshConstRef GetTriangleMesh() const { return *mesh; };
 	const MotionSystem &GetMotionSystem() const { return motionSystem; }

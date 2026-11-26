@@ -711,4 +711,120 @@ void ExtMotionTriangleMesh::UpdateMeshReferences(const ExtTriangleMesh& oldMesh,
 		cachedArea = false;
 	}
 }
+
+//------------------------------------------------------------------------------
+// Uninlined method definitions (moved from exttrianglemesh.h)
+//------------------------------------------------------------------------------
+
+bool ExtMesh::IntersectBevel(const luxrays::Ray &ray, const luxrays::RayHit &rayHit,
+		bool &continueToTrace, float &rayHitT,
+		luxrays::Point &p, luxrays::Normal &n) const {
+	continueToTrace = false;
+	return false;
+}
+
+void ExtTriangleMesh::SetCreases(std::vector<u_int> &&pairs, std::vector<float> &&weights) {
+	assert(pairs.size() == 2 * weights.size());
+	creasePairs = std::move(pairs);
+	creaseWeights = std::move(weights);
+}
+
+float ExtTriangleMesh::GetAlpha(const u_int vertIndex, const u_int layerIndex) const {
+	assert(vertIndex < alphas.GetLayerSize());
+	return alphas[layerIndex][vertIndex];
+}
+
+float ExtTriangleMesh::GetVertexAOV(const u_int vertIndex, const u_int layerIndex) const {
+	if (HasTriAOV(layerIndex))
+		return vertAOV[layerIndex][vertIndex];
+	else
+		return 0.f;
+}
+
+float ExtTriangleMesh::GetTriAOV(const u_int triIndex, const u_int layerIndex) const {
+	if (HasTriAOV(layerIndex))
+		return triAOV[layerIndex][triIndex];
+	else
+		return 0.f;
+}
+
+bool ExtTriangleMesh::GetTriBaryCoords(const luxrays::Transform &local2World, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const {
+	const Triangle &tri = tris[triIndex];
+	return tri.GetBaryCoords(GetVertices(), hitPoint, b1, b2);
+}
+
+void ExtTriangleMesh::SetLocal2World(const luxrays::Transform &t) {
+	appliedTrans = t;
+	appliedTransSwapsHandedness = appliedTrans.SwapsHandedness();
+}
+
+Normal ExtTriangleMesh::InterpolateTriNormal(const luxrays::Transform &local2World, const u_int triIndex,
+		const float b1, const float b2) const {
+	if (not bool(normals))
+		return GetGeometryNormal(local2World, triIndex);
+	const Triangle &tri = tris[triIndex];
+	const float b0 = 1.f - b1 - b2;
+	return (appliedTransSwapsHandedness ? -1.f : 1.f) * Normalize(b0 * normals[tri.v[0]] + b1 * normals[tri.v[1]] + b2 * normals[tri.v[2]]);
+}
+
+UV ExtTriangleMesh::InterpolateTriUV(const u_int triIndex, const float b1, const float b2,
+		const u_int layerIndex) const {
+	if (HasUVs(layerIndex)) {
+		const Triangle &tri = tris[triIndex];
+		const float b0 = 1.f - b1 - b2;
+		return b0 * uvs[layerIndex][tri.v[0]] + b1 * uvs[layerIndex][tri.v[1]] + b2 * uvs[layerIndex][tri.v[2]];
+	} else
+		return UV(0.f, 0.f);
+}
+
+Spectrum ExtTriangleMesh::InterpolateTriColor(const u_int triIndex, const float b1, const float b2,
+		const u_int layerIndex) const {
+	if (HasColors(layerIndex)) {
+		const Triangle &tri = tris[triIndex];
+		const float b0 = 1.f - b1 - b2;
+		return b0 * cols[layerIndex][tri.v[0]] + b1 * cols[layerIndex][tri.v[1]] + b2 * cols[layerIndex][tri.v[2]];
+	} else
+		return Spectrum(1.f);
+}
+
+float ExtTriangleMesh::InterpolateTriAlpha(const u_int triIndex, const float b1, const float b2,
+		const u_int layerIndex) const {
+	if (HasAlphas(layerIndex)) {
+		const Triangle &tri = tris[triIndex];
+		const float b0 = 1.f - b1 - b2;
+		return b0 * alphas[layerIndex][tri.v[0]] + b1 * alphas[layerIndex][tri.v[1]] + b2 * alphas[layerIndex][tri.v[2]];
+	} else
+		return 1.f;
+}
+
+float ExtTriangleMesh::InterpolateTriVertexAOV(const u_int triIndex, const float b1, const float b2,
+		const u_int layerIndex) const {
+	if (HasVertexAOV(layerIndex)) {
+		const Triangle &tri = tris[triIndex];
+		const float b0 = 1.f - b1 - b2;
+		return b0 * vertAOV[layerIndex][tri.v[0]] + b1 * vertAOV[layerIndex][tri.v[1]] + b2 * vertAOV[layerIndex][tri.v[2]];
+	} else
+		return 0.f;
+}
+
+bool ExtInstanceTriangleMesh::GetTriBaryCoords(const luxrays::Transform &local2World, const u_int triIndex,
+		const Point &hitPoint, float *b1, float *b2) const {
+	const Triangle &tri = mesh->GetTriangles()[triIndex];
+
+	return Triangle::GetBaryCoords(
+			GetVertex(local2World, tri.v[0]),
+			GetVertex(local2World, tri.v[1]),
+			GetVertex(local2World, tri.v[2]),
+			hitPoint, b1, b2);
+}
+
+bool ExtMotionTriangleMesh::GetTriBaryCoords(const luxrays::Transform &local2World, const u_int triIndex,
+		const Point &hitPoint, float *b1, float *b2) const {
+	const Triangle &tri = mesh->GetTriangles()[triIndex];
+
+	return Triangle::GetBaryCoords(GetVertex(local2World, tri.v[0]),
+			GetVertex(local2World, tri.v[1]), GetVertex(local2World, tri.v[2]),
+			hitPoint, b1, b2);
+}
+
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

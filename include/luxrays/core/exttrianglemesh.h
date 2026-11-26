@@ -20,15 +20,10 @@
 #define	_LUXRAYS_EXTTRIANGLEMESH_H
 
 #include <cassert>
-#include <cstdlib>
-#include <array>
 #include <memory>
 #include <span>
-#include <execution>
 
-#include <boost/lexical_cast.hpp>
 #include <boost/serialization/shared_ptr.hpp>
-#include <boost/serialization/array.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/extmeshprop.h"
@@ -36,11 +31,9 @@
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/geometry/triangle.h"
-#include "luxrays/core/geometry/frame.h"
 #include "luxrays/core/geometry/motionsystem.h"
 #include "luxrays/core/trianglemesh.h"
 #include "luxrays/core/namedobject.h"
-#include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
 
 namespace luxrays {
@@ -83,19 +76,16 @@ public:
 	virtual float GetBevelRadius() const { return bevelRadius; }
 	virtual bool IntersectBevel(const luxrays::Ray &ray, const luxrays::RayHit &rayHit,
 			bool &continueToTrace, float &rayHitT,
-			luxrays::Point &p, luxrays::Normal &n) const {
-		continueToTrace = false;
-		return false;
-	}
+			luxrays::Point &p, luxrays::Normal &n) const;
 
 	virtual bool HasNormals() const = 0;
 	virtual bool HasUVs(const u_int layerIndex) const = 0;
 	virtual bool HasColors(const u_int layerIndex) const = 0;
 	virtual bool HasAlphas(const u_int layerIndex) const = 0;
-	
+
 	virtual bool HasVertexAOV(const u_int layerIndex) const = 0;
 	virtual bool HasTriAOV(const u_int layerIndex) const = 0;
-	
+
 	virtual Normal GetGeometryNormal(const luxrays::Transform &local2World, const u_int triIndex) const = 0;
 	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int triIndex, const u_int vertIndex) const = 0;
 	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int vertIndex) const = 0;
@@ -106,7 +96,7 @@ public:
 
 	virtual float GetVertexAOV(const u_int vertIndex, const u_int layerIndex) const = 0;
 	virtual float GetTriAOV(const u_int triIndex, const u_int layerIndex) const = 0;
-	
+
 	virtual bool GetTriBaryCoords(const luxrays::Transform &local2World, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const = 0;
     virtual void GetDifferentials(const luxrays::Transform &local2World,
 			const u_int triIndex, const Normal &shadeNormal, const u_int layerIndex,
@@ -179,7 +169,7 @@ public:
 		const float bRadius = 0.f
 	);
 	~ExtTriangleMesh() { };
-	virtual void Delete();
+	void Delete() override;
 
 	const NormalBuffer& GetNormals() const { return normals; }
 	const NormalBuffer& GetTriNormals() const { return triNormals; }
@@ -201,7 +191,7 @@ public:
 	void DeleteVertexAOV(const u_int layerIndex) { vertAOV.DeleteLayer(layerIndex); }
 	auto GetVertexAOVs(const u_int layerIndex) const { return vertAOV.GetLayer(layerIndex); }
 	const auto& GetAllVertexAOVs() const { return vertAOV; }
-	virtual bool HasVertexAOV(const u_int layerIndex) const {
+	bool HasVertexAOV(const u_int layerIndex) const override {
 		return vertAOV.LayerHasValues(layerIndex);
 	}
 
@@ -218,7 +208,7 @@ public:
 	}
 	void DeleteTriAOV(const u_int layerIndex) { triAOV.DeleteLayer(layerIndex); }
 	auto GetTriAOVs(const u_int layerIndex) const { return triAOV.GetLayer(layerIndex); }
-	virtual bool HasTriAOV(const u_int layerIndex) const {
+	bool HasTriAOV(const u_int layerIndex) const override {
 		return triAOV.LayerHasValues(layerIndex);
 	}
 
@@ -228,7 +218,7 @@ public:
 	}
 	void DeleteUVs(const u_int layerIndex) { uvs.DeleteLayer(layerIndex); }
 	auto GetUVs(const u_int layerIndex) const { return uvs.GetLayer(layerIndex); }
-	virtual bool HasUVs(const u_int layerIndex) const { return uvs.LayerHasValues(layerIndex); }
+	bool HasUVs(const u_int layerIndex) const override { return uvs.LayerHasValues(layerIndex); }
 	const auto& GetAllUVs() const { return uvs; }
 
 	// Vertex colors
@@ -237,7 +227,7 @@ public:
 	}
 	void DeleteColors(const u_int layerIndex) { cols.DeleteLayer(layerIndex); }
 	auto GetColors(const u_int layerIndex) const { return cols.GetLayer(layerIndex); }
-	virtual bool HasColors(const u_int layerIndex) const {
+	bool HasColors(const u_int layerIndex) const override {
 		return cols.LayerHasValues(layerIndex);
 	}
 	const auto& GetAllColors() const { return cols; }
@@ -248,18 +238,14 @@ public:
 	}
 	void DeleteAlphas(const u_int layerIndex) { alphas.DeleteLayer(layerIndex); }
 	auto GetAlphas(const u_int layerIndex) const { return alphas.GetLayer(layerIndex); }
-	virtual bool HasAlphas(const u_int layerIndex) const { return alphas.LayerHasValues(layerIndex); }
+	bool HasAlphas(const u_int layerIndex) const override { return alphas.LayerHasValues(layerIndex); }
 	const auto& GetAllAlphas() const { return alphas; }
 
 	// Imported creases: vertex index pairs (flat v0, v1, ...) with one
 	// sharpness weight per pair, in OpenSubdiv units (0 = smooth,
 	// >= 10 = infinite crease). Populated e.g. from a PLY 'edge' element
 	// or via pyluxcore Scene.DefineMeshExt(crease_pairs=..., crease_weights=...)
-	void SetCreases(std::vector<u_int> &&pairs, std::vector<float> &&weights) {
-		assert(pairs.size() == 2 * weights.size());
-		creasePairs = std::move(pairs);
-		creaseWeights = std::move(weights);
-	}
+	void SetCreases(std::vector<u_int> &&pairs, std::vector<float> &&weights);
 	const std::vector<u_int>& GetCreasePairs() const { return creasePairs; }
 	const std::vector<float>& GetCreaseWeights() const { return creaseWeights; }
 	bool HasCreases() const { return !creaseWeights.empty(); }
@@ -279,104 +265,51 @@ public:
 	// always valid afterwards
 	void ComputeNormals();
 
-	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE; }
+	MeshType GetType() const override { return TYPE_EXT_TRIANGLE; }
 
-	virtual bool HasNormals() const { return bool(normals); }
+	bool HasNormals() const override { return bool(normals); }
 
-	virtual Normal GetGeometryNormal(const luxrays::Transform &local2World, const u_int triIndex) const {
+	Normal GetGeometryNormal(const luxrays::Transform &local2World, const u_int triIndex) const override {
 		// Pre-computed geometry normals already factor appliedTransSwapsHandedness
 		return triNormals[triIndex];
 	}
-	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int triIndex, const u_int vertIndex) const {
+	Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int triIndex, const u_int vertIndex) const override {
 		return (appliedTransSwapsHandedness ? -1.f : 1.f) * normals[tris[triIndex].v[vertIndex]];
 	}
-	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int vertIndex) const {
+	Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int vertIndex) const override {
 		return (appliedTransSwapsHandedness ? -1.f : 1.f) * normals[vertIndex];
 	}
 
-	virtual UV GetUV(const u_int vertIndex, const u_int layerIndex) const { return uvs[layerIndex][vertIndex]; }
-	virtual Spectrum GetColor(const u_int vertIndex, const u_int layerIndex) const { return cols[layerIndex][vertIndex]; }
-	virtual float GetAlpha(const u_int vertIndex, const u_int layerIndex) const {
-		assert(vertIndex < alphas.GetLayerSize());
-		return alphas[layerIndex][vertIndex];
-	}
-	virtual float GetVertexAOV(const u_int vertIndex, const u_int layerIndex) const {
-		if (HasTriAOV(layerIndex))
-			return vertAOV[layerIndex][vertIndex];
-		else
-			return 0.f;
-	}
-	virtual float GetTriAOV(const u_int triIndex, const u_int layerIndex) const {
-		if (HasTriAOV(layerIndex))
-			return triAOV[layerIndex][triIndex];
-		else
-			return 0.f;
-	}
+	UV GetUV(const u_int vertIndex, const u_int layerIndex) const override { return uvs[layerIndex][vertIndex]; }
+	Spectrum GetColor(const u_int vertIndex, const u_int layerIndex) const override { return cols[layerIndex][vertIndex]; }
+	float GetAlpha(const u_int vertIndex, const u_int layerIndex) const override;
+	float GetVertexAOV(const u_int vertIndex, const u_int layerIndex) const override;
+	float GetTriAOV(const u_int triIndex, const u_int layerIndex) const override;
 
-	virtual bool GetTriBaryCoords(const luxrays::Transform &local2World, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const {
-		const Triangle &tri = tris[triIndex];
-		return tri.GetBaryCoords(GetVertices(), hitPoint, b1, b2);
-	}
-	void SetLocal2World(const luxrays::Transform &t) {
-		appliedTrans = t;
-		appliedTransSwapsHandedness = appliedTrans.SwapsHandedness();
-	}
+	bool GetTriBaryCoords(const luxrays::Transform &local2World, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const override;
+	void SetLocal2World(const luxrays::Transform &t);
 
 	// Called by Shape::ApplyTransform() after the Shape transformed the
 	// shared vertex buffer: rotate the vertex normals (copy-on-write when
 	// shared) and refresh the derived data
-	virtual void OnShapeTransformed(const Transform &trans) override;
+	void OnShapeTransformed(const Transform &trans) override;
 
-	virtual Normal InterpolateTriNormal(const luxrays::Transform &local2World, const u_int triIndex,
-			const float b1, const float b2) const {
-		if (not bool(normals))
-			return GetGeometryNormal(local2World, triIndex);
-		const Triangle &tri = tris[triIndex];
-		const float b0 = 1.f - b1 - b2;
-		return (appliedTransSwapsHandedness ? -1.f : 1.f) * Normalize(b0 * normals[tri.v[0]] + b1 * normals[tri.v[1]] + b2 * normals[tri.v[2]]);
-	}
+	Normal InterpolateTriNormal(const luxrays::Transform &local2World, const u_int triIndex,
+			const float b1, const float b2) const override;
 
-	virtual UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2,
-			const u_int layerIndex) const {
-		if (HasUVs(layerIndex)) {
-			const Triangle &tri = tris[triIndex];
-			const float b0 = 1.f - b1 - b2;
-			return b0 * uvs[layerIndex][tri.v[0]] + b1 * uvs[layerIndex][tri.v[1]] + b2 * uvs[layerIndex][tri.v[2]];
-		} else
-			return UV(0.f, 0.f);
-	}
+	UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2,
+			const u_int layerIndex) const override;
 
-	virtual Spectrum InterpolateTriColor(const u_int triIndex, const float b1, const float b2,
-			const u_int layerIndex) const {
-		if (HasColors(layerIndex)) {
-			const Triangle &tri = tris[triIndex];
-			const float b0 = 1.f - b1 - b2;
-			return b0 * cols[layerIndex][tri.v[0]] + b1 * cols[layerIndex][tri.v[1]] + b2 * cols[layerIndex][tri.v[2]];
-		} else
-			return Spectrum(1.f);
-	}
+	Spectrum InterpolateTriColor(const u_int triIndex, const float b1, const float b2,
+			const u_int layerIndex) const override;
 
-	virtual float InterpolateTriAlpha(const u_int triIndex, const float b1, const float b2,
-			const u_int layerIndex) const {
-		if (HasAlphas(layerIndex)) {
-			const Triangle &tri = tris[triIndex];
-			const float b0 = 1.f - b1 - b2;
-			return b0 * alphas[layerIndex][tri.v[0]] + b1 * alphas[layerIndex][tri.v[1]] + b2 * alphas[layerIndex][tri.v[2]];
-		} else
-			return 1.f;
-	}
-	
-	virtual float InterpolateTriVertexAOV(const u_int triIndex, const float b1, const float b2,
-			const u_int layerIndex) const {
-		if (HasVertexAOV(layerIndex)) {
-			const Triangle &tri = tris[triIndex];
-			const float b0 = 1.f - b1 - b2;
-			return b0 * vertAOV[layerIndex][tri.v[0]] + b1 * vertAOV[layerIndex][tri.v[1]] + b2 * vertAOV[layerIndex][tri.v[2]];
-		} else
-			return 0.f;
-	}
+	float InterpolateTriAlpha(const u_int triIndex, const float b1, const float b2,
+			const u_int layerIndex) const override;
 
-	virtual void Save(const std::string &fileName) const;
+	float InterpolateTriVertexAOV(const u_int triIndex, const float b1, const float b2,
+			const u_int layerIndex) const override;
+
+	void Save(const std::string &fileName) const override;
 
 	void CopyAOV(ExtTriangleMeshRef destMesh) const;
 
@@ -404,9 +337,9 @@ public:
 
 	ShapeUPtr Copy(const float bRadius = 0.f) const;
 
-	virtual bool IntersectBevel(const luxrays::Ray &ray, const luxrays::RayHit &rayHit,
+	bool IntersectBevel(const luxrays::Ray &ray, const luxrays::RayHit &rayHit,
 			bool &continueToTrace, float &rayHitT,
-			luxrays::Point &p, luxrays::Normal &n) const;
+			luxrays::Point &p, luxrays::Normal &n) const override;
 
 	// Load/Merge/Copy return a Shape owning the produced mesh (the mesh
 	// references the Shape through Mesh::GetShape(), so the Shape must
@@ -437,7 +370,7 @@ public:
 
 		luxrays::Point v0, v1;
 	};
-	
+
 	class BevelBoundingCylinder {
 	public:
 		BevelBoundingCylinder() { }
@@ -556,96 +489,88 @@ public:
 	ExtInstanceTriangleMesh(ExtTriangleMesh& m, const Transform &t) :
 		Mesh(m.GetShape()), InstanceTriangleMesh(m, t), ExtMesh(m.GetShape()) { }
 	~ExtInstanceTriangleMesh() { };
-	virtual void Delete() {	}
+	void Delete() override {	}
 
-	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE_INSTANCE; }
-	
-	virtual float GetBevelRadius() const { return static_cast<const ExtTriangleMesh&>(*mesh).GetBevelRadius(); }
+	MeshType GetType() const override { return TYPE_EXT_TRIANGLE_INSTANCE; }
 
-	virtual bool HasNormals() const { return static_cast<const ExtTriangleMesh&>(*mesh).HasNormals(); }
-	virtual bool HasUVs(const u_int layerIndex) const { return static_cast<const ExtTriangleMesh&>(*mesh).HasUVs(layerIndex); }
-	virtual bool HasColors(const u_int layerIndex) const { return static_cast<const ExtTriangleMesh&>(*mesh).HasColors(layerIndex); }
-	virtual bool HasAlphas(const u_int layerIndex) const { return static_cast<const ExtTriangleMesh&>(*mesh).HasAlphas(layerIndex); }
-	
-	virtual bool HasVertexAOV(const u_int layerIndex) const { return static_cast<const ExtTriangleMesh&>(*mesh).HasVertexAOV(layerIndex); }
-	virtual bool HasTriAOV(const u_int layerIndex) const { return static_cast<const ExtTriangleMesh&>(*mesh).HasTriAOV(layerIndex); }
+	float GetBevelRadius() const override { return static_cast<const ExtTriangleMesh&>(*mesh).GetBevelRadius(); }
 
-	virtual Normal GetGeometryNormal(const luxrays::Transform &local2World, const u_int triIndex) const {
+	bool HasNormals() const override { return static_cast<const ExtTriangleMesh&>(*mesh).HasNormals(); }
+	bool HasUVs(const u_int layerIndex) const override { return static_cast<const ExtTriangleMesh&>(*mesh).HasUVs(layerIndex); }
+	bool HasColors(const u_int layerIndex) const override { return static_cast<const ExtTriangleMesh&>(*mesh).HasColors(layerIndex); }
+	bool HasAlphas(const u_int layerIndex) const override { return static_cast<const ExtTriangleMesh&>(*mesh).HasAlphas(layerIndex); }
+
+	bool HasVertexAOV(const u_int layerIndex) const override { return static_cast<const ExtTriangleMesh&>(*mesh).HasVertexAOV(layerIndex); }
+	bool HasTriAOV(const u_int layerIndex) const override { return static_cast<const ExtTriangleMesh&>(*mesh).HasTriAOV(layerIndex); }
+
+	Normal GetGeometryNormal(const luxrays::Transform &local2World, const u_int triIndex) const override {
 		return (transSwapsHandedness ? -1.f : 1.f) * Normalize(local2World * static_cast<const ExtTriangleMesh&>(*mesh).GetGeometryNormal(Transform::TRANS_IDENTITY, triIndex));
 	}
-	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int triIndex, const u_int vertIndex) const {
+	Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int triIndex, const u_int vertIndex) const override {
 		return (transSwapsHandedness ? -1.f : 1.f) * Normalize(local2World * static_cast<const ExtTriangleMesh&>(*mesh).GetShadeNormal(Transform::TRANS_IDENTITY, triIndex, vertIndex));
 	}
-	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int vertIndex) const {
+	Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int vertIndex) const override {
 		return (transSwapsHandedness ? -1.f : 1.f) * Normalize(local2World * static_cast<const ExtTriangleMesh&>(*mesh).GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex));
 	}
-	virtual UV GetUV(const unsigned vertIndex, const u_int layerIndex) const {
+	UV GetUV(const unsigned vertIndex, const u_int layerIndex) const override {
 		return static_cast<const ExtTriangleMesh&>(*mesh).GetUV(vertIndex, layerIndex);
 	}
-	virtual Spectrum GetColor(const unsigned vertIndex, const u_int layerIndex) const {
+	Spectrum GetColor(const unsigned vertIndex, const u_int layerIndex) const override {
 		return static_cast<const ExtTriangleMesh&>(*mesh).GetColor(vertIndex, layerIndex);
 	}
-	virtual float GetAlpha(const unsigned vertIndex, const u_int layerIndex) const {
+	float GetAlpha(const unsigned vertIndex, const u_int layerIndex) const override {
 		return static_cast<const ExtTriangleMesh&>(*mesh).GetAlpha(vertIndex, layerIndex);
 	}
 
-	virtual float GetVertexAOV(const unsigned vertIndex, const u_int layerIndex) const {
+	float GetVertexAOV(const unsigned vertIndex, const u_int layerIndex) const override {
 		return static_cast<const ExtTriangleMesh&>(*mesh).GetVertexAOV(vertIndex, layerIndex);
 	}
-	virtual float GetTriAOV(const unsigned triIndex, const u_int layerIndex) const {
+	float GetTriAOV(const unsigned triIndex, const u_int layerIndex) const override {
 		return static_cast<const ExtTriangleMesh&>(*mesh).GetTriAOV(triIndex, layerIndex);
 	}
 
-	virtual bool GetTriBaryCoords(const luxrays::Transform &local2World, const u_int triIndex,
-			const Point &hitPoint, float *b1, float *b2) const {
-		const Triangle &tri = mesh->GetTriangles()[triIndex];
+	bool GetTriBaryCoords(const luxrays::Transform &local2World, const u_int triIndex,
+			const Point &hitPoint, float *b1, float *b2) const override;
 
-		return Triangle::GetBaryCoords(
-				GetVertex(local2World, tri.v[0]),
-				GetVertex(local2World, tri.v[1]),
-				GetVertex(local2World, tri.v[2]),
-				hitPoint, b1, b2);
-	}
-
-	virtual Normal InterpolateTriNormal(const luxrays::Transform &local2World,
-			const u_int triIndex, const float b1, const float b2) const {
+	Normal InterpolateTriNormal(const luxrays::Transform &local2World,
+			const u_int triIndex, const float b1, const float b2) const override {
 		return (transSwapsHandedness ? -1.f : 1.f) * Normalize(trans * static_cast<const ExtTriangleMesh&>(*mesh).InterpolateTriNormal(
 				Transform::TRANS_IDENTITY, triIndex, b1, b2));
 	}
 
-	virtual UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2,
-			const u_int layerIndex) const {
+	UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2,
+			const u_int layerIndex) const override {
 		return static_cast<const ExtTriangleMesh&>(*mesh).InterpolateTriUV(triIndex,
 				b1, b2, layerIndex);
 	}
 
-	virtual Spectrum InterpolateTriColor(const u_int triIndex, const float b1, const float b2,
-			const u_int layerIndex) const {
+	Spectrum InterpolateTriColor(const u_int triIndex, const float b1, const float b2,
+			const u_int layerIndex) const override {
 		return static_cast<const ExtTriangleMesh&>(*mesh).InterpolateTriColor(triIndex,
 				b1, b2, layerIndex);
 	}
-	
-	virtual float InterpolateTriAlpha(const u_int triIndex, const float b1, const float b2,
-			const u_int layerIndex) const {
+
+	float InterpolateTriAlpha(const u_int triIndex, const float b1, const float b2,
+			const u_int layerIndex) const override {
 		return static_cast<const ExtTriangleMesh&>(*mesh).InterpolateTriAlpha(triIndex,
 				b1, b2, layerIndex);
 	}
-	
-	virtual float InterpolateTriVertexAOV(const u_int triIndex, const float b1, const float b2,
-			const u_int layerIndex) const {
+
+	float InterpolateTriVertexAOV(const u_int triIndex, const float b1, const float b2,
+			const u_int layerIndex) const override {
 		return static_cast<const ExtTriangleMesh&>(*mesh).InterpolateTriVertexAOV(triIndex,
 				b1, b2, layerIndex);
 	}
 
-	virtual bool IntersectBevel(const luxrays::Ray &ray, const luxrays::RayHit &rayHit,
+	bool IntersectBevel(const luxrays::Ray &ray, const luxrays::RayHit &rayHit,
 			bool &continueToTrace, float &rayHitT,
-			luxrays::Point &p, luxrays::Normal &n) const;
+			luxrays::Point &p, luxrays::Normal &n) const override;
 
-	virtual void Save(const std::string &fileName) const { static_cast<const ExtTriangleMesh&>(*mesh).Save(fileName); }
+	void Save(const std::string &fileName) const override { static_cast<const ExtTriangleMesh&>(*mesh).Save(fileName); }
 
 	const Transform &GetTransformation() const { return trans; }
 	const ExtTriangleMesh& GetExtTriangleMesh() const { return static_cast<const ExtTriangleMesh&>(*mesh); };
-	
+
 	void UpdateMeshReferences(const ExtTriangleMesh& oldMesh, ExtTriangleMesh& newMesh);
 
 	friend class boost::serialization::access;
@@ -676,90 +601,84 @@ public:
 	ExtMotionTriangleMesh(ExtTriangleMesh& m, const MotionSystem &ms) :
 		Mesh(m.GetShape()), MotionTriangleMesh(m, ms), ExtMesh(m.GetShape()) { }
 	~ExtMotionTriangleMesh() { }
-	virtual void Delete() {	}
+	void Delete() override {	}
 
-	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE_MOTION; }
+	MeshType GetType() const override { return TYPE_EXT_TRIANGLE_MOTION; }
 
-	virtual float GetBevelRadius() const { return static_cast<const ExtTriangleMesh&>(*mesh).GetBevelRadius(); }
+	float GetBevelRadius() const override { return static_cast<const ExtTriangleMesh&>(*mesh).GetBevelRadius(); }
 
-	virtual bool HasNormals() const { return static_cast<const ExtTriangleMesh&>(*mesh).HasNormals(); }
-	virtual bool HasUVs(const u_int layerIndex) const { return static_cast<const ExtTriangleMesh&>(*mesh).HasUVs(layerIndex); }
-	virtual bool HasColors(const u_int layerIndex) const { return static_cast<const ExtTriangleMesh&>(*mesh).HasColors(layerIndex); }
-	virtual bool HasAlphas(const u_int layerIndex) const { return static_cast<const ExtTriangleMesh&>(*mesh).HasAlphas(layerIndex); }
+	bool HasNormals() const override { return static_cast<const ExtTriangleMesh&>(*mesh).HasNormals(); }
+	bool HasUVs(const u_int layerIndex) const override { return static_cast<const ExtTriangleMesh&>(*mesh).HasUVs(layerIndex); }
+	bool HasColors(const u_int layerIndex) const override { return static_cast<const ExtTriangleMesh&>(*mesh).HasColors(layerIndex); }
+	bool HasAlphas(const u_int layerIndex) const override { return static_cast<const ExtTriangleMesh&>(*mesh).HasAlphas(layerIndex); }
 
-	virtual bool HasVertexAOV(const u_int layerIndex) const { return static_cast<const ExtTriangleMesh&>(*mesh).HasVertexAOV(layerIndex); }
-	virtual bool HasTriAOV(const u_int layerIndex) const { return static_cast<const ExtTriangleMesh&>(*mesh).HasTriAOV(layerIndex); }
+	bool HasVertexAOV(const u_int layerIndex) const override { return static_cast<const ExtTriangleMesh&>(*mesh).HasVertexAOV(layerIndex); }
+	bool HasTriAOV(const u_int layerIndex) const override { return static_cast<const ExtTriangleMesh&>(*mesh).HasTriAOV(layerIndex); }
 
-	virtual Normal GetGeometryNormal(const luxrays::Transform &local2World, const u_int triIndex) const {
+	Normal GetGeometryNormal(const luxrays::Transform &local2World, const u_int triIndex) const override {
 		const bool transSwapsHandedness = local2World.SwapsHandedness();
 		return (transSwapsHandedness ? -1.f : 1.f) * Normalize(local2World * static_cast<const ExtTriangleMesh&>(*mesh).GetGeometryNormal(local2World, triIndex));
 	}
-	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int triIndex, const u_int vertIndex) const {
+	Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int triIndex, const u_int vertIndex) const override {
 		const bool transSwapsHandedness = local2World.SwapsHandedness();
 		return (transSwapsHandedness ? -1.f : 1.f) * Normalize(local2World * static_cast<const ExtTriangleMesh&>(*mesh).GetShadeNormal(local2World, triIndex, vertIndex));
 	}
-	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int vertIndex) const {
+	Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int vertIndex) const override {
 		const bool transSwapsHandedness = local2World.SwapsHandedness();
 		return (transSwapsHandedness ? -1.f : 1.f) * Normalize(local2World * static_cast<const ExtTriangleMesh&>(*mesh).GetShadeNormal(local2World, vertIndex));
 	}
-	virtual UV GetUV(const unsigned vertIndex, const u_int layerIndex) const {
+	UV GetUV(const unsigned vertIndex, const u_int layerIndex) const override {
 		return static_cast<const ExtTriangleMesh&>(*mesh).GetUV(vertIndex, layerIndex);
 	}
-	virtual Spectrum GetColor(const unsigned vertIndex, const u_int layerIndex) const {
+	Spectrum GetColor(const unsigned vertIndex, const u_int layerIndex) const override {
 		return static_cast<const ExtTriangleMesh&>(*mesh).GetColor(vertIndex, layerIndex);
 	}
-	virtual float GetAlpha(const unsigned vertIndex, const u_int layerIndex) const {
+	float GetAlpha(const unsigned vertIndex, const u_int layerIndex) const override {
 		return static_cast<const ExtTriangleMesh&>(*mesh).GetAlpha(vertIndex, layerIndex);
 	}
 
-	virtual float GetVertexAOV(const unsigned vertIndex, const u_int layerIndex) const {
+	float GetVertexAOV(const unsigned vertIndex, const u_int layerIndex) const override {
 		return static_cast<const ExtTriangleMesh&>(*mesh).GetVertexAOV(vertIndex, layerIndex);
 	}
-	virtual float GetTriAOV(const unsigned triIndex, const u_int layerIndex) const {
+	float GetTriAOV(const unsigned triIndex, const u_int layerIndex) const override {
 		return static_cast<const ExtTriangleMesh&>(*mesh).GetTriAOV(triIndex, layerIndex);
 	}
 
-	virtual bool GetTriBaryCoords(const luxrays::Transform &local2World, const u_int triIndex,
-			const Point &hitPoint, float *b1, float *b2) const {
-		const Triangle &tri = mesh->GetTriangles()[triIndex];
+	bool GetTriBaryCoords(const luxrays::Transform &local2World, const u_int triIndex,
+			const Point &hitPoint, float *b1, float *b2) const override;
 
-		return Triangle::GetBaryCoords(GetVertex(local2World, tri.v[0]),
-				GetVertex(local2World, tri.v[1]), GetVertex(local2World, tri.v[2]),
-				hitPoint, b1, b2);
-	}
-
-	virtual Normal InterpolateTriNormal(const luxrays::Transform &local2World,
-			const u_int triIndex, const float b1, const float b2) const {
+	Normal InterpolateTriNormal(const luxrays::Transform &local2World,
+			const u_int triIndex, const float b1, const float b2) const override {
 		const bool transSwapsHandedness = local2World.SwapsHandedness();
 		return (transSwapsHandedness ? -1.f : 1.f) * Normalize(local2World * static_cast<const ExtTriangleMesh&>(*mesh).InterpolateTriNormal(
 				local2World, triIndex, b1, b2));
 	}
 
-	virtual UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2,
-			const u_int layerIndex) const {
+	UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2,
+			const u_int layerIndex) const override {
 		return static_cast<const ExtTriangleMesh&>(*mesh).InterpolateTriUV(triIndex,
 				b1, b2, layerIndex);
 	}
-	
-	virtual Spectrum InterpolateTriColor(const u_int triIndex, const float b1, const float b2,
-			const u_int layerIndex) const {
+
+	Spectrum InterpolateTriColor(const u_int triIndex, const float b1, const float b2,
+			const u_int layerIndex) const override {
 		return static_cast<const ExtTriangleMesh&>(*mesh).InterpolateTriColor(triIndex,
 				b1, b2, layerIndex);
 	}
-	
-	virtual float InterpolateTriAlpha(const u_int triIndex, const float b1, const float b2,
-			const u_int layerIndex) const {
+
+	float InterpolateTriAlpha(const u_int triIndex, const float b1, const float b2,
+			const u_int layerIndex) const override {
 		return static_cast<const ExtTriangleMesh&>(*mesh).InterpolateTriAlpha(triIndex,
 				b1, b2, layerIndex);
 	}
 
-	virtual float InterpolateTriVertexAOV(const u_int triIndex, const float b1, const float b2,
-			const u_int layerIndex) const {
+	float InterpolateTriVertexAOV(const u_int triIndex, const float b1, const float b2,
+			const u_int layerIndex) const override {
 		return static_cast<const ExtTriangleMesh&>(*mesh).InterpolateTriVertexAOV(triIndex,
 				b1, b2, layerIndex);
 	}
 
-	virtual void Save(const std::string &fileName) const { static_cast<const ExtTriangleMesh&>(*mesh).Save(fileName); }
+	void Save(const std::string &fileName) const override { static_cast<const ExtTriangleMesh&>(*mesh).Save(fileName); }
 
 	const MotionSystem &GetMotionSystem() const { return motionSystem; }
 	const ExtTriangleMesh& GetExtTriangleMesh() const { return static_cast<const ExtTriangleMesh&>(*mesh); };
