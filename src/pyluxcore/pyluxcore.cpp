@@ -1768,7 +1768,7 @@ struct ParsedExtMesh {
 	bool normals_pretransformed = false;
 	int tri_aov_index = -1;
 	float tri_aov_value = 0.0f;
-	std::optional<std::string> submeshName;  // shape name; default = mesh name
+	std::optional<std::string> shapeName;  // shape (group) name; default = mesh name
 	py::array_t<uint32_t, py::array::c_style> vertexIndices;  // local->global map, optional
 	bool hasVertexIndices = false;
 	std::shared_ptr<void> triOwner;
@@ -1798,14 +1798,14 @@ static ParsedExtMesh parseExtMeshArgs(
 	const int tri_aov_index,
 	const float tri_aov_value,
 	const py::object &vertex_indices = py::none(),
-	const std::optional<std::string> &submesh_name = std::nullopt
+	const std::optional<std::string> &shape_name = std::nullopt
 ) {
 	ParsedExtMesh a;
 	a.meshName = meshName;
 	a.normals_pretransformed = normals_pretransformed;
 	a.tri_aov_index = tri_aov_index;
 	a.tri_aov_value = tri_aov_value;
-	a.submeshName = submesh_name;
+	a.shapeName = shape_name;
 	if (py::isinstance<py::str>(p)) {
 		a.pointsIsName = true;
 		a.srcMeshName = py::cast<std::string>(p);
@@ -1986,8 +1986,8 @@ srcTrans = 		srcTriMesh->GetLocal2World(0.f);
 	// Register as a submesh (ref) so a shape transform propagates to it
 	shape->AddSubmesh(*newMesh);
 	newMesh->SetName(a.meshName);
-	if (a.submeshName)
-		newMesh->SetShapeName(*a.submeshName);
+	if (a.shapeName)
+		newMesh->SetShapeName(*a.shapeName);
 	if (!a.upairs.empty())
 		newMesh->SetCreases(std::move(a.upairs), std::move(a.weights));
 	if (a.hasVertexIndices && canonical) {
@@ -2046,7 +2046,8 @@ static void Scene_DefineMeshExt3(
     const int tri_aov_index = -1,
     const float tri_aov_value = 0.0f,
     const py::object &vertex_indices = py::none(),
-    const std::optional<std::string> submesh_name = std::nullopt
+    const std::optional<std::string> shape_name = std::nullopt,
+    const std::optional<std::string> submesh_name = std::nullopt  // deprecated alias
 ) {
 	// NOTE: the GIL is released for the buffer copies / mesh build / scene
 	// insertion below. Scene mesh definition is serialized by the scene's
@@ -2059,20 +2060,21 @@ static void Scene_DefineMeshExt3(
 		transformation ? py::reinterpret_borrow<py::object>(*transformation) : py::none(),
 		crease_pairs ? *crease_pairs : py::none(),
 		crease_weights ? *crease_weights : py::none(),
-		normals_pretransformed, tri_aov_index, tri_aov_value, vertex_indices, submesh_name);
+		normals_pretransformed, tri_aov_index, tri_aov_value, vertex_indices,
+		shape_name ? shape_name : submesh_name);
 	Py_BEGIN_ALLOW_THREADS
 	luxrays::VertexBuffer canonical;
 	const luxrays::VertexBuffer *canonicalPtr = nullptr;
 	if (a.hasVertexIndices && !a.pointsIsName) {
 		canonical = buildCanonicalPoints(a);
 		canonicalPtr = &canonical;
-	} else if (a.hasVertexIndices && a.submeshName) {
+	} else if (a.hasVertexIndices && a.shapeName) {
 		// Points-by-name submesh whose first sibling was defined earlier:
 		// gather from the shape's canonical buffer (shares its storage)
 		std::lock_guard<std::recursive_mutex> meshLock(scene->GetSlgScene().MeshDefMutex());
 		auto &shapes = scene->GetSlgScene().GetShapes();
-		if (shapes.IsShapeDefined(*a.submeshName)) {
-			canonical = shapes.GetShape(*a.submeshName).GetVertices();
+		if (shapes.IsShapeDefined(*a.shapeName)) {
+			canonical = shapes.GetShape(*a.shapeName).GetVertices();
 			canonicalPtr = &canonical;
 		}
 	}
@@ -2080,8 +2082,8 @@ static void Scene_DefineMeshExt3(
 	// Insert mesh into the scene (with the Shape it is built on)
 	auto meshes = newShape->ReleaseOwnedMeshes();
 	scene->DefineMesh(std::move(meshes[0]), std::move(newShape));
-	if (canonicalPtr && a.submeshName)
-		scene->GetSlgScene().SetShapeVertexBuffer(*a.submeshName, canonical);
+	if (canonicalPtr && a.shapeName)
+		scene->GetSlgScene().SetShapeVertexBuffer(*a.shapeName, canonical);
 	Py_END_ALLOW_THREADS
 }
 
@@ -2091,7 +2093,7 @@ static void Scene_DefineMeshExt3(
 // covers only the insertions (the builds run lock-free; a submesh referencing
 // the points of an earlier payload of the same batch resolves it batch-locally,
 // without touching the scene cache). Meshes are inserted in list order.
-static void Scene_DefineMeshesExt(const SceneImplPtr &scene, const py::list &payloads) {
+static void Scene_DefineShapeExt(const SceneImplPtr &scene, const py::list &payloads) {
 	std::vector<ParsedExtMesh> parsed;
 	parsed.reserve(py::len(payloads));
 	for (py::handle h : payloads) {
@@ -2108,9 +2110,13 @@ static void Scene_DefineMeshesExt(const SceneImplPtr &scene, const py::list &pay
 			d.contains("tri_aov_index") ? py::cast<int>(d["tri_aov_index"]) : -1,
 			d.contains("tri_aov_value") ? py::cast<float>(d["tri_aov_value"]) : 0.0f,
 			vertexIndices,
-			(d.contains("submesh_name") && !d["submesh_name"].is_none())
-				? std::optional<std::string>(py::cast<std::string>(d["submesh_name"]))
-				: std::nullopt));
+			// 'shape_name' is the current key; 'submesh_name' is the
+			// deprecated alias
+			(d.contains("shape_name") && !d["shape_name"].is_none())
+				? std::optional<std::string>(py::cast<std::string>(d["shape_name"]))
+				: (d.contains("submesh_name") && !d["submesh_name"].is_none())
+					? std::optional<std::string>(py::cast<std::string>(d["submesh_name"]))
+					: std::nullopt));
 	}
 	Py_BEGIN_ALLOW_THREADS
 	// Build all meshes first, WITHOUT the mesh-def lock: the build only copies
@@ -2132,20 +2138,20 @@ static void Scene_DefineMeshesExt(const SceneImplPtr &scene, const py::list &pay
 		if (canonicalPtr == nullptr && a.hasVertexIndices && !a.pointsIsName) {
 			canonical = buildCanonicalPoints(a);
 			canonicalPtr = &canonical;
-			canonicalShapeName = a.submeshName ? *a.submeshName : a.meshName;
+			canonicalShapeName = a.shapeName ? *a.shapeName : a.meshName;
 		}
 	}
 	if (canonicalPtr == nullptr) {
 		// All vertex_indices payloads are points-by-name: the shape's
 		// canonical buffer was set when its first submesh was defined
 		for (auto &a : parsed) {
-			if (a.hasVertexIndices && a.submeshName) {
+			if (a.hasVertexIndices && a.shapeName) {
 				std::lock_guard<std::recursive_mutex> meshLock(scene->GetSlgScene().MeshDefMutex());
 				auto &shapes = scene->GetSlgScene().GetShapes();
-				if (shapes.IsShapeDefined(*a.submeshName)) {
-					canonical = shapes.GetShape(*a.submeshName).GetVertices();
+				if (shapes.IsShapeDefined(*a.shapeName)) {
+					canonical = shapes.GetShape(*a.shapeName).GetVertices();
 					canonicalPtr = &canonical;
-					canonicalShapeName = *a.submeshName;
+					canonicalShapeName = *a.shapeName;
 				}
 				break;
 			}
@@ -3230,15 +3236,23 @@ PYBIND11_MODULE(pyluxcore, m) {
 		py::arg("tri_aov_index") = -1,
 		py::arg("tri_aov_value") = 0.0,
 		py::arg("vertex_indices") = py::none(),
-		py::arg("submesh_name") = py::none()
+		py::arg("shape_name") = py::none(),
+		py::arg("submesh_name") = py::none()  // deprecated alias for shape_name
+	)
+	.def(
+		"DefineShapeExt",
+		&Scene_DefineShapeExt,
+		"Batch version of DefineMeshExt defining one Shape and its submeshes: "
+		"takes a list of payload dicts (same keys as the DefineMeshExt kwargs, "
+		"plus optional tri_aov_index / tri_aov_value; the group name is the "
+		"'shape_name' key, 'submesh_name' is a deprecated alias) and defines "
+		"them all with one GIL release and one mesh-def mutex acquisition",
+		py::arg("payloads")
 	)
 	.def(
 		"DefineMeshesExt",
-		&Scene_DefineMeshesExt,
-		"Batch version of DefineMeshExt: takes a list of payload dicts (same "
-		"keys as the DefineMeshExt kwargs, plus optional tri_aov_index / "
-		"tri_aov_value) and defines them all with one GIL release and one "
-		"mesh-def mutex acquisition",
+		&Scene_DefineShapeExt,
+		"Deprecated alias for DefineShapeExt",
 		py::arg("payloads")
 	)
 	.def("DefineMeshExt", &Scene_DefineMeshExt1)
