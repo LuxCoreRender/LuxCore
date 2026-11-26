@@ -148,7 +148,8 @@ public:
 		ExtMeshProp<Spectrum>::Layer meshCols = nullptr,
 		ExtMeshProp<float>::Layer meshAlphas = nullptr,
 		const float bRadius = 0.f,
-		const std::string &shapeName = ""
+		const std::string &shapeName = "",
+		bool compactVertices = true
 	);
 	ExtTriangleMesh(
 		const Shape &shape,
@@ -157,7 +158,8 @@ public:
 		std::optional<std::span<UV>> meshUVs,
 		std::optional<std::span<Spectrum>> meshCols,
 		std::optional<std::span<float>> meshAlphas,
-		const float bRadius = 0.f
+		const float bRadius = 0.f,
+		bool compactVertices = true
 	);
 	ExtTriangleMesh(
 		const Shape &shape,
@@ -166,7 +168,8 @@ public:
 		std::optional<ExtMeshProp<UV>> meshUVs,
 		std::optional<ExtMeshProp<Spectrum>> meshCols,
 		std::optional<ExtMeshProp<float>> meshAlphas,
-		const float bRadius = 0.f
+		const float bRadius = 0.f,
+		bool compactVertices = true
 	);
 	~ExtTriangleMesh() { };
 	void Delete() override;
@@ -250,15 +253,30 @@ public:
 	const std::vector<float>& GetCreaseWeights() const { return creaseWeights; }
 	bool HasCreases() const { return !creaseWeights.empty(); }
 
-	// Optional local->global vertex map: when a submesh references the
-	// canonical vertex buffer of its Shape instead of owning its points,
-	// its triangles and attribute arrays are indexed locally
+	// Vertex map (local->global): the mesh stores only the vertices its
+	// triangles actually reference (compacted), triangle indices are local
 	// (0..countVertices-1) and vertexMap[local] is the index in the Shape
-	// buffer. Empty for a mesh that owns its points. Runtime-only (not
-	// serialized: submesh maps are rebuilt by the exporter on each define).
+	// buffer. Built at construction from the triangle buffer (always, even
+	// when identity). Used at runtime by the vertex accessors and by
+	// MakeGlobalView to rebuild global-indexed views.
 	void SetVertexMap(std::vector<u_int> &&m) { vertexMap = std::move(m); }
 	const std::vector<u_int>& GetVertexMap() const { return vertexMap; }
 	bool HasVertexMap() const { return !vertexMap.empty(); }
+
+	// Build vertexMap from the triangle buffer, remap the triangle indices
+	// to local ones and compact all the per-vertex data (positions, normals,
+	// UVs, colors, alphas, vertex AOVs) through the map. Triangle topology
+	// and triangle AOVs are not touched.
+	void CompactVertexData();
+
+	// Vertex accessors return the mapped (compacted) data (see the
+	// definitions in exttrianglemesh.cpp: before CompactVertexData() has
+	// run, they fall back to the Shape's buffer with the still-global
+	// triangle indices)
+	Point GetVertex(const Transform &local2World, const u_int vertIndex) const override;
+	std::span<Point> GetVertices() const override;
+	std::span<float> GetVerticesAsFloats() const override;
+	size_t GetTotalVertexCount() const override;
 
 
 	// Computes the vertex normals in place: the normal buffer of the mesh is
@@ -401,7 +419,8 @@ public:
 		NormalBuffer&& meshNormals,
 		std::optional<ExtMeshProp<UV>> meshUVs,
 		std::optional<ExtMeshProp<Spectrum>> meshCols,
-		std::optional<ExtMeshProp<float>> meshAlphas
+		std::optional<ExtMeshProp<float>> meshAlphas,
+		bool compactVertices = true
 	);
 
 	void Preprocess();
@@ -418,6 +437,7 @@ public:
 		ar & hasNormals;
 		auto vertCount = GetTotalVertexCount();
 		auto triCount = tris.Count();
+		ar & vertexMap;
 		if (HasNormals())
 			for (u_int i = 0; i < vertCount; ++i)
 				ar & normals[i];
@@ -437,7 +457,8 @@ public:
 
 		bool hasNormals;
 		ar & hasNormals;
-		auto vertCount = GetVertices().size();
+		ar & vertexMap;
+		auto vertCount = vertexMap.size();
 		auto triCount = tris.Count();
 		if (hasNormals) {
 			normals.Allocate(vertCount);
@@ -459,6 +480,14 @@ public:
 		bevelBoundingCylinders = nullptr;
 		bevelBVHArrayNodes = nullptr;
 
+		// Rebuild the compacted (mapped) vertex buffer from the Shape's
+		// canonical buffer and the vertex map
+		mappedVertices.Allocate(vertexMap.size());
+		const auto shapeVerts = GetShape().GetVertices();
+		for (size_t i = 0; i < vertexMap.size(); ++i)
+			mappedVertices[i] = shapeVerts[vertexMap[i]];
+
+		TriangleMesh::Preprocess();
 		Preprocess();
 	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
@@ -477,7 +506,8 @@ public:
 	std::vector<u_int> creasePairs;    // flat (v0, v1) pairs
 	std::vector<float> creaseWeights;  // one sharpness per pair
 
-	std::vector<u_int> vertexMap;      // optional local->global vertex map
+	std::vector<u_int> vertexMap;      // local->global vertex map (see above)
+	VertexBuffer mappedVertices;       // compacted positions (mappedVertices[local])
 
 	std::unique_ptr<BevelCylinder[]> bevelCylinders;
 	std::unique_ptr<BevelBoundingCylinder[]> bevelBoundingCylinders;

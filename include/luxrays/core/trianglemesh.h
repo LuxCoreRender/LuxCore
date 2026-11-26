@@ -142,7 +142,11 @@ public:
 		const float u1
 	) const override {
 		const Triangle &tri = tris[triIndex];
-		return tri.Sample(GetVertices(), u0, u1);
+		return tri.Sample(
+			GetVertex(local2World, tri.v[0]),
+			GetVertex(local2World, tri.v[1]),
+			GetVertex(local2World, tri.v[2]),
+			u0, u1);
 	}
 
 	// Called by Shape::ApplyTransform() after the Shape has transformed the
@@ -217,6 +221,12 @@ public:
 	Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const override {
 		return trans * mesh->GetVertex(local2World, vertIndex);
 	}
+
+	// The wrapped mesh may compact its vertices (vertex map): forward the
+	// vertex accessors so local triangle indices stay consistent
+	std::span<Point> GetVertices() const override { return mesh->GetVertices(); }
+	std::span<float> GetVerticesAsFloats() const override { return mesh->GetVerticesAsFloats(); }
+	size_t GetTotalVertexCount() const override { return mesh->GetTotalVertexCount(); }
 
 	std::span<const Triangle> GetTriangles() const override { return mesh->GetTriangles(); }
 	size_t GetTotalTriangleCount() const override { return mesh->GetTotalTriangleCount(); }
@@ -320,6 +330,12 @@ public:
 	Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const override {
 		return local2World * mesh->GetVertex(local2World, vertIndex);
 	}
+
+	// The wrapped mesh may compact its vertices (vertex map): forward the
+	// vertex accessors so local triangle indices stay consistent
+	std::span<Point> GetVertices() const override { return mesh->GetVertices(); }
+	std::span<float> GetVerticesAsFloats() const override { return mesh->GetVerticesAsFloats(); }
+	size_t GetTotalVertexCount() const override { return mesh->GetTotalVertexCount(); }
 
 	std::span<const Triangle> GetTriangles() const override { return mesh->GetTriangles(); }
 	size_t GetTotalTriangleCount() const override { return mesh->GetTotalTriangleCount(); }

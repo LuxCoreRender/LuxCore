@@ -92,7 +92,9 @@ ExtTriangleMeshUPtr MakeGlobalView(
 		shape,  // the view shares the Shape's canonical vertex buffer
 		std::move(tris),
 		std::move(normals),
-		uvs, cols, alphas
+		uvs, cols, alphas,
+		0.f,    // bRadius
+		false   // compactVertices: the view is already global-indexed
 	);
 	view->SetName(mesh.GetName());
 	view->SetShapeName(mesh.GetShapeName());

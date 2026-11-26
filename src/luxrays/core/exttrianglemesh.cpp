@@ -19,6 +19,8 @@
 #include <iostream>
 #include <fstream>
 #include <cstring>
+#include <cstdlib>
+#include <limits>
 #include <execution>
 #include <oneapi/tbb.h>
 
@@ -134,7 +136,8 @@ ExtTriangleMesh::ExtTriangleMesh(
 	std::shared_ptr<Spectrum[]> mCols,
 	std::shared_ptr<float[]> mAlphas,
 	const float bRadius,
-	const std::string &shapeName
+	const std::string &shapeName,
+	bool compactVertices
 ) :
 	Mesh(shape),
 	TriangleMesh(shape, std::move(meshTris)),
@@ -149,7 +152,7 @@ ExtTriangleMesh::ExtTriangleMesh(
 	auto meshCols = ExtMeshProp(mCols, vertCount);
 	auto meshAlphas = ExtMeshProp(mAlphas, vertCount);
 
-	Init(std::move(meshNormals), meshUVs, meshCols, meshAlphas);
+	Init(std::move(meshNormals), meshUVs, meshCols, meshAlphas, compactVertices);
 }
 
 ExtTriangleMesh::ExtTriangleMesh(
@@ -159,7 +162,8 @@ ExtTriangleMesh::ExtTriangleMesh(
 	std::optional<std::span<UV>> mUVs,
 	std::optional<std::span<Spectrum>> mCols,
 	std::optional<std::span<float>> mAlphas,
-	const float bRadius
+	const float bRadius,
+	bool compactVertices
 ) :
 	Mesh(shape),
 	TriangleMesh(shape, std::move(meshTris)),
@@ -183,7 +187,7 @@ ExtTriangleMesh::ExtTriangleMesh(
 	auto meshCols = applySpan(mCols);
 	auto meshAlphas = applySpan(mAlphas);
 
-	Init(std::move(meshNormals), meshUVs, meshCols, meshAlphas);
+	Init(std::move(meshNormals), meshUVs, meshCols, meshAlphas, compactVertices);
 }
 
 ExtTriangleMesh::ExtTriangleMesh(
@@ -193,7 +197,8 @@ ExtTriangleMesh::ExtTriangleMesh(
 	std::optional<ExtMeshProp<UV>> meshUVs,
 	std::optional<ExtMeshProp<Spectrum>> meshCols,
 	std::optional<ExtMeshProp<float>> meshAlphas,
-	const float bRadius
+	const float bRadius,
+	bool compactVertices
 ) :
 	Mesh(shape),
 	TriangleMesh(shape, std::move(meshTris)),
@@ -202,14 +207,15 @@ ExtTriangleMesh::ExtTriangleMesh(
 	bevelBoundingCylinders(nullptr),
 	bevelBVHArrayNodes(nullptr)
 {
-	Init(std::move(meshNormals), meshUVs, meshCols, meshAlphas);
+	Init(std::move(meshNormals), meshUVs, meshCols, meshAlphas, compactVertices);
 }
 
 void ExtTriangleMesh::Init(
 	NormalBuffer&& meshNormals,
 	std::optional<ExtMeshProp<UV>> meshUVs,
 	std::optional<ExtMeshProp<Spectrum>> meshCols,
-	std::optional<ExtMeshProp<float>> meshAlphas
+	std::optional<ExtMeshProp<float>> meshAlphas,
+	bool compactVertices
 ) {
 	if (meshUVs && (meshUVs->GetMaxLayerNumber() > EXTMESH_MAX_DATA_COUNT)) {
 		throw runtime_error(
@@ -243,7 +249,79 @@ void ExtTriangleMesh::Init(
 	if (meshAlphas)
 		alphas = *meshAlphas;
 
+	if (compactVertices)
+		CompactVertexData();
+
 	Preprocess();
+}
+
+// Compact all the layers of a per-vertex attribute container through the
+// local->global vertex map
+template <typename T>
+static void CompactProp(ExtMeshProp<T> &prop, const std::vector<u_int> &map) {
+	const size_t n = map.size();
+	// Build a fresh prop: its layer size starts unset, so SetLayer accepts n
+	ExtMeshProp<T> compacted;
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+		if (!prop.LayerHasValues(i))
+			continue;
+		auto src = prop.GetLayer(i);
+		auto dst = std::make_shared<T[]>(n);
+		for (size_t l = 0; l < n; ++l)
+			dst[l] = src[map[l]];
+		compacted.SetLayer(i, std::move(dst), n);
+	}
+	prop = std::move(compacted);
+}
+
+void ExtTriangleMesh::CompactVertexData() {
+	// Collect the vertex indices actually referenced by the triangles
+	const auto shapeVerts = GetShape().GetVertices();
+	const size_t total = shapeVerts.Count();
+	std::vector<bool> used(total, false);
+	const auto triSpan = tris.GetObjects();
+	for (const Triangle &tri : triSpan)
+		for (u_int c = 0; c < 3; ++c)
+			used[tri.v[c]] = true;
+
+	// Build the local->global vertex map (always, even when identity)
+	vertexMap.clear();
+	vertexMap.reserve(total);
+	std::vector<u_int> globalToLocal(total, std::numeric_limits<u_int>::max());
+	for (size_t g = 0; g < total; ++g) {
+		if (used[g]) {
+			globalToLocal[g] = (u_int)vertexMap.size();
+			vertexMap.push_back((u_int)g);
+		}
+	}
+
+	// Remap the triangle indices to local ones (topology untouched)
+	for (Triangle &tri : triSpan)
+		for (u_int c = 0; c < 3; ++c)
+			tri.v[c] = globalToLocal[tri.v[c]];
+
+	// Compact the positions
+	const size_t n = vertexMap.size();
+	VertexBuffer mv(n);
+	for (size_t l = 0; l < n; ++l)
+		mv[l] = shapeVerts[vertexMap[l]];
+	mappedVertices = std::move(mv);
+
+	// Compact the per-vertex attribute arrays through the map
+	if (normals) {
+		NormalBuffer nn(n);
+		for (size_t l = 0; l < n; ++l)
+			nn[l] = normals[vertexMap[l]];
+		normals = std::move(nn);
+	}
+	CompactProp(uvs, vertexMap);
+	CompactProp(cols, vertexMap);
+	CompactProp(alphas, vertexMap);
+	CompactProp(vertAOV, vertexMap);
+	// triAOV is per-triangle: not touched
+
+	// The base-class area cache was computed on the full buffer: refresh it
+	TriangleMesh::Preprocess();
 }
 
 void ExtTriangleMesh::Preprocess() {
@@ -336,9 +414,14 @@ void ExtTriangleMesh::ComputeNormals() {
 }
 
 void ExtTriangleMesh::OnShapeTransformed(const Transform &trans) {
-	// The Shape has already transformed the shared vertex buffer: rotate
-	// the vertex normals (copy-on-write when the normal storage is shared
-	// with other meshes), then refresh the derived data
+	// The Shape has already transformed the shared vertex buffer: transform
+	// this mesh's compacted positions, rotate the vertex normals
+	// (copy-on-write when the normal storage is shared with other meshes),
+	// then refresh the derived data
+	if (mappedVertices) {
+		for (size_t i = 0; i < mappedVertices.Count(); ++i)
+			mappedVertices[i] *= trans;
+	}
 	if (normals) {
 		if (normals.IsShared()) {
 			NormalBuffer copy;
@@ -710,6 +793,34 @@ void ExtMotionTriangleMesh::UpdateMeshReferences(const ExtTriangleMesh& oldMesh,
 		mesh = &newMesh;
 		cachedArea = false;
 	}
+}
+
+
+// Vertex accessors: return the mapped (compacted) data; before
+// CompactVertexData() has run, fall back to the Shape's buffer (the triangle
+// indices are still global then)
+Point ExtTriangleMesh::GetVertex(const Transform &local2World, const u_int vertIndex) const {
+	if (mappedVertices)
+		return mappedVertices[vertIndex];
+	return GetShape().GetVertices()[vertIndex];
+}
+
+std::span<Point> ExtTriangleMesh::GetVertices() const {
+	if (mappedVertices)
+		return mappedVertices.GetObjects();
+	return GetShape().GetVertices().GetObjects();
+}
+
+std::span<float> ExtTriangleMesh::GetVerticesAsFloats() const {
+	if (mappedVertices)
+		return mappedVertices.GetSubObjects();
+	return GetShape().GetVertices().GetSubObjects();
+}
+
+size_t ExtTriangleMesh::GetTotalVertexCount() const {
+	if (mappedVertices)
+		return mappedVertices.Count();
+	return GetShape().GetVertices().Count();
 }
 
 //------------------------------------------------------------------------------

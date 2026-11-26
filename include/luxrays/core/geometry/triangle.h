@@ -123,6 +123,19 @@ public:
 	}
 
 	std::tuple<Point, float, float, float> Sample(
+		const Point &p0,
+		const Point &p1,
+		const Point &p2,
+		const float u0,
+		const float u1
+	) const {
+		auto [b0, b1] = LowDiscrepancySampleTriangle(u0);
+		float b2 = 1.f - b0 - b1;
+		Point p = b0 * p0 + b1 * p1 + b2 * p2;
+		return std::make_tuple(p, b0, b1, b2);
+	}
+
+	std::tuple<Point, float, float, float> Sample(
 		const std::span<Point> verts,
 		const float u0,
 		const float u1
