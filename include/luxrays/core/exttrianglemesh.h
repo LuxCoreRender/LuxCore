@@ -269,6 +269,10 @@ public:
 	// and triangle AOVs are not touched.
 	void CompactVertexData();
 
+	// Rebuild mappedVertices from the Shape's canonical buffer and vertexMap
+	// (used by deserialization)
+	void RebuildMappedVertices();
+
 	// Vertex accessors return the mapped (compacted) data (see the
 	// definitions in exttrianglemesh.cpp: before CompactVertexData() has
 	// run, they fall back to the Shape's buffer with the still-global
@@ -481,11 +485,9 @@ public:
 		bevelBVHArrayNodes = nullptr;
 
 		// Rebuild the compacted (mapped) vertex buffer from the Shape's
-		// canonical buffer and the vertex map
-		mappedVertices.Allocate(vertexMap.size());
-		const auto shapeVerts = GetShape().GetVertices();
-		for (size_t i = 0; i < vertexMap.size(); ++i)
-			mappedVertices[i] = shapeVerts[vertexMap[i]];
+		// canonical buffer and the vertex map (defined in the .cpp: Shape
+		// is incomplete here)
+		RebuildMappedVertices();
 
 		TriangleMesh::Preprocess();
 		Preprocess();
