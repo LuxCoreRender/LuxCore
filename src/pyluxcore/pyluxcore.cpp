@@ -2062,7 +2062,8 @@ static void Scene_DefineMeshExt3(
 		crease_weights ? *crease_weights : py::none(),
 		normals_pretransformed, tri_aov_index, tri_aov_value, vertex_indices,
 		shape_name ? shape_name : submesh_name);
-	Py_BEGIN_ALLOW_THREADS
+	{
+	py::gil_scoped_release release;
 	luxrays::VertexBuffer canonical;
 	const luxrays::VertexBuffer *canonicalPtr = nullptr;
 	if (a.hasVertexIndices && !a.pointsIsName) {
@@ -2084,7 +2085,7 @@ static void Scene_DefineMeshExt3(
 	scene->DefineMesh(std::move(meshes[0]), std::move(newShape));
 	if (canonicalPtr && a.shapeName)
 		scene->GetSlgScene().SetShapeVertexBuffer(*a.shapeName, canonical);
-	Py_END_ALLOW_THREADS
+	}
 }
 
 // Batch version of DefineMeshExt: 'payloads' is a list of dicts with the same
@@ -2118,7 +2119,8 @@ static void Scene_DefineShapeExt(const SceneImplPtr &scene, const py::list &payl
 					? std::optional<std::string>(py::cast<std::string>(d["submesh_name"]))
 					: std::nullopt));
 	}
-	Py_BEGIN_ALLOW_THREADS
+	{
+	py::gil_scoped_release release;
 	// Build all meshes first, WITHOUT the mesh-def lock: the build only copies
 	// buffers and constructs mesh objects (the expensive part), and the only
 	// scene access is the shared-points lookup, resolved batch-locally when
@@ -2177,7 +2179,7 @@ static void Scene_DefineShapeExt(const SceneImplPtr &scene, const py::list &payl
 		if (canonicalPtr && !canonicalShapeName.empty())
 			scene->GetSlgScene().SetShapeVertexBuffer(canonicalShapeName, canonical);
 	}
-	Py_END_ALLOW_THREADS
+	}
 }
 
 // Number of imported creases (edge sharpness values) of a mesh
