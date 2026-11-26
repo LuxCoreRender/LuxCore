@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -440,6 +440,9 @@ public:
 
 	// Note: this method is not part of LuxCore API and it is used only internally
 	void DefineMesh(luxrays::ExtTriangleMeshUPtr&& mesh);
+	// Define a mesh together with the Shape it is built on (adopted into the
+	// scene shape definitions)
+	void DefineMesh(luxrays::ExtTriangleMeshUPtr&& mesh, luxrays::ShapeUPtr&& shape);
 
 	static luxrays::VertexBuffer AllocVerticesBuffer(const unsigned int meshVertCount);
 	static luxrays::TriangleBuffer AllocTrianglesBuffer(const unsigned int meshTriCount);

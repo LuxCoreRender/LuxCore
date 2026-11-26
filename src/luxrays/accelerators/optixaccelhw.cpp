@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -186,7 +186,7 @@ public:
 
 					// Set transform matrix
 					Transform local2World;
-					itm.GetLocal2World(0.f, local2World);
+local2World = 					itm.GetLocal2World(0.f);
 
 					optixInstance.transform[0] = local2World.m.m[0][0];
 					optixInstance.transform[1] = local2World.m.m[0][1];

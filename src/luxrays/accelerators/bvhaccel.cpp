@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -216,7 +216,7 @@ bool BVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 				default: {
 					// Generic path
 					Transform local2World;
-					mesh->GetLocal2World(0.f, local2World);
+local2World = 					mesh->GetLocal2World(0.f);
 					p0 = mesh->GetVertex(local2World, node.triangleLeaf.v[0]);
 					p1 = mesh->GetVertex(local2World, node.triangleLeaf.v[1]);
 					p2 = mesh->GetVertex(local2World, node.triangleLeaf.v[2]);

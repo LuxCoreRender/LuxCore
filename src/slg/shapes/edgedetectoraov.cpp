@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -111,7 +111,8 @@ EdgeDetectorAOVShape::EdgeDetectorAOVShape(ExtTriangleMeshRef srcMesh,
 
 	// Create the processed mesh
 
-	mesh = srcMesh.Copy();
+	shape = srcMesh.Copy();
+ mesh = std::move(shape->ReleaseOwnedMeshes().front());
 
 	ExtMeshProp<float>::Layer aovEdge[3] {
 		std::make_shared<float[]>(triCount),

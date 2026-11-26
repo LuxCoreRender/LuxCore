@@ -1,7 +1,7 @@
 #line 2 "camera_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2016 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *

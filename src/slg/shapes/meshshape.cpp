@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/shape.h"
 #include "slg/shapes/meshshape.h"
 #include "slg/scene/scene.h"
 
@@ -24,12 +25,16 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-MeshShape::MeshShape(ExtTriangleMeshUPtr&& m) {
-	mesh = std::move(m);
+MeshShape::MeshShape(ShapeUPtr&& s) {
+	shape = std::move(s);
+	auto meshes = shape->ReleaseOwnedMeshes();
+	mesh = std::move(meshes[0]);
 }
 
 MeshShape::MeshShape(const string &fileName) {
-	mesh = ExtTriangleMesh::Load(fileName);
+	shape = ExtTriangleMesh::Load(fileName);
+	auto meshes = shape->ReleaseOwnedMeshes();
+	mesh = std::move(meshes[0]);
 }
 
 MeshShape::~MeshShape() {
@@ -40,7 +45,9 @@ void MeshShape::SetLocal2World(const luxrays::Transform &trans) {
 }
 
 void MeshShape::ApplyTransform(const Transform &trans) {
-	mesh->ApplyTransform(trans);
+	// The mesh is a submesh of its shape: transform the shape (vertices +
+	// submesh normals)
+	shape->ApplyTransform(trans);
 }
 
 ExtTriangleMeshUPtr MeshShape::RefineImpl(SceneConstRef scene) {

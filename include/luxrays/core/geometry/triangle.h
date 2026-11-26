@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -122,20 +122,37 @@ public:
 		return Normal(Normalize(Cross(p1 - p0, p2 - p0)));
 	}
 
-	void Sample(const std::span<Point> verts, const float u0,
-		const float u1, Point *p, float *b0, float *b1, float *b2) const {
+	std::tuple<Point, float, float, float> Sample(
+		const Point &p0,
+		const Point &p1,
+		const Point &p2,
+		const float u0,
+		const float u1
+	) const {
+		auto [b0, b1] = LowDiscrepancySampleTriangle(u0);
+		float b2 = 1.f - b0 - b1;
+		Point p = b0 * p0 + b1 * p1 + b2 * p2;
+		return std::make_tuple(p, b0, b1, b2);
+	}
+
+	std::tuple<Point, float, float, float> Sample(
+		const std::span<Point> verts,
+		const float u0,
+		const float u1
+	) const {
 		// Old triangle uniform sampling
 		// UniformSampleTriangle(u0, u1, b0, b1);
 
 		// This new implementation samples from a one dimensional sample
-		LowDiscrepancySampleTriangle(u0, b0, b1);
+		auto [b0, b1] = LowDiscrepancySampleTriangle(u0);
 
 		// Get triangle vertices in _p1_, _p2_, and _p3_
 		const Point &p0 = verts[v[0]];
 		const Point &p1 = verts[v[1]];
 		const Point &p2 = verts[v[2]];
-		*b2 = 1.f - (*b0) - (*b1);
-		*p = (*b0) * p0 + (*b1) * p1 + (*b2) * p2;
+		float b2 = 1.f - b0 - b1;
+		Point p = b0 * p0 + b1 * p1 + b2 * p2;
+		return std::make_tuple(p, b0, b1, b2);
 	}
 
 	bool GetBaryCoords(const Points verts, const Point &hitPoint, float *b1, float *b2) const {

@@ -103,3 +103,8 @@ CMakeUserPresets.json
 .vscode/
 tags
 scenes/displacement/lucy/lucy.ply
+
+# Local tooling artifacts
+.aider.*
+opencode.db
+scenes/displacement/lucy/lucy.tar.gz

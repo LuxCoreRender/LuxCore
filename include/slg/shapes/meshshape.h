@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -27,7 +27,8 @@ namespace slg {
 
 class MeshShape : public ShapeModifier {
 public:
-	MeshShape(luxrays::ExtTriangleMeshUPtr&& mesh);
+	// Takes ownership of the Shape owning the mesh
+	MeshShape(luxrays::ShapeUPtr&& shape);
 	MeshShape(const std::string &fileName);
 	virtual ~MeshShape();
 

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -25,7 +25,8 @@ using namespace luxrays;
 using namespace slg;
 
 BevelShape::BevelShape(ExtTriangleMeshRef m, const float bevelRadius) {
-	mesh = m.Copy(bevelRadius);
+	shape = m.Copy(bevelRadius);
+ mesh = std::move(shape->ReleaseOwnedMeshes().front());
 }
 
 BevelShape::~BevelShape() {

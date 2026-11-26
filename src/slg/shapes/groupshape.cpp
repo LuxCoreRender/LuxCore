@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -19,6 +19,7 @@
 #include <span>
 #include <optional>
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/shape.h"
 #include "slg/shapes/groupshape.h"
 #include "slg/scene/scene.h"
 
@@ -36,7 +37,8 @@ GroupShape::~GroupShape() {
 }
 
 ExtTriangleMeshUPtr GroupShape::RefineImpl(SceneConstRef scene) {
-	mesh = ExtTriangleMesh::Merge(meshes, trans);
+	shape = ExtTriangleMesh::Merge(meshes, trans);
+ mesh = std::move(shape->ReleaseOwnedMeshes().front());
 	return std::move(mesh);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

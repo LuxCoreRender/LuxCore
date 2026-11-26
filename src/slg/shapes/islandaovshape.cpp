@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -105,7 +105,8 @@ IslandAOVShape::IslandAOVShape(ExtTriangleMeshRef srcMesh, const u_int dataIndex
 
 	SDL_LOG("IslandAOV shape island count: " << islandCount);
 
-	mesh = srcMesh.Copy();
+	shape = srcMesh.Copy();
+ mesh = std::move(shape->ReleaseOwnedMeshes().front());
 	mesh->DeleteTriAOV(dataIndex);
 	mesh->SetTriAOV(dataIndex, triAOV, triCount);
 

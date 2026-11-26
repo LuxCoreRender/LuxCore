@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -40,7 +40,7 @@ public:
 
 	virtual ShapeType GetType() const override { return SUBDIV_OLD; }
 
-	static luxrays::ExtTriangleMeshUPtr ApplySubdiv(
+	static luxrays::ShapeUPtr ApplySubdiv(
 		luxrays::ExtTriangleMeshRef srcMesh,
 		const u_int maxLevel
 	);

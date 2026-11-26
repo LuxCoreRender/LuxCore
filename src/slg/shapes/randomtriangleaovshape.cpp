@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -36,7 +36,8 @@ RandomTriangleAOVShape::RandomTriangleAOVShape(luxrays::ExtTriangleMeshRef srcMe
 
 	if (!srcMesh.HasTriAOV(srcDataIndex)) {
 		SDL_LOG("RandomTriangleAOV shape has no triangle AOV: " << srcDataIndex);
-		mesh = srcMesh.Copy();
+		shape = srcMesh.Copy();
+ mesh = std::move(shape->ReleaseOwnedMeshes().front());
 		return;
 	}
 	
@@ -53,7 +54,8 @@ RandomTriangleAOVShape::RandomTriangleAOVShape(luxrays::ExtTriangleMeshRef srcMe
 		dstTriAOV[i] = rnd.floatValue();
 	}
 	
-	mesh = srcMesh.Copy();
+	shape = srcMesh.Copy();
+ mesh = std::move(shape->ReleaseOwnedMeshes().front());
 	mesh->DeleteTriAOV(dstDataIndex);
 	mesh->SetTriAOV(dstDataIndex, dstTriAOV, triCount);
 

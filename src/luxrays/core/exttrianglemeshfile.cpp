@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -28,6 +28,7 @@
 #include "oneapi/tbb.h"
 
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/shape.h"
 #include "luxrays/core/trianglemesh.h"
 #include "luxrays/utils/ply/rply.h"
 #include "luxrays/utils/serializationutils.h"
@@ -443,7 +444,7 @@ static string PlyBaseName(const string &name) {
 // Read the plain binary PLY meshes. Returns null when the file is
 // anything the fast path does not support (the caller falls back to
 // the rply reader)
-static ExtTriangleMeshUPtr ReadPlyBinary(const string &fileName) {
+static ShapeUPtr ReadPlyBinary(const string &fileName) {
 	// Read the whole file at once: the header is parsed from the
 	// buffer and the data below is read directly from the bytes
 	FILE *file = fopen(fileName.c_str(), "rb");
@@ -675,19 +676,21 @@ static ExtTriangleMeshUPtr ReadPlyBinary(const string &fileName) {
 	ExtMeshProp<Spectrum> cols;
 	ExtMeshProp<float> alphas;
 	ExtMeshProp<float> triAOVs;
-	auto mesh = std::make_unique<ExtTriangleMesh>(std::move(p), std::move(tris),
+	auto shape = std::make_unique<Shape>(fileName, std::move(p));
+	auto mesh = std::make_unique<ExtTriangleMesh>(*shape, std::move(tris),
 			std::move(n), uvs, cols, alphas);
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i)
 		mesh->SetTriAOV(i, triAOVs[i], faceElement.count);
 
-	return mesh;
+	shape->AddSubmesh(std::move(mesh));
+	return shape;
 }
 
-ExtTriangleMeshUPtr ExtTriangleMesh::LoadPly(const string &fileName) {
+ShapeUPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 	// The fast path of the plain binary PLY meshes (see ReadPlyBinary):
 	// anything it does not support returns null and the rply reader
 	// below handles the file, unchanged
-	if (ExtTriangleMeshUPtr fastMesh = ReadPlyBinary(fileName))
+	if (ShapeUPtr fastMesh = ReadPlyBinary(fileName))
 		return fastMesh;
 
 	p_ply plyfile = ply_open(fileName.c_str(), nullptr);
@@ -848,7 +851,8 @@ ExtTriangleMeshUPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 	auto tris = TriangleBuffer(vi);
 	//copy(vi.begin(), vi.end(), tris);
 
-	auto mesh = std::make_unique<ExtTriangleMesh>(std::move(p), std::move(tris), std::move(n), uvs, cols, alphas);
+	auto shape = std::make_unique<Shape>(fileName, std::move(p));
+	auto mesh = std::make_unique<ExtTriangleMesh>(*shape, std::move(tris), std::move(n), uvs, cols, alphas);
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		//mesh->SetVertexAOV(i, vertexAOVs[i], plyNbVerts);  TODO
 		mesh->SetTriAOV(i, TriAOVs[i], vi.size());
@@ -856,14 +860,15 @@ ExtTriangleMeshUPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 	if (!creaseWeights.empty())
 		mesh->SetCreases(std::move(creasePairs), std::move(creaseWeights));
 
-	return mesh;
+	shape->AddSubmesh(std::move(mesh));
+	return shape;
 }
 
 //------------------------------------------------------------------------------
 // ExtTriangleMesh Load
 //------------------------------------------------------------------------------
 
-ExtTriangleMeshUPtr ExtTriangleMesh::Load(const string &fileName) {
+ShapeUPtr ExtTriangleMesh::Load(const string &fileName) {
 	const std::filesystem::path ext = std::filesystem::path(fileName).extension();
 	if (ext == ".ply")
 		return LoadPly(fileName);
@@ -898,7 +903,7 @@ void ExtTriangleMesh::SavePly(const string &fileName) const {
 		throw runtime_error("Unable to open: " + fileName);
 
 	plyFile.imbue(cLocale);
-	auto vertCount = vertices.Count();
+	auto vertCount = GetTotalVertexCount();
 	auto triCount = tris.Count();
 
 
@@ -954,8 +959,9 @@ void ExtTriangleMesh::SavePly(const string &fileName) const {
 		throw runtime_error("Unable to write PLY header to: " + fileName);
 
 	// Write all vertex data
+	const auto verts = GetVertices();
 	for (size_t i = 0; i < vertCount; ++i) {
-		plyFile.write((char *)&vertices[i], sizeof(Point));
+		plyFile.write((char *)&verts[i], sizeof(Point));
 		if (HasNormals())
 			plyFile.write((char *)&normals[i], sizeof(Normal));
 

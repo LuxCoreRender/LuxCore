@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -30,13 +30,17 @@ using namespace slg;
 ShapeModifier::ShapeModifier() : refined(false) { }
 ShapeModifier::~ShapeModifier() { }
 
-ExtTriangleMeshUPtr ShapeModifier::Refine(SceneConstRef scene) {
+ShapeUPtr ShapeModifier::Refine(SceneConstRef scene) {
 	if (refined)
 		throw runtime_error("Called ShapeModifier::Refine() on an already refined shape");
 
-	auto mesh = RefineImpl(scene);
+	mesh = RefineImpl(scene);
 	refined = true;
 
-	return mesh;
+	// The produced mesh is built on 'shape': register it as a submesh (the
+	// Shape owns the mesh from now on)
+	shape->AddSubmesh(std::move(mesh));
+
+	return std::move(shape);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

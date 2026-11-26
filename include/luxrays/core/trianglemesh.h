@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -24,6 +24,7 @@
 #include <deque>
 #include <span>
 #include <string>
+#include <tuple>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/usings.h"
@@ -40,6 +41,9 @@ namespace ocl {
 #include "luxrays/core/trianglemesh_types.cl"
 }
 
+// Forward declaration: Mesh holds a const reference to its Shape
+class Shape;
+
 typedef u_int TriangleMeshID;
 typedef u_int TriangleID;
 
@@ -49,10 +53,14 @@ typedef enum {
 } MeshType;
 
 
+// Base class for meshes, mostly virtual.
+// A Mesh does NOT own the vertex data: the vertices are owned by the
+// mesh's Shape, of which Mesh only holds a const reference (the Shape
+// outlives the mesh, e.g. it is owned by the scene shape definitions).
 class Mesh {
 public:
-	Mesh() { }
-	virtual ~Mesh() { }
+	Mesh(const Shape &shape);
+	virtual ~Mesh() = default;
 
 	// Delete copy operations (if you don't want copying)
 	Mesh(const Mesh&) = delete;
@@ -64,87 +72,99 @@ public:
 
 	virtual MeshType GetType() const = 0;
 
-	virtual BBox GetBBox() const = 0;
-	virtual void GetLocal2World(const float time, luxrays::Transform &local2World) const = 0;
-	virtual Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const = 0;
+	// The Shape owning the (shared) vertex buffer of this mesh
+	const Shape &GetShape() const { return shape; }
 
-	virtual std::span<Point> GetVertices() const = 0;
+	// Vertex accessors (the vertices are stored in the Shape)
+	virtual Point GetVertex(const Transform &local2World, const u_int vertIndex) const;
+	virtual std::span<Point> GetVertices() const;
+	virtual std::span<float> GetVerticesAsFloats() const;
+	virtual size_t GetTotalVertexCount() const;
+	virtual const VertexBuffer &GetVertexBuffer() const;
+
+	virtual BBox GetBBox() const = 0;
 	virtual std::span<const Triangle> GetTriangles() const = 0;
-	virtual size_t GetTotalVertexCount() const = 0;
 	virtual size_t GetTotalTriangleCount() const = 0;
+
+	virtual luxrays::Transform GetLocal2World(const float time) const = 0;
 
 	// This can be a very expansive function to run
 	virtual float GetMeshArea(const luxrays::Transform &local2World) const = 0;
 	virtual float GetTriangleArea(const luxrays::Transform &local2World, const unsigned int triIndex) const = 0;
-	virtual void Sample(const luxrays::Transform &local2World, const u_int triIndex, const float u0, const float u1,
-		Point *p, float *b0, float *b1, float *b2) const = 0;
+	virtual std::tuple<Point, float, float, float> Sample(const luxrays::Transform &local2World,
+		const u_int triIndex, const float u0, const float u1) const = 0;
 
-	virtual void ApplyTransform(const Transform &trans) = 0;
+	// Only instance/motion meshes transform themselves (they own no
+	// vertices); plain triangle meshes are transformed through their
+	// Shape (see Shape::ApplyTransform)
+	virtual void ApplyTransform(const Transform &trans) { }
 
 	friend class boost::serialization::access;
 
 private:
+	const Shape &shape;
+
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 	}
 };
 
+
 class TriangleMesh : virtual public Mesh {
 public:
-	TriangleMesh(VertexBuffer&& meshVertices, TriangleBuffer&& meshTris);
-	// Sharing constructor: the vertex buffer is copied, i.e. its storage is
-	// shared with the source buffer (the point data is not duplicated), e.g.
-	// between the submeshes of a same source mesh
-	TriangleMesh(const VertexBuffer &sharedVertices, TriangleBuffer&& meshTris);
-	virtual ~TriangleMesh() { };
+	// Build a TriangleMesh on a luxrays::Shape: the Shape supplies its
+	// canonical vertex buffer (by const ref, so the Shape is not copied),
+	// and the caller supplies the triangles separately. The vertex storage
+	// is the Shape's canonical buffer.
+	TriangleMesh(const Shape &shape, TriangleBuffer&& meshTris);
+	~TriangleMesh() = default;
 
-	virtual MeshType GetType() const { return TYPE_TRIANGLE; }
+	MeshType GetType() const override { return TYPE_TRIANGLE; }
 
-	virtual BBox GetBBox() const;
-	virtual void GetLocal2World(const float time, luxrays::Transform &local2World) const {
-		local2World = appliedTrans;
+	BBox GetBBox() const override;
+
+	Transform GetLocal2World(const float time) const override { return appliedTrans; }
+
+	std::span<const Triangle> GetTriangles() const override;
+	std::span<const Triangle::subtype_t> GetTrianglesAsInts() const;
+	size_t GetTotalTriangleCount() const override;
+	float GetMeshArea(const luxrays::Transform &local2World) const override;
+
+	float GetTriangleArea(
+		const luxrays::Transform &local2World,
+		const unsigned int triIndex) const override {
+		return tris[triIndex].Area(GetVertices());
 	}
-	virtual Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const { return vertices[vertIndex]; }
 
-	virtual std::span<Point> GetVertices() const { return vertices.GetObjects(); }
-	virtual std::span<float> GetVerticesAsFloats() const { return vertices.GetSubObjects(); }
-	// The vertex buffer itself, e.g. to share it with another mesh through the
-	// sharing ctor (a Buffer copy shares the storage)
-	const VertexBuffer &GetVertexBuffer() const { return vertices; }
-	virtual std::span<const Triangle> GetTriangles() const { return tris.GetObjects(); }
-	virtual std::span<const Triangle::subtype_t> GetTrianglesAsInts() const { return tris.GetSubObjects(); }
-	virtual size_t GetTotalVertexCount() const { return vertices.Count(); }
-	virtual size_t GetTotalTriangleCount() const { return tris.Count(); }
-
-	virtual float GetMeshArea(const luxrays::Transform &local2World) const {
-		return area;
-	}
-	
-	virtual float GetTriangleArea(const luxrays::Transform &local2World, const unsigned int triIndex) const {
-		return tris[triIndex].Area(vertices);
-	}
-	virtual void Sample(const luxrays::Transform &local2World, const u_int triIndex,
-			const float u0, const float u1,
-			Point *p, float *b0, float *b1, float *b2) const  {
+	std::tuple<Point, float, float, float> Sample(
+		const luxrays::Transform &local2World,
+		const u_int triIndex,
+		const float u0,
+		const float u1
+	) const override {
 		const Triangle &tri = tris[triIndex];
-		tri.Sample(vertices, u0, u1, p, b0, b1, b2);
+		return tri.Sample(
+			GetVertex(local2World, tri.v[0]),
+			GetVertex(local2World, tri.v[1]),
+			GetVertex(local2World, tri.v[2]),
+			u0, u1);
 	}
 
-	virtual void ApplyTransform(const Transform &trans);
+	// Called by Shape::ApplyTransform() after the Shape has transformed the
+	// shared vertex buffer: refresh this mesh's derived data (triangle
+	// normals, area, bbox cache, applied transform). ExtTriangleMesh
+	// overrides it to also transform the vertex normals.
+	virtual void OnShapeTransformed(const Transform &trans);
 
 	u_int GetUniqueVerticesMapping(std::vector<u_int> &uniqueVertices,
 			bool (*CompareVertices)(const TriangleMesh &mesh,
 				const u_int vertIndex1, const u_int vertIndex2)) const;
 
-	static TriangleMeshUPtr Merge(
-		const std::deque<const Mesh *> &meshes,
-		std::unique_ptr<TriangleMeshID[]> *preprocessedMeshIDs = nullptr,
-		std::unique_ptr<TriangleID[]> *preprocessedMeshTriangleIDs = nullptr
-	);
+	// Used by serialization (see boost::serialization load_construct_data)
+	explicit TriangleMesh(const Shape &shape) : Mesh(shape) { }
 
 protected:
 	void Preprocess();
 
-	VertexBuffer vertices;
 	TriangleBuffer tris;
 	float area;
 
@@ -158,21 +178,12 @@ protected:
 
 	friend class boost::serialization::access;
 
-protected:
-	// Used by serialization
-	TriangleMesh() {
-	}
-
 private:
+
 	template<class Archive> void save(Archive &ar, const unsigned int version) const {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
 
-		auto vertCount = vertices.Count();
-		auto triCount = vertices.Count();
-
-		ar & vertCount;
-		for (u_int i = 0; i < vertCount; ++i)
-			ar & vertices[i];
+		auto triCount = tris.Count();
 
 		ar & triCount;
 		for (u_int i = 0; i < triCount; ++i)
@@ -184,13 +195,7 @@ private:
 	template<class Archive>	void load(Archive &ar, const unsigned int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
 
-		auto vertCount = vertices.Count();
 		auto triCount = tris.Count();
-
-		ar & vertCount;
-		vertices.Allocate(vertCount);
-		for (u_int i = 0; i < vertCount; ++i)
-			ar & vertices[i];
 
 		ar & triCount;
 		tris.Allocate(triCount);
@@ -211,18 +216,20 @@ public:
 
 	virtual MeshType GetType() const { return TYPE_TRIANGLE_INSTANCE; }
 
-	virtual BBox GetBBox() const;
-	virtual void GetLocal2World(const float time, luxrays::Transform &local2World) const {
-		local2World = trans;
-	}
-	virtual Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const {
+	BBox GetBBox() const;
+	Transform GetLocal2World(const float time) const override { return trans; }
+	Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const override {
 		return trans * mesh->GetVertex(local2World, vertIndex);
 	}
 
-	virtual std::span<Point> GetVertices() const { return mesh->GetVertices(); }
-	virtual std::span<const Triangle> GetTriangles() const { return mesh->GetTriangles(); }
-	virtual size_t GetTotalVertexCount() const { return mesh->GetTotalVertexCount(); }
-	virtual size_t GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
+	// The wrapped mesh may compact its vertices (vertex map): forward the
+	// vertex accessors so local triangle indices stay consistent
+	std::span<Point> GetVertices() const override { return mesh->GetVertices(); }
+	std::span<float> GetVerticesAsFloats() const override { return mesh->GetVerticesAsFloats(); }
+	size_t GetTotalVertexCount() const override { return mesh->GetTotalVertexCount(); }
+
+	std::span<const Triangle> GetTriangles() const override { return mesh->GetTriangles(); }
+	size_t GetTotalTriangleCount() const override { return mesh->GetTotalTriangleCount(); }
 
 	virtual float GetMeshArea(const luxrays::Transform &local2World) const {
 		if (cachedArea < 0.f) {
@@ -245,14 +252,16 @@ public:
 				GetVertex(local2World, tri.v[1]),
 				GetVertex(local2World, tri.v[2]));
 	}
-	virtual void Sample(const luxrays::Transform &local2World, const u_int triIndex,
-			const float u0, const float u1,
-			Point *p, float *b0, float *b1, float *b2) const  {
-		mesh->Sample(local2World, triIndex, u0, u1, p , b0, b1, b2);
-		*p *= trans;
+	virtual std::tuple<Point, float, float, float>
+	Sample(const luxrays::Transform &local2World, const u_int triIndex,
+		const float u0, const float u1) const override
+	{
+		auto [p, b0, b1, b2] = mesh->Sample(local2World, triIndex, u0, u1);
+		p *= trans;
+		return std::make_tuple(p, b0, b1, b2);
 	}
 
-	virtual void ApplyTransform(const Transform &t) {
+	void ApplyTransform(const Transform &t) override {
 		trans = trans * t;
 		transSwapsHandedness = t.SwapsHandedness();
 		cachedBBoxValid = false;
@@ -272,14 +281,13 @@ public:
 	}
 
 	TriangleMeshConstRef GetTriangleMesh() const { return *mesh; };
-	
+
 	friend class boost::serialization::access;
 
-protected:
-	// Used by serialization
-	InstanceTriangleMesh() {
-	}
+	// Used by serialization (see boost::serialization load_construct_data)
+	explicit InstanceTriangleMesh(const Shape &shape) : Mesh(shape) { }
 
+protected:
 	Transform trans;
 	bool transSwapsHandedness;
 	TriangleMeshPtr mesh;
@@ -315,19 +323,22 @@ public:
 
 	virtual MeshType GetType() const { return TYPE_TRIANGLE_MOTION; }
 
-	virtual BBox GetBBox() const;
-	virtual void GetLocal2World(const float time, luxrays::Transform &local2World) const {
-		const Matrix4x4 m = motionSystem.SampleInverse(time);
-		local2World = Transform(m);
+	BBox GetBBox() const;
+	Transform GetLocal2World(const float time) const override {
+		return Transform(motionSystem.SampleInverse(time));
 	}
-	virtual Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const {
+	Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const override {
 		return local2World * mesh->GetVertex(local2World, vertIndex);
 	}
 
-	virtual std::span<Point> GetVertices() const { return mesh->GetVertices(); }
-	virtual std::span<const Triangle> GetTriangles() const { return mesh->GetTriangles(); }
-	virtual size_t GetTotalVertexCount() const { return mesh->GetTotalVertexCount(); }
-	virtual size_t GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
+	// The wrapped mesh may compact its vertices (vertex map): forward the
+	// vertex accessors so local triangle indices stay consistent
+	std::span<Point> GetVertices() const override { return mesh->GetVertices(); }
+	std::span<float> GetVerticesAsFloats() const override { return mesh->GetVerticesAsFloats(); }
+	size_t GetTotalVertexCount() const override { return mesh->GetTotalVertexCount(); }
+
+	std::span<const Triangle> GetTriangles() const override { return mesh->GetTriangles(); }
+	size_t GetTotalTriangleCount() const override { return mesh->GetTotalTriangleCount(); }
 
 	virtual float GetMeshArea(const luxrays::Transform &local2World) const {
 		if (cachedArea < 0.f) {
@@ -342,7 +353,8 @@ public:
 		return cachedArea;
 	}
 
-	virtual float GetTriangleArea(const luxrays::Transform &local2World, const u_int triIndex) const {
+	virtual float GetTriangleArea
+	(const luxrays::Transform &local2World, const u_int triIndex) const {
 		const Triangle &tri = mesh->GetTriangles()[triIndex];
 
 		return Triangle::Area(
@@ -350,25 +362,30 @@ public:
 				GetVertex(local2World, tri.v[1]),
 				GetVertex(local2World, tri.v[2]));
 	}
-	virtual void Sample(const luxrays::Transform &local2World,
-			const u_int triIndex, const float u0, const float u1,
-			Point *p, float *b0, float *b1, float *b2) const  {
-		mesh->Sample(local2World, triIndex, u0, u1, p , b0, b1, b2);
-		*p = local2World * (*p);
+
+	virtual std::tuple<Point, float, float, float> Sample(
+		const luxrays::Transform &local2World,
+		const u_int triIndex,
+		const float u0,
+		const float u1
+	) const override
+	{
+		auto [p, b0, b1, b2] = mesh->Sample(local2World, triIndex, u0, u1);
+		p = local2World * p;
+		return std::make_tuple(p, b0, b1, b2);
 	}
 
-	virtual void ApplyTransform(const Transform &t);
+	void ApplyTransform(const Transform &t) override;
 
 	TriangleMeshConstRef GetTriangleMesh() const { return *mesh; };
 	const MotionSystem &GetMotionSystem() const { return motionSystem; }
 
 	friend class boost::serialization::access;
 
-protected:
-	// Used by serialization
-	MotionTriangleMesh() {
-	}
+	// Used by serialization (see boost::serialization load_construct_data)
+	explicit MotionTriangleMesh(const Shape &shape) : Mesh(shape) { }
 
+protected:
 	MotionSystem motionSystem;
 	TriangleMeshPtr mesh;
 
@@ -407,6 +424,50 @@ BOOST_CLASS_VERSION(luxrays::MotionTriangleMesh, 1)
 BOOST_CLASS_EXPORT_KEY(luxrays::TriangleMesh)
 BOOST_CLASS_EXPORT_KEY(luxrays::InstanceTriangleMesh)
 BOOST_CLASS_EXPORT_KEY(luxrays::MotionTriangleMesh)
+
+// The Mesh classes hold a const reference to their Shape: per the Boost
+// Serialization docs (serialization of references), the reference is
+// serialized as a pointer through save/load_construct_data overrides, and
+// the referenced Shape is tracked so that loading rebinds the reference to
+// the (single) loaded Shape object.
+namespace boost {
+namespace serialization {
+
+template<class Archive>
+inline void save_construct_data(Archive &ar, const luxrays::TriangleMesh *t, const unsigned int version) {
+	ar << const_cast<luxrays::Shape *>(&t->GetShape());
+}
+template<class Archive>
+inline void load_construct_data(Archive &ar, luxrays::TriangleMesh *t, const unsigned int version) {
+	luxrays::Shape *s = nullptr;
+	ar >> s;
+	::new(t) luxrays::TriangleMesh(*s);
+}
+
+template<class Archive>
+inline void save_construct_data(Archive &ar, const luxrays::InstanceTriangleMesh *t, const unsigned int version) {
+	ar << const_cast<luxrays::Shape *>(&t->GetShape());
+}
+template<class Archive>
+inline void load_construct_data(Archive &ar, luxrays::InstanceTriangleMesh *t, const unsigned int version) {
+	luxrays::Shape *s = nullptr;
+	ar >> s;
+	::new(t) luxrays::InstanceTriangleMesh(*s);
+}
+
+template<class Archive>
+inline void save_construct_data(Archive &ar, const luxrays::MotionTriangleMesh *t, const unsigned int version) {
+	ar << const_cast<luxrays::Shape *>(&t->GetShape());
+}
+template<class Archive>
+inline void load_construct_data(Archive &ar, luxrays::MotionTriangleMesh *t, const unsigned int version) {
+	luxrays::Shape *s = nullptr;
+	ar >> s;
+	::new(t) luxrays::MotionTriangleMesh(*s);
+}
+
+} // namespace serialization
+} // namespace boost
 
 #endif	/* _LUXRAYS_TRIANGLEMESH_H */
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -16,7 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "luxrays/core/exttrianglemesh.h"  // complete ExtTriangleMesh for the make_unique below
+#include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/shape.h"  // complete ExtTriangleMesh for the make_unique below
 #include "luxrays/core/trianglemesh.h"
 #include "slg/cameras/camera.h"
 #include "slg/utils/meshutils.h"
@@ -29,7 +30,7 @@ using namespace slg;
 // ScreenProjection()
 //------------------------------------------------------------------------------
 
-ExtTriangleMeshUPtr ScreenProjection(const Camera &camera, const ExtTriangleMesh &mesh) {
+ShapeUPtr ScreenProjection(const Camera &camera, const ExtTriangleMesh &mesh) {
 	const u_int vertCount = mesh.GetTotalVertexCount();
 	const u_int triCount = mesh.GetTotalTriangleCount();
 
@@ -54,18 +55,24 @@ ExtTriangleMeshUPtr ScreenProjection(const Camera &camera, const ExtTriangleMesh
 
 	TriangleBuffer newTris(triangles);
 
-	return std::make_unique<ExtTriangleMesh>(std::move(newVertices), std::move(newTris), NormalBuffer());
+	auto shape = std::make_unique<Shape>("mesh", std::move(newVertices));
+	auto m = std::make_unique<ExtTriangleMesh>(*shape, std::move(newTris), NormalBuffer());
+	shape->AddSubmesh(std::move(m));
+	return shape;
 }
 
 //------------------------------------------------------------------------------
 // ExtTriangleMeshBuilder
 //------------------------------------------------------------------------------
 
-ExtTriangleMeshUPtr ExtTriangleMeshBuilder::GetExtTriangleMesh() const {
+ShapeUPtr ExtTriangleMeshBuilder::GetExtTriangleMesh() const {
 
 	VertexBuffer newVertices(vertices);
 	TriangleBuffer newTris(triangles);
 
-	return std::make_unique<ExtTriangleMesh>(std::move(newVertices), std::move(newTris), NormalBuffer());
+	auto shape = std::make_unique<Shape>("mesh", std::move(newVertices));
+	auto m = std::make_unique<ExtTriangleMesh>(*shape, std::move(newTris), NormalBuffer());
+	shape->AddSubmesh(std::move(m));
+	return shape;
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

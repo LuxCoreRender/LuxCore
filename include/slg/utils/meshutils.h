@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -41,13 +41,13 @@ public:
 		triangles.push_back(t);
 	}
 
-	luxrays::ExtTriangleMeshUPtr GetExtTriangleMesh() const;
+	luxrays::ShapeUPtr GetExtTriangleMesh() const;
 
 	std::vector<luxrays::Point> vertices;
 	std::vector<luxrays::Triangle> triangles;
 };
 
-extern luxrays::ExtTriangleMeshUPtr ScreenProjection(const Camera &camera,
+extern luxrays::ShapeUPtr ScreenProjection(const Camera &camera,
 		const luxrays::ExtTriangleMesh &mesh);
 
 }

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -35,7 +35,7 @@ void BSDF::Init(
 
 	// Get the mesh
 	auto& mesh = sceneObject->GetExtMesh();
-	mesh.GetLocal2World(ray.time, hitPoint.localToWorld);
+hitPoint.localToWorld = 	mesh.GetLocal2World(ray.time);
 
 	hitPoint.Init(fixedFromLight, throughShadowTransparency,
 			scene, rayHit.meshIndex, rayHit.triangleIndex,
@@ -88,7 +88,7 @@ void BSDF::Init(
 
 	// Get the mesh
 	auto& mesh = sceneObject->GetExtMesh();
-	mesh.GetLocal2World(time, hitPoint.localToWorld);
+hitPoint.localToWorld = 	mesh.GetLocal2World(time);
 
 	const Vector fixedDir = Vector(mesh.GetGeometryNormal(hitPoint.localToWorld, triangleIndex));
 	hitPoint.Init(false, false,

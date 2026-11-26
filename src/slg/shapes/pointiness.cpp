@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -335,7 +335,7 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef srcMesh, const u_int destAOV
 
 	if (destAOVIndex == NULL_INDEX) {
 		// Make a copy of the original mesh and overwrite vertex color information
-		mesh = srcMesh.Copy(
+		shape = srcMesh.Copy(
 			std::nullopt,
 			std::nullopt,
 			std::nullopt,
@@ -343,8 +343,10 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef srcMesh, const u_int destAOV
 			std::nullopt,
 			curvatureSpan
 		);
+ mesh = std::move(shape->ReleaseOwnedMeshes().front());
 	} else {
-		mesh = srcMesh.Copy();
+		shape = srcMesh.Copy();
+ mesh = std::move(shape->ReleaseOwnedMeshes().front());
 
 		assert (destAOVIndex < EXTMESH_MAX_DATA_COUNT);
 		mesh->SetVertexAOV(destAOVIndex, curvatureSpan);

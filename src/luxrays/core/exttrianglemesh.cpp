@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -19,6 +19,8 @@
 #include <iostream>
 #include <fstream>
 #include <cstring>
+#include <cstdlib>
+#include <limits>
 #include <execution>
 #include <oneapi/tbb.h>
 
@@ -28,6 +30,7 @@
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/core/color/color.h"
+#include "luxrays/core/shape.h"
 #include "luxrays/core/trianglemesh.h"
 #include "luxrays/utils/ply/rply.h"
 #include "luxrays/utils/serializationutils.h"
@@ -126,40 +129,45 @@ struct is_virtual_base_of<luxrays::TriangleMesh, luxrays::ExtTriangleMesh>: publ
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtTriangleMesh)
 
 ExtTriangleMesh::ExtTriangleMesh(
-	VertexBuffer&& meshVertices,
+	const Shape &shape,
 	TriangleBuffer&& meshTris,
 	NormalBuffer&& meshNormals,
 	std::shared_ptr<UV[]> mUVs,
 	std::shared_ptr<Spectrum[]> mCols,
 	std::shared_ptr<float[]> mAlphas,
 	const float bRadius,
-	const std::string &shapeName
+	const std::string &shapeName,
+	bool compactVertices
 ) :
-	TriangleMesh(std::move(meshVertices), std::move(meshTris)),
-	ExtMesh(bRadius, shapeName),
+	Mesh(shape),
+	TriangleMesh(shape, std::move(meshTris)),
+	ExtMesh(shape, bRadius, shapeName),
 	bevelCylinders(nullptr),
 	bevelBoundingCylinders(nullptr),
 	bevelBVHArrayNodes(nullptr)
 
 {
-	auto meshUVs = ExtMeshProp(mUVs, vertices.Count());
-	auto meshCols = ExtMeshProp(mCols, vertices.Count());
-	auto meshAlphas = ExtMeshProp(mAlphas, vertices.Count());
+	const auto vertCount = GetTotalVertexCount();
+	auto meshUVs = ExtMeshProp(mUVs, vertCount);
+	auto meshCols = ExtMeshProp(mCols, vertCount);
+	auto meshAlphas = ExtMeshProp(mAlphas, vertCount);
 
-	Init(std::move(meshNormals), meshUVs, meshCols, meshAlphas);
+	Init(std::move(meshNormals), meshUVs, meshCols, meshAlphas, compactVertices);
 }
 
 ExtTriangleMesh::ExtTriangleMesh(
-	VertexBuffer&& meshVertices,
+	const Shape &shape,
 	TriangleBuffer&& meshTris,
 	NormalBuffer&& meshNormals,
 	std::optional<std::span<UV>> mUVs,
 	std::optional<std::span<Spectrum>> mCols,
 	std::optional<std::span<float>> mAlphas,
-	const float bRadius
+	const float bRadius,
+	bool compactVertices
 ) :
-	TriangleMesh(std::move(meshVertices), std::move(meshTris)),
-	ExtMesh(bRadius),
+	Mesh(shape),
+	TriangleMesh(shape, std::move(meshTris)),
+	ExtMesh(shape, bRadius),
 	bevelCylinders(nullptr),
 	bevelBoundingCylinders(nullptr),
 	bevelBVHArrayNodes(nullptr)
@@ -179,66 +187,35 @@ ExtTriangleMesh::ExtTriangleMesh(
 	auto meshCols = applySpan(mCols);
 	auto meshAlphas = applySpan(mAlphas);
 
-	Init(std::move(meshNormals), meshUVs, meshCols, meshAlphas);
-}
-
-// Sharing constructor: VertexBuffer(sharedVertices) copies the buffer, i.e.
-// shares its storage
-ExtTriangleMesh::ExtTriangleMesh(
-	const VertexBuffer &sharedVertices,
-	TriangleBuffer&& meshTris,
-	NormalBuffer&& meshNormals,
-	std::optional<std::span<UV>> meshUVs,
-	std::optional<std::span<Spectrum>> meshCols,
-	std::optional<std::span<float>> meshAlphas,
-	const float bRadius
-) :
-	ExtTriangleMesh(
-		VertexBuffer(sharedVertices), std::move(meshTris), std::move(meshNormals),
-		std::move(meshUVs), std::move(meshCols), std::move(meshAlphas), bRadius
-	) {
+	Init(std::move(meshNormals), meshUVs, meshCols, meshAlphas, compactVertices);
 }
 
 ExtTriangleMesh::ExtTriangleMesh(
-	VertexBuffer&& meshVertices,
+	const Shape &shape,
 	TriangleBuffer&& meshTris,
 	NormalBuffer&& meshNormals,
 	std::optional<ExtMeshProp<UV>> meshUVs,
 	std::optional<ExtMeshProp<Spectrum>> meshCols,
 	std::optional<ExtMeshProp<float>> meshAlphas,
-	const float bRadius
+	const float bRadius,
+	bool compactVertices
 ) :
-	TriangleMesh(std::move(meshVertices), std::move(meshTris)),
-	ExtMesh(bRadius),
+	Mesh(shape),
+	TriangleMesh(shape, std::move(meshTris)),
+	ExtMesh(shape, bRadius),
 	bevelCylinders(nullptr),
 	bevelBoundingCylinders(nullptr),
 	bevelBVHArrayNodes(nullptr)
 {
-	Init(std::move(meshNormals), meshUVs, meshCols, meshAlphas);
-}
-
-// Sharing constructor: VertexBuffer(sharedVertices) copies the buffer, i.e.
-// shares its storage
-ExtTriangleMesh::ExtTriangleMesh(
-	const VertexBuffer &sharedVertices,
-	TriangleBuffer&& meshTris,
-	NormalBuffer&& meshNormals,
-	std::optional<ExtMeshProp<UV>> meshUVs,
-	std::optional<ExtMeshProp<Spectrum>> meshCols,
-	std::optional<ExtMeshProp<float>> meshAlphas,
-	const float bRadius
-) :
-	ExtTriangleMesh(
-		VertexBuffer(sharedVertices), std::move(meshTris), std::move(meshNormals),
-		std::move(meshUVs), std::move(meshCols), std::move(meshAlphas), bRadius
-	) {
+	Init(std::move(meshNormals), meshUVs, meshCols, meshAlphas, compactVertices);
 }
 
 void ExtTriangleMesh::Init(
 	NormalBuffer&& meshNormals,
 	std::optional<ExtMeshProp<UV>> meshUVs,
 	std::optional<ExtMeshProp<Spectrum>> meshCols,
-	std::optional<ExtMeshProp<float>> meshAlphas
+	std::optional<ExtMeshProp<float>> meshAlphas,
+	bool compactVertices
 ) {
 	if (meshUVs && (meshUVs->GetMaxLayerNumber() > EXTMESH_MAX_DATA_COUNT)) {
 		throw runtime_error(
@@ -272,14 +249,87 @@ void ExtTriangleMesh::Init(
 	if (meshAlphas)
 		alphas = *meshAlphas;
 
+	if (compactVertices)
+		CompactVertexData();
+
 	Preprocess();
+}
+
+// Compact all the layers of a per-vertex attribute container through the
+// local->global vertex map
+template <typename T>
+static void CompactProp(ExtMeshProp<T> &prop, const std::vector<u_int> &map) {
+	const size_t n = map.size();
+	// Build a fresh prop: its layer size starts unset, so SetLayer accepts n
+	ExtMeshProp<T> compacted;
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+		if (!prop.LayerHasValues(i))
+			continue;
+		auto src = prop.GetLayer(i);
+		auto dst = std::make_shared<T[]>(n);
+		for (size_t l = 0; l < n; ++l)
+			dst[l] = src[map[l]];
+		compacted.SetLayer(i, std::move(dst), n);
+	}
+	prop = std::move(compacted);
+}
+
+void ExtTriangleMesh::CompactVertexData() {
+	// Collect the vertex indices actually referenced by the triangles
+	const auto shapeVerts = GetShape().GetVertices();
+	const size_t total = shapeVerts.Count();
+	std::vector<bool> used(total, false);
+	const auto triSpan = tris.GetObjects();
+	for (const Triangle &tri : triSpan)
+		for (u_int c = 0; c < 3; ++c)
+			used[tri.v[c]] = true;
+
+	// Build the local->global vertex map (always, even when identity)
+	vertexMap.clear();
+	vertexMap.reserve(total);
+	std::vector<u_int> globalToLocal(total, std::numeric_limits<u_int>::max());
+	for (size_t g = 0; g < total; ++g) {
+		if (used[g]) {
+			globalToLocal[g] = (u_int)vertexMap.size();
+			vertexMap.push_back((u_int)g);
+		}
+	}
+
+	// Remap the triangle indices to local ones (topology untouched)
+	for (Triangle &tri : triSpan)
+		for (u_int c = 0; c < 3; ++c)
+			tri.v[c] = globalToLocal[tri.v[c]];
+
+	// Compact the positions
+	const size_t n = vertexMap.size();
+	VertexBuffer mv(n);
+	for (size_t l = 0; l < n; ++l)
+		mv[l] = shapeVerts[vertexMap[l]];
+	mappedVertices = std::move(mv);
+
+	// Compact the per-vertex attribute arrays through the map
+	if (normals) {
+		NormalBuffer nn(n);
+		for (size_t l = 0; l < n; ++l)
+			nn[l] = normals[vertexMap[l]];
+		normals = std::move(nn);
+	}
+	CompactProp(uvs, vertexMap);
+	CompactProp(cols, vertexMap);
+	CompactProp(alphas, vertexMap);
+	CompactProp(vertAOV, vertexMap);
+	// triAOV is per-triangle: not touched
+
+	// The base-class area cache was computed on the full buffer: refresh it
+	TriangleMesh::Preprocess();
 }
 
 void ExtTriangleMesh::Preprocess() {
 	// Compute all triangle normals
+	const auto verts = GetVertices();
 	#pragma omp parallel for
 	for (long long i = 0; i < tris.Count(); ++i)
-		triNormals[i] = tris[i].GetGeometryNormal(vertices);
+		triNormals[i] = tris[i].GetGeometryNormal(verts);
 
 	PreprocessBevel();
 }
@@ -298,9 +348,10 @@ void ExtTriangleMesh::Delete() {
 
 void ExtTriangleMesh::ComputeNormals() {
 	if (not bool(normals))
-		normals = NormalBuffer(vertices.Count());
+		normals = NormalBuffer(GetTotalVertexCount());
 
-	const u_int vertCount = (u_int)vertices.Count();
+	const u_int vertCount = (u_int)GetTotalVertexCount();
+	const auto verts = GetVertices();
 	const u_int triCount = (u_int)tris.Count();
 
 	// The minimum number of triangles for a chunk to be worth the temporary
@@ -332,8 +383,8 @@ void ExtTriangleMesh::ComputeNormals() {
 		const u_int startTri = chunkIndex * trisPerChunk;
 		const u_int endTri = Min(startTri + trisPerChunk, triCount);
 		for (u_int triIndex = startTri; triIndex < endTri; ++triIndex) {
-			const Vector e1 = vertices[tris[triIndex].v[1]] - vertices[tris[triIndex].v[0]];
-			const Vector e2 = vertices[tris[triIndex].v[2]] - vertices[tris[triIndex].v[0]];
+			const Vector e1 = verts[tris[triIndex].v[1]] - verts[tris[triIndex].v[0]];
+			const Vector e2 = verts[tris[triIndex].v[2]] - verts[tris[triIndex].v[0]];
 
 			// The normal is normalized with a single division and 3
 			// multiplications, instead of the 3 divisions of Normalize: this
@@ -362,24 +413,29 @@ void ExtTriangleMesh::ComputeNormals() {
 	});
 }
 
-void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
-	TriangleMesh::ApplyTransform(trans);
-
+void ExtTriangleMesh::OnShapeTransformed(const Transform &trans) {
+	// The Shape has already transformed the shared vertex buffer: transform
+	// this mesh's compacted positions, rotate the vertex normals
+	// (copy-on-write when the normal storage is shared with other meshes),
+	// then refresh the derived data
+	if (mappedVertices) {
+		for (size_t i = 0; i < mappedVertices.Count(); ++i)
+			mappedVertices[i] *= trans;
+	}
 	if (normals) {
 		if (normals.IsShared()) {
-			// The normal storage is shared with other buffers: copy-on-write
-			// instead of modifying the shared content
 			NormalBuffer copy;
+			copy.Allocate(normals.Count());
 			copy.Set(normals);
 			normals = std::move(copy);
 		}
-		for (u_int i = 0; i < vertices.Count(); ++i) {
+		for (u_int i = 0; i < normals.Count(); ++i) {
 			normals[i] *= trans;
 			normals[i] = Normalize(normals[i]);
 		}
 	}
 
-	Preprocess();
+	TriangleMesh::OnShapeTransformed(trans);
 }
 
 void ExtTriangleMesh::CopyAOV(ExtTriangleMeshRef destMesh) const {
@@ -396,7 +452,7 @@ void ExtTriangleMesh::CopyAOV(ExtTriangleMeshRef destMesh) const {
 	}
 }
 
-ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(
+ShapeUPtr ExtTriangleMesh::CopyExt(
 	std::optional<VertexBuffer> meshVertices,
 	std::optional<TriangleBuffer> meshTris,
 	std::optional<NormalBuffer> meshNormals,
@@ -409,8 +465,8 @@ ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(
 	if (meshVertices.has_value()) {
 		vs = std::move(meshVertices.value());
 	} else {
-		vs.Allocate(vertices.Count());
-		vs.Set(vertices);
+		vs.Allocate(GetTotalVertexCount());
+		vs.Set(GetVertexBuffer());
 	}
 
 	TriangleBuffer ts;
@@ -451,8 +507,10 @@ ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(
 		}
 	}
 
-	auto m =  std::make_unique<ExtTriangleMesh>(
-		std::move(vs), std::move(ts), std::move(ns), us, cs, as, bRadius);
+	// The copy lives on its own Shape owning the vertex buffer
+	auto shape = std::make_unique<Shape>(GetName(), std::move(vs));
+	auto m = std::make_unique<ExtTriangleMesh>(
+		*shape, std::move(ts), std::move(ns), us, cs, as, bRadius);
 
 	m->SetLocal2World(appliedTrans);
 
@@ -463,10 +521,23 @@ ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(
 	m->creasePairs = creasePairs;
 	m->creaseWeights = creaseWeights;
 
-	return m;
+	shape->AddSubmesh(std::move(m));
+	return shape;
 }
 
-ExtTriangleMeshUPtr ExtTriangleMesh::Copy(
+ShapeUPtr ExtTriangleMesh::Copy(const float bRadius) const {
+	return CopyExt(
+		std::nullopt,
+		std::nullopt,
+		std::nullopt,
+		std::nullopt,
+		std::nullopt,
+		std::nullopt,
+		bRadius
+	);
+}
+
+ShapeUPtr ExtTriangleMesh::Copy(
 	std::optional<VertexBuffer> meshVertices,
 	std::optional<TriangleBuffer> meshTris,
 	std::optional<NormalBuffer> meshNormals,
@@ -498,7 +569,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::Copy(
 	);
 }
 
-ExtTriangleMeshUPtr ExtTriangleMesh::Merge(
+ShapeUPtr ExtTriangleMesh::Merge(
 	std::vector<std::reference_wrapper<const ExtTriangleMesh>> meshes,
 	std::optional<std::vector<Transform>> trans
 ) {
@@ -632,8 +703,9 @@ ExtTriangleMeshUPtr ExtTriangleMesh::Merge(
 		vIndex += mesh.GetTotalVertexCount();
 	}
 
+	auto shape = std::make_unique<Shape>(meshes[0].get().GetName(), std::move(meshVertices));
 	auto newMesh = std::make_unique<ExtTriangleMesh>(
-		std::move(meshVertices),
+		*shape,
 		std::move(meshTris),
 		std::move(meshNormals),
 		meshUVs,
@@ -646,13 +718,14 @@ ExtTriangleMeshUPtr ExtTriangleMesh::Merge(
 		newMesh->SetTriAOV(dataIndex, meshTriAOV.GetLayer(dataIndex), meshTriAOV.GetLayerSize());
 	}
 
-	return newMesh;
+	shape->AddSubmesh(std::move(newMesh));
+	return shape;
 }
 
 // For some reason, LoadSerialized() and SaveSerialized() must be in the same
 // file of BOOST_CLASS_EXPORT_IMPLEMENT()
 
-ExtTriangleMeshUPtr ExtTriangleMesh::LoadSerialized(const string &fileName) {
+ShapeUPtr ExtTriangleMesh::LoadSerialized(const string &fileName) {
 	SerializationInputFile sif(fileName);
 
 	ExtTriangleMesh * mesh;
@@ -661,8 +734,11 @@ ExtTriangleMeshUPtr ExtTriangleMesh::LoadSerialized(const string &fileName) {
 	if (!sif.IsGood())
 		throw runtime_error("Error while loading serialized scene: " + fileName);
 
-	ExtTriangleMeshUPtr res(mesh);
-	return res;
+	// The deserialized mesh references the deserialized Shape (serialized as
+	// a pointer through the reference): take ownership of both
+	ShapeUPtr shape(const_cast<Shape *>(&mesh->GetShape()));
+	shape->AddSubmesh(ExtTriangleMeshUPtr(mesh));
+	return shape;
 }
 
 void ExtTriangleMesh::SaveSerialized(const string &fileName) const {
@@ -718,4 +794,148 @@ void ExtMotionTriangleMesh::UpdateMeshReferences(const ExtTriangleMesh& oldMesh,
 		cachedArea = false;
 	}
 }
+
+
+// Vertex accessors: return the mapped (compacted) data; before
+// CompactVertexData() has run, fall back to the Shape's buffer (the triangle
+// indices are still global then)
+Point ExtTriangleMesh::GetVertex(const Transform &local2World, const u_int vertIndex) const {
+	if (mappedVertices)
+		return mappedVertices[vertIndex];
+	return GetShape().GetVertices()[vertIndex];
+}
+
+std::span<Point> ExtTriangleMesh::GetVertices() const {
+	if (mappedVertices)
+		return mappedVertices.GetObjects();
+	return GetShape().GetVertices().GetObjects();
+}
+
+std::span<float> ExtTriangleMesh::GetVerticesAsFloats() const {
+	if (mappedVertices)
+		return mappedVertices.GetSubObjects();
+	return GetShape().GetVertices().GetSubObjects();
+}
+
+size_t ExtTriangleMesh::GetTotalVertexCount() const {
+	if (mappedVertices)
+		return mappedVertices.Count();
+	return GetShape().GetVertices().Count();
+}
+
+//------------------------------------------------------------------------------
+// Uninlined method definitions (moved from exttrianglemesh.h)
+//------------------------------------------------------------------------------
+
+bool ExtMesh::IntersectBevel(const luxrays::Ray &ray, const luxrays::RayHit &rayHit,
+		bool &continueToTrace, float &rayHitT,
+		luxrays::Point &p, luxrays::Normal &n) const {
+	continueToTrace = false;
+	return false;
+}
+
+void ExtTriangleMesh::SetCreases(std::vector<u_int> &&pairs, std::vector<float> &&weights) {
+	assert(pairs.size() == 2 * weights.size());
+	creasePairs = std::move(pairs);
+	creaseWeights = std::move(weights);
+}
+
+float ExtTriangleMesh::GetAlpha(const u_int vertIndex, const u_int layerIndex) const {
+	assert(vertIndex < alphas.GetLayerSize());
+	return alphas[layerIndex][vertIndex];
+}
+
+float ExtTriangleMesh::GetVertexAOV(const u_int vertIndex, const u_int layerIndex) const {
+	if (HasTriAOV(layerIndex))
+		return vertAOV[layerIndex][vertIndex];
+	else
+		return 0.f;
+}
+
+float ExtTriangleMesh::GetTriAOV(const u_int triIndex, const u_int layerIndex) const {
+	if (HasTriAOV(layerIndex))
+		return triAOV[layerIndex][triIndex];
+	else
+		return 0.f;
+}
+
+bool ExtTriangleMesh::GetTriBaryCoords(const luxrays::Transform &local2World, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const {
+	const Triangle &tri = tris[triIndex];
+	return tri.GetBaryCoords(GetVertices(), hitPoint, b1, b2);
+}
+
+void ExtTriangleMesh::SetLocal2World(const luxrays::Transform &t) {
+	appliedTrans = t;
+	appliedTransSwapsHandedness = appliedTrans.SwapsHandedness();
+}
+
+Normal ExtTriangleMesh::InterpolateTriNormal(const luxrays::Transform &local2World, const u_int triIndex,
+		const float b1, const float b2) const {
+	if (not bool(normals))
+		return GetGeometryNormal(local2World, triIndex);
+	const Triangle &tri = tris[triIndex];
+	const float b0 = 1.f - b1 - b2;
+	return (appliedTransSwapsHandedness ? -1.f : 1.f) * Normalize(b0 * normals[tri.v[0]] + b1 * normals[tri.v[1]] + b2 * normals[tri.v[2]]);
+}
+
+UV ExtTriangleMesh::InterpolateTriUV(const u_int triIndex, const float b1, const float b2,
+		const u_int layerIndex) const {
+	if (HasUVs(layerIndex)) {
+		const Triangle &tri = tris[triIndex];
+		const float b0 = 1.f - b1 - b2;
+		return b0 * uvs[layerIndex][tri.v[0]] + b1 * uvs[layerIndex][tri.v[1]] + b2 * uvs[layerIndex][tri.v[2]];
+	} else
+		return UV(0.f, 0.f);
+}
+
+Spectrum ExtTriangleMesh::InterpolateTriColor(const u_int triIndex, const float b1, const float b2,
+		const u_int layerIndex) const {
+	if (HasColors(layerIndex)) {
+		const Triangle &tri = tris[triIndex];
+		const float b0 = 1.f - b1 - b2;
+		return b0 * cols[layerIndex][tri.v[0]] + b1 * cols[layerIndex][tri.v[1]] + b2 * cols[layerIndex][tri.v[2]];
+	} else
+		return Spectrum(1.f);
+}
+
+float ExtTriangleMesh::InterpolateTriAlpha(const u_int triIndex, const float b1, const float b2,
+		const u_int layerIndex) const {
+	if (HasAlphas(layerIndex)) {
+		const Triangle &tri = tris[triIndex];
+		const float b0 = 1.f - b1 - b2;
+		return b0 * alphas[layerIndex][tri.v[0]] + b1 * alphas[layerIndex][tri.v[1]] + b2 * alphas[layerIndex][tri.v[2]];
+	} else
+		return 1.f;
+}
+
+float ExtTriangleMesh::InterpolateTriVertexAOV(const u_int triIndex, const float b1, const float b2,
+		const u_int layerIndex) const {
+	if (HasVertexAOV(layerIndex)) {
+		const Triangle &tri = tris[triIndex];
+		const float b0 = 1.f - b1 - b2;
+		return b0 * vertAOV[layerIndex][tri.v[0]] + b1 * vertAOV[layerIndex][tri.v[1]] + b2 * vertAOV[layerIndex][tri.v[2]];
+	} else
+		return 0.f;
+}
+
+bool ExtInstanceTriangleMesh::GetTriBaryCoords(const luxrays::Transform &local2World, const u_int triIndex,
+		const Point &hitPoint, float *b1, float *b2) const {
+	const Triangle &tri = mesh->GetTriangles()[triIndex];
+
+	return Triangle::GetBaryCoords(
+			GetVertex(local2World, tri.v[0]),
+			GetVertex(local2World, tri.v[1]),
+			GetVertex(local2World, tri.v[2]),
+			hitPoint, b1, b2);
+}
+
+bool ExtMotionTriangleMesh::GetTriBaryCoords(const luxrays::Transform &local2World, const u_int triIndex,
+		const Point &hitPoint, float *b1, float *b2) const {
+	const Triangle &tri = mesh->GetTriangles()[triIndex];
+
+	return Triangle::GetBaryCoords(GetVertex(local2World, tri.v[0]),
+			GetVertex(local2World, tri.v[1]), GetVertex(local2World, tri.v[2]),
+			hitPoint, b1, b2);
+}
+
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

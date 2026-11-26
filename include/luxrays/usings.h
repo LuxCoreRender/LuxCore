@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2025 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -90,6 +90,7 @@ DECLARE_SUBTYPES(Point);
 DECLARE_SUBTYPES(Ray);
 DECLARE_SUBTYPES(RayHit);
 DECLARE_SUBTYPES(RGBColor);
+DECLARE_SUBTYPES(Shape);
 DECLARE_SUBTYPES(Triangle);
 DECLARE_SUBTYPES(TriangleMesh);
 DECLARE_SUBTYPES(UV);

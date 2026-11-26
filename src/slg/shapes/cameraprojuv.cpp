@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -27,7 +27,8 @@ using namespace slg;
 
 CameraProjUVShape::CameraProjUVShape(ExtTriangleMeshConstRef m, const u_int index) :
 		uvIndex(index) {
-	mesh = m.Copy();
+	shape = m.Copy();
+ mesh = std::move(shape->ReleaseOwnedMeshes().front());
 }
 
 CameraProjUVShape::~CameraProjUVShape() {

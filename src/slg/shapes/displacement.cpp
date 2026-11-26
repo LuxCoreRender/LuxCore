@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -22,8 +22,9 @@
 #include <oneapi/tbb.h>
 
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/shape.h"
 #include "slg/shapes/displacement.h"
-#include "slg/scene/shape.h"
+#include "slg/usings.h"
 #include "luxrays/utils/strutils.h"
 #include "luxrays/core/trianglemesh.h"
 #include "slg/scene/scene.h"
@@ -211,7 +212,7 @@ static VertexBuffer ComputeDisplacedVertices(
 		hitPoint.dndv = dndv[i];
 
 		hitPoint.passThroughEvent = 0.f;
-		srcMesh.GetLocal2World(0.f, hitPoint.localToWorld);
+hitPoint.localToWorld = 		srcMesh.GetLocal2World(0.f);
 		hitPoint.interiorVolume = nullptr;
 		hitPoint.exteriorVolume = nullptr;
 		hitPoint.objectID = 0;
@@ -272,7 +273,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 	//
 	// The source normals are copied only if they are not about to be entirely
 	// overwritten by ComputeNormals below
-	mesh = srcMesh.Copy(
+	shape = srcMesh.Copy(
 		std::move(newVertices),
 		std::nullopt,
 		params.normalSmooth ? std::optional<NormalBuffer>(NormalBuffer()) : std::nullopt,
@@ -280,6 +281,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 		std::nullopt,
 		std::nullopt
 	);
+ mesh = std::move(shape->ReleaseOwnedMeshes().front());
 	if (params.normalSmooth)
 		mesh->ComputeNormals();
 
@@ -315,7 +317,7 @@ ShapeUPtr DisplacementShape::ApplyToShape(
 	std::vector<ExtTriangleMesh *> work(submeshes.size());
 	for (size_t i = 0; i < submeshes.size(); ++i) {
 		auto &sm = submeshes[i].get();
-		auto view = sm.HasVertexMap() ? MakeGlobalView(sm, srcShape.GetVertices()) : nullptr;
+		auto view = sm.HasVertexMap() ? MakeGlobalView(sm, srcShape) : nullptr;
 		if (view) {
 			views.push_back(std::move(view));
 			work[i] = views.back().get();
@@ -345,7 +347,7 @@ ShapeUPtr DisplacementShape::ApplyToShape(
 	for (size_t wi = 0; wi < work.size(); ++wi) {
 		ExtTriangleMesh &m = *work[wi];
 		const VertexBuffer &newVertices = displacedPerGroup[m.GetVertexBuffer().Data()];
-		auto mesh = m.Copy(
+		auto subShape = m.Copy(
 			VertexBuffer(newVertices),  // copy: shares the displaced buffer storage
 			std::nullopt,
 			params.normalSmooth ? std::optional<NormalBuffer>(NormalBuffer()) : std::nullopt,
@@ -353,11 +355,14 @@ ShapeUPtr DisplacementShape::ApplyToShape(
 			std::nullopt,
 			std::nullopt
 		);
+		auto &mesh = subShape->GetSubmeshes()[0].get();
 		if (params.normalSmooth)
-			mesh->ComputeNormals();
-		mesh->SetName(single ? resultName : resultName + "i" + ToString(k));
-		mesh->SetShapeName(resultName);
-		result->AddSubmesh(std::move(mesh));
+			mesh.ComputeNormals();
+		mesh.SetName(single ? resultName : resultName + "i" + ToString(k));
+		mesh.SetShapeName(resultName);
+		// Adopt the whole sub-shape: the mesh becomes a submesh of the result
+		// and the sub-shape is kept alive (the mesh references it)
+		result->AddSubmesh(std::move(subShape));
 		++k;
 	}
 

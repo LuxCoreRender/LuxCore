@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -35,7 +35,7 @@ namespace luxrays {
 	float  UniformConePdf(float costhetamax);
 	void UniformSampleDisk(float u1, float u2, float *x, float *y);
 	void UniformSampleTriangle(float ud1, float ud2, float *u, float *v);
-	void LowDiscrepancySampleTriangle(float u1, float *u, float *v);
+	std::tuple<float, float> LowDiscrepancySampleTriangle(float u1);
 	Vector SampleHG(const Vector &w, float g, float u1, float u2);
 	float PhaseHG(const Vector &w, const Vector &wp, float g);
 	float HGPdf(const Vector &w, const Vector &wp, float g);

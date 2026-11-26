@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -99,7 +99,7 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 		auto& mesh = sceneObj.GetExtMesh();
 
 		Transform localToWorld;
-		sceneObj.GetExtMesh().GetLocal2World(0.f, localToWorld);
+localToWorld = 		sceneObj.GetExtMesh().GetLocal2World(0.f);
 
 		std::vector<float> trisArea(mesh.GetTotalTriangleCount());
 		engine->currentSceneObjsToBakeArea[sceneObjIndex] = 0.f;
@@ -155,13 +155,13 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 
 	const float timeSample = state.GetEyeSampler().GetSample(4);
 	Transform localToWorld;
-	mesh.GetLocal2World(timeSample, localToWorld);
+localToWorld = 	mesh.GetLocal2World(timeSample);
 
 	// Origin
 	Point samplePoint;
 	float b0, b1, b2;
-	mesh.Sample(localToWorld, triangleIndex, state.GetEyeSampler().GetSample(2), state.GetEyeSampler().GetSample(3),
-			&samplePoint, &b0, &b1, &b2);
+	std::tie(samplePoint, b0, b1, b2) = mesh.Sample(localToWorld, triangleIndex,
+			state.GetEyeSampler().GetSample(2), state.GetEyeSampler().GetSample(3));
 
 	const u_int sceneObjIndex = state.scene.GetObjects().GetSceneObjectIndex(sceneObj);
 	const PathVolumeInfo volInfo;

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -142,6 +142,11 @@ public:
 	// Use one of the following methods, do not directly call extMeshCache.DefineExtMesh()
 	ReturnType<ExtMesh> DefineMesh(ExtMeshUPtr&& mesh);
 
+	// Define a mesh together with the Shape it is built on (the mesh holds a
+	// const reference to the Shape): the Shape is adopted into the scene
+	// shape definitions, so it outlives the mesh
+	ReturnType<ExtMesh> DefineMesh(ExtMeshUPtr&& mesh, luxrays::ShapeUPtr&& shape);
+
 	ReturnType<ExtTriangleMesh> DefineMesh(ExtTriangleMeshUPtr&& mesh);
 
 	ReturnType<ExtInstanceTriangleMesh> DefineMesh(ExtInstanceTriangleMeshUPtr&& mesh);
@@ -281,7 +286,7 @@ public:
 	// directly with DefineShape(). Shape modifiers take a Shape as input.
 	auto& GetShapes() { return shapeDefs; }
 	const auto& GetShapes() const { return shapeDefs; }
-	std::tuple<Shape&, ShapeUPtr> DefineShape(ShapeUPtr&& shape) {
+	std::tuple<luxrays::Shape&, luxrays::ShapeUPtr> DefineShape(luxrays::ShapeUPtr&& shape) {
 		return shapeDefs.DefineShape(std::move(shape));
 	}
 	// Move a mesh to another Shape handle (created on demand)
@@ -392,8 +397,8 @@ private:
 	VolumeUPtr CreateVolume(const u_int defaultVolID, const std::string &volName, const luxrays::Properties &props);
 	MaterialUPtr CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
 
-	ShapeUPtr CreateShapeModifier(const std::string &shapeName, const luxrays::Properties &props,
-		const std::vector<ShapeUPtr> *blockShapes = nullptr,
+	luxrays::ShapeUPtr CreateShapeModifier(const std::string &shapeName, const luxrays::Properties &props,
+		const std::vector<luxrays::ShapeUPtr> *blockShapes = nullptr,
 		const std::unordered_map<std::string, size_t> *blockIndex = nullptr);
 
 	// Register a triangle mesh into its Shape handle (created on demand from
@@ -405,7 +410,8 @@ private:
 	// Create directly in cache, so result is just a reference
 	ImageMapPtr CreateEmissionMap(const std::string &propName, const luxrays::Properties &props);
 
-	luxrays::ExtTriangleMeshUPtr CreateInlinedMesh(const std::string &shapeName,
+	// Returns the Shape owning the created inlined mesh
+	luxrays::ShapeUPtr CreateInlinedMesh(const std::string &shapeName,
 			const std::string &propName, const luxrays::Properties &props);
 
 	template<class Archive> void save(Archive &ar, const u_int version) const;

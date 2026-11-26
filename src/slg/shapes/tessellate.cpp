@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -26,7 +26,7 @@
 #include "slg/shapes/subdiv_envelope.h"
 #include "slg/shapes/tessellate_core.h"
 #include "slg/scene/scene.h"
-#include "slg/scene/shape.h"
+#include "slg/usings.h"
 
 using namespace luxrays;
 
@@ -43,10 +43,13 @@ TessellateShape::TessellateShape(
 ) {
 	const double startTime = WallClockTime();
 
-	if (rate > 0)
-		mesh = ApplyTessellate(srcMesh, rate, interpolatedNormals);
-	else
-		mesh = srcMesh.Copy();
+	if (rate > 0) {
+		shape = ApplyTessellate(srcMesh, rate, interpolatedNormals);
+		mesh = std::move(shape->ReleaseOwnedMeshes().front());
+	} else {
+		shape = srcMesh.Copy();
+		mesh = std::move(shape->ReleaseOwnedMeshes().front());
+	}
 
 	SDL_LOG("Tessellated shape from " << srcMesh.GetTotalTriangleCount()
 		<< " to " << mesh->GetTotalTriangleCount() << " faces in "
@@ -60,7 +63,7 @@ ExtTriangleMeshUPtr TessellateShape::RefineImpl(SceneConstRef scene) {
 	return std::move(mesh);
 }
 
-ExtTriangleMeshUPtr TessellateShape::ApplyTessellate(
+ShapeUPtr TessellateShape::ApplyTessellate(
 	ExtTriangleMeshRef srcMesh,
 	const u_int rate,
 	const bool interpolatedNormals
@@ -110,7 +113,7 @@ ShapeUPtr TessellateShape::ApplyToShape(
 	std::vector<ExtTriangleMesh *> work(submeshes.size());
 	for (size_t i = 0; i < submeshes.size(); ++i) {
 		auto &sm = submeshes[i].get();
-		auto view = sm.HasVertexMap() ? MakeGlobalView(sm, srcShape.GetVertices()) : nullptr;
+		auto view = sm.HasVertexMap() ? MakeGlobalView(sm, srcShape) : nullptr;
 		if (view) {
 			views.push_back(std::move(view));
 			work[i] = views.back().get();
@@ -123,6 +126,7 @@ ShapeUPtr TessellateShape::ApplyToShape(
 		groups[work[i]->GetVertexBuffer().Data()].push_back(i);
 
 	struct GroupData {
+		ShapeUPtr tessShape;                            // Shape owning the tessellated envelope
 		ExtTriangleMeshUPtr tess;                       // tessellated envelope
 		std::vector<std::pair<size_t, size_t>> ranges;  // source face range per submesh
 	};
@@ -138,12 +142,14 @@ ShapeUPtr TessellateShape::ApplyToShape(
 		if (groupMeshes.size() == 1) {
 			// Single submesh: tessellate it directly (no envelope needed,
 			// all its mesh data is preserved as-is)
-			g.tess = TessellateTopology(*groupMeshes[0], N, interpolatedNormals);
+			g.tessShape = TessellateTopology(*groupMeshes[0], N, interpolatedNormals);
 		} else {
 			// Several submeshes sharing the buffer: tessellate the merged
 			// envelope once, then resplit per submesh below
-			g.tess = TessellateTopology(*BuildEnvelopeFromMeshes(groupMeshes), N, interpolatedNormals);
+			auto envelope = BuildEnvelopeFromMeshes(groupMeshes);
+			g.tessShape = TessellateTopology(*envelope, N, interpolatedNormals);
 		}
+		g.tess = std::move(g.tessShape->ReleaseOwnedMeshes().front());
 		size_t faceOffset = 0;
 		for (const auto *m : groupMeshes) {
 			const size_t count = m->GetTotalTriangleCount();
@@ -175,7 +181,7 @@ ShapeUPtr TessellateShape::ApplyToShape(
 
 			TriangleBuffer slice(srcTris.subspan(f0 * NN, triCount));
 			auto mesh = std::make_unique<ExtTriangleMesh>(
-				g.tess->GetVertexBuffer(),  // sharing ctor: storage shared
+				*result,  // the result submeshes share the result Shape's buffer
 				std::move(slice),
 				NormalBuffer(g.tess->GetNormals()),
 				std::optional<ExtMeshProp<UV>>(g.tess->GetAllUVs()),

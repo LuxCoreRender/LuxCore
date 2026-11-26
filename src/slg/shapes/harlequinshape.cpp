@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -19,6 +19,7 @@
 #include <boost/format.hpp>
 
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/shape.h"
 #include "slg/shapes/harlequinshape.h"
 #include "slg/scene/scene.h"
 #include "slg/utils/harlequincolors.h"
@@ -58,8 +59,9 @@ HarlequinShape::HarlequinShape(luxrays::ExtTriangleMeshRef srcMesh) {
 		newVertCols[newTri.v[2]] = col;
 	}
 
+	shape = std::make_unique<Shape>("harlequin", std::move(newVertices));
 	mesh = std::make_unique<ExtTriangleMesh>(
-		std::move(newVertices),
+		*shape,
 		std::move(newTris),
 		NormalBuffer(),  // Normals (empty)
 		nullptr,  // UVs

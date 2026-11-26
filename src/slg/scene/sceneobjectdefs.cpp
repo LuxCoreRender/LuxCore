@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -73,7 +73,7 @@ void SceneObjectDefinitions::DefineIntersectableLights
 	// cache on first call, which would race if done from the parallel loop
 	{
 		Transform localToWorld;
-		mesh.GetLocal2World(0.f, localToWorld);
+localToWorld = 		mesh.GetLocal2World(0.f);
 		(void)mesh.GetMeshArea(localToWorld);
 	}
 

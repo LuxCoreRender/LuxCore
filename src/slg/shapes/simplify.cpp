@@ -36,6 +36,7 @@
 
 #include "luxrays/usings.h"
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/shape.h"
 #include "slg/shapes/simplify.h"
 #include "slg/utils/group_by_equivalence.h"
 #include "slg/cameras/camera.h"
@@ -515,7 +516,7 @@ public:
 	// and the corner ids are remapped after the gather. The output is
 	// bit identical to a compaction followed by a copy: the gathers
 	// preserve the ascending source order
-	ExtTriangleMeshUPtr ExportExtMesh() {
+	ShapeUPtr ExportExtMesh() {
 		const double exportStartTime = WallClockTime();
 
 		const size_t triangleCount = GetTriangleCount();
@@ -609,14 +610,17 @@ public:
 		SDL_LOG("Simplify: Mesh compacted and exported in "
 			<< (boost::format("%.3f") % (WallClockTime() - exportStartTime)) << "secs");
 
-		return std::make_unique<ExtTriangleMesh>(
-			std::move(newVertices),
+		auto shape = std::make_unique<Shape>("simplify", std::move(newVertices));
+		auto mesh = std::make_unique<ExtTriangleMesh>(
+			*shape,
 			std::move(newTris),
 			std::move(newNorms),
 			newUVs,
 			newCols,
 			newAlphas
 		);
+		shape->AddSubmesh(std::move(mesh));
+		return shape;
 	}
 
 	void Decimate(const float targetTriangleCount, CameraConstRef scnCamera,
@@ -4147,7 +4151,8 @@ SimplifyShape2::SimplifyShape2(CameraConstPtr camera, ExtTriangleMeshRef srcMesh
 
 	Simplify simplify(srcMesh);
 	simplify.Decimate(targetCount, *camera, edgeScreenSize, preserveBorder);
-	mesh = simplify.ExportExtMesh();
+	shape = simplify.ExportExtMesh();
+	mesh = std::move(shape->ReleaseOwnedMeshes().front());
 
 	SDL_LOG("SimplifyShape2: Simplified shape from " << srcMesh.GetTotalTriangleCount() << " to " << mesh->GetTotalTriangleCount() << " faces");
 

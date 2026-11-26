@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -221,7 +221,7 @@ void BakeCPURenderEngine::StartLockLess() {
 			auto& mesh = sceneObj.GetExtMesh();
 
 			Transform localToWorld;
-			sceneObj.GetExtMesh().GetLocal2World(0.f, localToWorld);
+localToWorld = 			sceneObj.GetExtMesh().GetLocal2World(0.f);
 
 			for (u_int triIndex = 0; triIndex < mesh.GetTotalTriangleCount(); ++triIndex)
 				mapMeshesArea[mapInfoIndex] += mesh.GetTriangleArea(localToWorld, triIndex);

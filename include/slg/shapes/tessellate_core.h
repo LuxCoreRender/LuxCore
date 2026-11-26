@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -115,7 +115,9 @@ using TessellationData = std::tuple<CoordVector, luxrays::TriangleBuffer, u_int,
 //        face (3 * numTriangles entries): the per-point coords of points
 //        shared between faces carry the face of one arbitrary incident
 //        face, which is not suitable for face-varying data evaluation.
-luxrays::ExtTriangleMeshUPtr TessellateTopology(
+// Returns the Shape owning the tessellated mesh (the mesh references the
+// Shape through Mesh::GetShape())
+luxrays::ShapeUPtr TessellateTopology(
 	const luxrays::ExtTriangleMesh &srcMesh,
 	const size_t N,
 	const bool interpolatedNormals = true

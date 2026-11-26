@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -19,6 +19,7 @@
 #include "luxrays/core/dataset.h"
 #include "luxrays/core/intersectiondevice.h"
 #include "slg/scene/scene.h"
+#include "luxrays/core/shape.h"
 
 using namespace std;
 using namespace luxrays;
@@ -36,7 +37,10 @@ void Scene::UpdateObjectTransformation(const string &objName, const Transform &t
 		instanceMesh.SetTransformation(trans);
 		editActions.AddAction(GEOMETRY_TRANS_EDIT);
 	} catch(std::bad_cast&) {
-		mesh.ApplyTransform(trans);
+		// Plain triangle mesh: transform through its Shape (the Shape owns
+		// the vertex buffer and propagates to the submeshes' normals)
+		const string shapeName = mesh.GetShapeName().empty() ? mesh.GetName() : mesh.GetShapeName();
+		shapeDefs.GetShape(shapeName).ApplyTransform(trans);
 		editActions.AddAction(GEOMETRY_EDIT);
 	}
 

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -99,7 +99,7 @@ void EmbreeAccel::ExportMotionTriangleMesh(const RTCScene embreeScene, const Mot
 				sizeof(Point), mtm.GetTotalVertexCount());
 
 		Transform local2World;
-		mtm.GetLocal2World(ms.times[step], local2World);
+local2World = 		mtm.GetLocal2World(ms.times[step]);
 		for (u_int i = 0; i < mtm.GetTotalVertexCount(); ++i)
 			vertices[i] = mtm.GetVertex(local2World, i);
 	}

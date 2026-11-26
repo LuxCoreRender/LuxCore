@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -71,7 +71,7 @@ PropertiesUPtr SceneObject::ToProperties(const ExtMeshCache &extMeshCache,
 			// I have to output the applied transformation
 			auto& extMesh = static_cast<const ExtTriangleMesh &>(GetMesh());
 			Transform trans;
-			extMesh.GetLocal2World(0.f, trans);
+trans = 			extMesh.GetLocal2World(0.f);
 
 			props->Set(Property("scene.objects." + name + ".appliedtransformation")(trans.m));
 			break;
