@@ -329,15 +329,47 @@ ShapeUPtr DisplacementShape::ApplyToShape(
 	for (size_t i = 0; i < work.size(); ++i)
 		groups[work[i]->GetVertexBuffer().Data()].push_back(i);
 
-	// displaced buffer per vertex-buffer group
+	// Displaced buffer per vertex-buffer group. The displacement is computed
+	// PER SUBMESH (each submesh has its own dense per-vertex normals/UVs; a
+	// global view would have zeroed rows for vertices owned by sibling
+	// submeshes), then merged into the group's shared buffer: each point
+	// takes the average of the displacements computed by all the submeshes
+	// owning it (submeshes of a group own disjoint vertex ranges after
+	// compaction, so usually exactly one).
 	std::unordered_map<const void *, VertexBuffer> displacedPerGroup;
 	for (auto &[bufPtr, indices] : groups) {
-		ExtTriangleMesh &srcMesh = *work[indices[0]];
-		if (!srcMesh.HasNormals())
-			srcMesh.ComputeNormals();
-		if ((params.mapType == VECTOR_DISPLACEMENT) && !srcMesh.HasUVs(params.uvIndex))
-			throw runtime_error("Displacement shape for vector displacement can be used only with mesh having UVs defined");
-		displacedPerGroup.emplace(bufPtr, ComputeDisplacedVertices(srcMesh, dispMap, params));
+		const VertexBuffer &groupBuf = work[indices[0]]->GetVertexBuffer();
+		const size_t P = groupBuf.Count();
+		VertexBuffer disp(P);
+		disp.Set(groupBuf);
+		std::vector<Vector> accum(P, Vector(0.f, 0.f, 0.f));
+		std::vector<u_int> count(P, 0);
+		for (size_t idx : indices) {
+			ExtTriangleMesh &sm = submeshes[idx].get();
+			if (!sm.HasNormals())
+				sm.ComputeNormals();
+			if ((params.mapType == VECTOR_DISPLACEMENT) && !sm.HasUVs(params.uvIndex))
+				throw runtime_error("Displacement shape for vector displacement can be used only with mesh having UVs defined");
+			VertexBuffer localDisp = ComputeDisplacedVertices(sm, dispMap, params);
+			const auto localVerts = sm.GetVertices();
+			if (sm.HasVertexMap()) {
+				const auto &map = sm.GetVertexMap();
+				for (size_t l = 0; l < localDisp.Count(); ++l) {
+					const u_int g = map[l];
+					accum[g] += Vector(localDisp[l] - localVerts[l]);
+					++count[g];
+				}
+			} else {
+				for (size_t l = 0; l < localDisp.Count(); ++l) {
+					accum[l] += Vector(localDisp[l] - localVerts[l]);
+					++count[l];
+				}
+			}
+		}
+		for (size_t g = 0; g < P; ++g)
+			if (count[g] > 0)
+				disp[g] = groupBuf[g] + accum[g] / count[g];
+		displacedPerGroup.emplace(bufPtr, std::move(disp));
 	}
 
 	auto result = std::make_unique<Shape>(resultName,
