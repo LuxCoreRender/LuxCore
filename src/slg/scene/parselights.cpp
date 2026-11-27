@@ -501,8 +501,9 @@ LightSourceUPtr Scene::CreateLightSource(const string &name, const luxrays::Prop
 		sl->lightToWorld = light2World;
 		sl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
 		sl->localTarget = props.Get(Property(propName + ".target")(Point(0.f, 0.f, 1.f))).Get<Point>();
-		sl->coneAngle = Max(0.0, props.Get(Property(propName + ".coneangle")(30.0)).Get<double>());
-		sl->coneDeltaAngle = Max(0.0, props.Get(Property(propName + ".conedeltaangle")(5.0)).Get<double>());
+		const double cone_angle_double = props.Get(Property(propName + ".coneangle")(30.0)).Get<double>();
+		sl->coneAngle = Min(180.0, Max(0.0, cone_angle_double));
+		sl->coneDeltaAngle = Min(cone_angle_double, Max(0.0, props.Get(Property(propName + ".conedeltaangle")(5.0)).Get<double>()));
 		sl->color = GetColor(props.Get(Property(propName + ".color")(Spectrum(1.f))));
 		sl->power = Max(0.0, props.Get(Property(propName + ".power")(0.0)).Get<double>());
 		sl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
